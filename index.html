@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestor</title>
+<!-- GESTOR — painel interno, v1 (TI, 25/09/2026). O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
+     dentro; vamos botar um nome que não bloqueia a mente". A consulta de pares é a primeira função, não a identidade. Só LEITURA.
+     Publicado em repositório PÚBLICO (GitHub Pages): aqui só HTML/CSS/JS e a chave publicável — nada de segredo, caminho de
+     máquina ou nome real de cliente em exemplo. Login com e-mail e senha (Auth do Supabase); sem login não vê nada.
+     A pergunta dele: cliente × produto × período → pares. Período aceita intervalo desde o primeiro dia; quando não há carga para
+     um mês pedido, a tela DIZ — tabela vazia é armadilha. Mostra a data da base que gerou cada número.
+     O que NÃO tem, de propósito: voz (o ditado do iPhone no campo já serve), qualquer escrita (cancelar/transferir é outro projeto),
+     gráfico. Os marcadores https://bdkazfzgecbhmiewfmjb.supabase.co e sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB são preenchidos por publica_portal.py (a chave publicável é feita
+     para ficar na página; o que protege o dado é a política por linha, não a chave). -->
+<style>
+:root{--bg:#0b0c10;--card:#16171f;--ink:#f5f6f8;--mu:#8b8f99;--acc:#36c47a;--ruim:#d9534f;--bd:#2a2c36}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+h1{font-size:1.1rem;margin:0 0 12px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:.8rem;color:var(--mu);margin:10px 0 4px}
+input,button{font:inherit}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);background:#0f1015;color:var(--ink)}
+.linha{display:flex;gap:10px}.linha>div{flex:1}
+button{width:100%;padding:14px;border:0;border-radius:10px;background:var(--acc);color:#0b0c10;font-weight:800;margin-top:14px}
+button.sec{background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:600}
+.msg{padding:12px;border-radius:10px;margin-top:12px;font-size:.95rem}
+.msg.aviso{background:#3a2a10;color:#ffd54a}.msg.erro{background:#3a1616;color:#ff9a9a}.msg.ok{background:#12301f;color:#9be7b8}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.9rem}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
+.mu{color:var(--mu);font-size:.8rem}
+.pe{color:var(--mu);font-size:.75rem;margin-top:16px}
+.oculto{display:none}
+</style>
+</head>
+<body>
+<h1>Gestor <span class="mu" style="font-weight:600">· quantos pares?</span></h1>
+
+<div id="tela-login" class="card oculto">
+  <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
+  <label>senha</label><input id="senha" type="password" autocomplete="current-password">
+  <button id="bt-entrar">Entrar</button>
+  <button id="bt-esqueci" class="sec">Esqueci a senha</button>
+  <div id="msg-login"></div>
+</div>
+
+<div id="tela-senha" class="card oculto">
+  <p>Defina a sua senha para o Gestor.</p>
+  <label>nova senha (mínimo 8)</label><input id="senha-nova" type="password" autocomplete="new-password">
+  <button id="bt-definir">Salvar senha e entrar</button>
+  <div id="msg-senha"></div>
+</div>
+
+<div id="tela-pergunta" class="oculto">
+  <div class="card">
+    <label>cliente (parte do nome basta)</label><input id="cliente" list="lista-clientes" placeholder="ex.: LOJA EXEMPLO" autocapitalize="characters">
+    <datalist id="lista-clientes"></datalist>
+    <label>produto (referência ou nome; vazio = todos)</label><input id="produto" placeholder="ex.: nome do tênis ou referência" autocapitalize="characters">
+    <div class="linha">
+      <div><label>de (mês)</label><input id="de" type="month"></div>
+      <div><label>até (mês)</label><input id="ate" type="month"></div>
+    </div>
+    <button id="bt-perguntar">Perguntar</button>
+    <div id="msg-pergunta"></div>
+    <div class="mu" id="cobertura" style="margin-top:10px"></div>
+  </div>
+  <div id="resultado"></div>
+  <p class="pe">Gestor · só leitura nesta versão. O número é o faturado (pares) por mês, calculado da base; a data da base vai em cada linha.
+    <a href="#" id="bt-sair" style="color:var(--mu)">sair</a></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
+const sb = supabase.createClient(URL_SB, CHAVE);
+const $ = id => document.getElementById(id);
+const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const fmt = n => Number(n).toLocaleString("pt-BR");
+const mesBR = iso => { const [a,m] = iso.slice(0,7).split("-"); return MESES[+m-1] + "/" + a.slice(2); };
+const dmy = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4) : "";
+function msg(id, texto, tipo){ $(id).innerHTML = texto ? `<div class="msg ${tipo||"aviso"}">${texto}</div>` : ""; }
+function mostrar(tela){ for (const t of ["tela-login","tela-senha","tela-pergunta"]) $(t).classList.toggle("oculto", t !== tela); }
+
+// ---------- sessão
+async function arranque(){
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && (hash.get("type") === "invite" || hash.get("type") === "recovery")) { mostrar("tela-senha"); return; }
+  if (session) { mostrar("tela-pergunta"); await prepararPergunta(); return; }
+  mostrar("tela-login");
+}
+sb.auth.onAuthStateChange((evento, sessao) => {
+  if (evento === "PASSWORD_RECOVERY") mostrar("tela-senha");
+  else if (evento === "SIGNED_OUT") mostrar("tela-login");
+});
+$("bt-entrar").onclick = async () => {
+  msg("msg-login", "");
+  const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("senha").value });
+  if (error) { msg("msg-login", "Não entrou: " + traduz(error.message), "erro"); return; }
+  mostrar("tela-pergunta"); await prepararPergunta();
+};
+$("bt-esqueci").onclick = async () => {
+  const email = $("email").value.trim();
+  if (!email) { msg("msg-login", "Escreva o e-mail primeiro.", "aviso"); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href.split("#")[0] });
+  msg("msg-login", error ? "Não consegui: " + traduz(error.message) : "Se o e-mail tiver login, chegou um link para definir a senha.", error ? "erro" : "ok");
+};
+$("bt-definir").onclick = async () => {
+  const s = $("senha-nova").value;
+  if (s.length < 8) { msg("msg-senha", "Mínimo 8 caracteres.", "erro"); return; }
+  const { error } = await sb.auth.updateUser({ password: s });
+  if (error) { msg("msg-senha", "Não salvou: " + traduz(error.message), "erro"); return; }
+  history.replaceState(null, "", location.pathname);
+  mostrar("tela-pergunta"); await prepararPergunta();
+};
+$("bt-sair").onclick = async e => { e.preventDefault(); await sb.auth.signOut(); mostrar("tela-login"); };
+function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errados","Email not confirmed":"e-mail ainda não confirmado"})[m] || m; }
+
+// ---------- a pergunta
+let COBERTURA = [];   // meses com carga, do banco — para dizer "não há carga" em vez de tabela vazia
+async function prepararPergunta(){
+  const { data: cli } = await sb.from("venda_mensal").select("cliente").order("cliente");
+  const nomes = [...new Set((cli||[]).map(r => r.cliente))];
+  $("lista-clientes").innerHTML = nomes.map(n => `<option value="${n}">`).join("");
+  const { data: meses } = await sb.from("venda_mensal").select("mes").order("mes");
+  COBERTURA = [...new Set((meses||[]).map(r => r.mes.slice(0,7)))];
+  $("cobertura").textContent = COBERTURA.length ? "meses com carga no banco: " + COBERTURA.map(mesBR).join(", ") : "o banco ainda não tem carga nenhuma";
+  if (COBERTURA.length && !$("de").value) { $("de").value = COBERTURA[0]; $("ate").value = COBERTURA[COBERTURA.length-1]; }
+}
+function mesesEntre(de, ate){
+  const out = []; let [a,m] = de.split("-").map(Number); const [a2,m2] = ate.split("-").map(Number);
+  while (a < a2 || (a === a2 && m <= m2)) { out.push(a + "-" + String(m).padStart(2,"0")); m++; if (m > 12) { m = 1; a++; } }
+  return out;
+}
+$("bt-perguntar").onclick = async () => {
+  msg("msg-pergunta", ""); $("resultado").innerHTML = "";
+  const cliente = $("cliente").value.trim(), produto = $("produto").value.trim(), de = $("de").value, ate = $("ate").value;
+  if (!de || !ate || de > ate) { msg("msg-pergunta", "Período inválido: escolha de e até (o de não pode ser depois do até).", "erro"); return; }
+  const pedidos = mesesEntre(de, ate);
+  const semCarga = pedidos.filter(m => !COBERTURA.includes(m));
+  if (semCarga.length === pedidos.length) {
+    msg("msg-pergunta", `<b>Não há carga no banco para ${semCarga.map(mesBR).join(", ")}.</b> Meses carregados: ${COBERTURA.map(mesBR).join(", ") || "nenhum"}. O número não existe aqui — não é zero.`, "aviso");
+    return;
+  }
+  let q = sb.from("venda_mensal").select("mes,cliente,referencia,cor,descricao,pares_fat,pares_cart,base_em,fonte")
+            .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("pares_fat", { ascending: false }).limit(2000);
+  if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
+  if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
+  const { data, error } = await q;
+  if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
+  const avisos = [];
+  if (semCarga.length) avisos.push(`sem carga para ${semCarga.map(mesBR).join(", ")} — esses meses NÃO estão na soma`);
+  if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>COBERTURA.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
+  const total = data.reduce((s,r) => s + r.pares_fat, 0);
+  const bases = [...new Set(data.map(r => r.base_em))].sort();
+  let html = `<div class="card"><b>${fmt(total)} pares</b> faturados — ${data.length} linha(s) · base de ${bases.map(dmy).join(" e ")}${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
+  html += `<div class="card"><table><thead><tr><th>mês</th><th>cliente</th><th>produto</th><th class="n">pares</th><th class="n">base</th></tr></thead><tbody>`;
+  for (const r of data) html += `<tr><td>${mesBR(r.mes)}</td><td>${r.cliente}</td><td>${r.referencia} ${r.cor}<br><span class="mu">${r.descricao||""}</span></td><td class="n">${fmt(r.pares_fat)}${r.pares_cart ? `<br><span class="mu">+${fmt(r.pares_cart)} cart.</span>` : ""}</td><td class="n mu">${dmy(r.base_em)}</td></tr>`;
+  html += `<tr class="tot"><td colspan="3">total</td><td class="n">${fmt(total)}</td><td></td></tr></tbody></table></div>`;
+  $("resultado").innerHTML = html;
+};
+arranque();
+</script>
+</body>
+</html>
