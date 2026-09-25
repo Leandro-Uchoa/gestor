@@ -68,7 +68,7 @@ tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
     <div class="mu" id="cobertura" style="margin-top:10px"></div>
   </div>
   <div id="resultado"></div>
-  <p class="pe">Gestor · só leitura nesta versão. O número é o faturado (pares) por mês, calculado da base; a data da base vai em cada linha.
+  <p class="pe">Gestor · só leitura nesta versão. <b>Faturado</b> = pares com data de faturamento no mês; <b>carteira</b> = pares ainda em carteira com previsão no mês. Ambos da base dele, por cliente. Estoque não está aqui (vem do giro do cliente). A data da base vai em cada linha.
     <a href="#" id="bt-sair" style="color:var(--mu)">sair</a></p>
 </div>
 
@@ -145,8 +145,9 @@ $("bt-perguntar").onclick = async () => {
     msg("msg-pergunta", `<b>Não há carga no banco para ${semCarga.map(mesBR).join(", ")}.</b> Meses carregados: ${COBERTURA.map(mesBR).join(", ") || "nenhum"}. O número não existe aqui — não é zero.`, "aviso");
     return;
   }
-  let q = sb.from("venda_mensal").select("mes,cliente,referencia,cor,descricao,pares_fat,pares_cart,base_em,fonte")
-            .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("pares_fat", { ascending: false }).limit(2000);
+  const porLoja = false;   // ordem dele (25/09, 19h): "não coloca por porta ainda, coloca por cliente" — a loja fica no banco, pronta
+  let q = sb.from("venda_mensal").select("mes,cliente,porta,referencia,cor,descricao,pares_fat,pares_cart,base_em,fonte")
+            .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("porta").order("pares_fat", { ascending: false }).limit(3000);
   if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
   if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
   const { data, error } = await q;
@@ -154,12 +155,19 @@ $("bt-perguntar").onclick = async () => {
   const avisos = [];
   if (semCarga.length) avisos.push(`sem carga para ${semCarga.map(mesBR).join(", ")} — esses meses NÃO estão na soma`);
   if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>COBERTURA.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
-  const total = data.reduce((s,r) => s + r.pares_fat, 0);
+  // "cliente inteiro": soma as lojas do mesmo produto no mesmo mês
+  let linhas = data;
+  if (!porLoja) {
+    const g = new Map();
+    for (const r of data) { const k = [r.mes, r.cliente, r.referencia, r.cor].join("|"); const a = g.get(k) || {...r, porta: "todas", pares_fat: 0, pares_cart: 0}; a.pares_fat += r.pares_fat; a.pares_cart += r.pares_cart; g.set(k, a); }
+    linhas = [...g.values()];
+  }
+  const totF = linhas.reduce((s,r) => s + r.pares_fat, 0), totC = linhas.reduce((s,r) => s + r.pares_cart, 0);
   const bases = [...new Set(data.map(r => r.base_em))].sort();
-  let html = `<div class="card"><b>${fmt(total)} pares</b> faturados — ${data.length} linha(s) · base de ${bases.map(dmy).join(" e ")}${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
-  html += `<div class="card"><table><thead><tr><th>mês</th><th>cliente</th><th>produto</th><th class="n">pares</th><th class="n">base</th></tr></thead><tbody>`;
-  for (const r of data) html += `<tr><td>${mesBR(r.mes)}</td><td>${r.cliente}</td><td>${r.referencia} ${r.cor}<br><span class="mu">${r.descricao||""}</span></td><td class="n">${fmt(r.pares_fat)}${r.pares_cart ? `<br><span class="mu">+${fmt(r.pares_cart)} cart.</span>` : ""}</td><td class="n mu">${dmy(r.base_em)}</td></tr>`;
-  html += `<tr class="tot"><td colspan="3">total</td><td class="n">${fmt(total)}</td><td></td></tr></tbody></table></div>`;
+  let html = `<div class="card"><b>${fmt(totF)} pares faturados</b> · <b>${fmt(totC)} em carteira</b> (previstos para o período) — ${linhas.length} linha(s)${porLoja ? ", por loja" : ", cliente inteiro"} · base de ${bases.map(dmy).join(" e ")}${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
+  html += `<div class="card"><table><thead><tr><th>mês</th><th>cliente</th><th>produto</th><th class="n">faturado</th><th class="n">carteira</th></tr></thead><tbody>`;
+  for (const r of linhas) html += `<tr><td>${mesBR(r.mes)}<br><span class="mu">${dmy(r.base_em)}</span></td><td>${r.cliente}${porLoja ? `<br><span class="mu">loja ${r.porta || "?"}</span>` : ""}</td><td>${r.referencia} ${r.cor}<br><span class="mu">${r.descricao||""}</span></td><td class="n">${fmt(r.pares_fat)}</td><td class="n mu">${fmt(r.pares_cart)}</td></tr>`;
+  html += `<tr class="tot"><td colspan="3">total</td><td class="n">${fmt(totF)}</td><td class="n">${fmt(totC)}</td></tr></tbody></table></div>`;
   $("resultado").innerHTML = html;
 };
 arranque();
