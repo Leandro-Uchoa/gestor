@@ -27,12 +27,18 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:var(--acc)
 button.sec{background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:600}
 .msg{padding:12px;border-radius:10px;margin-top:12px;font-size:.95rem}
 .msg.aviso{background:#3a2a10;color:#ffd54a}.msg.erro{background:#3a1616;color:#ff9a9a}.msg.ok{background:#12301f;color:#9be7b8}
-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.9rem}
-th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);vertical-align:top}
+table{width:100%;border-collapse:collapse;margin-top:4px;font-size:.82rem}
+th,td{text-align:left;padding:6px 5px;border-bottom:1px solid var(--bd);vertical-align:top;white-space:nowrap}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
 .mu{color:var(--mu);font-size:.8rem}
 .pe{color:var(--mu);font-size:.75rem;margin-top:16px}
+/* ordem dele (26/09, no celular): um número por célula, uma linha só; a COR diz o que é — verde claro = faturado, verde escuro = carteira */
+td.fat{background:#245c3d;color:#dff5e7;font-weight:700}
+td.cart{background:#0f3a24;color:#9be7b8}
+td.mix{background:linear-gradient(90deg,#245c3d 50%,#0f3a24 50%);color:#dff5e7;font-weight:700}
+.legenda{font-size:.75rem;color:var(--mu);margin:6px 0 0}
+.legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px}
 .oculto{display:none}
 </style>
 </head>
@@ -68,7 +74,7 @@ tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
     <div class="mu" id="cobertura" style="margin-top:10px"></div>
   </div>
   <div id="resultado"></div>
-  <p class="pe">Gestor · só leitura nesta versão. <b>Faturado</b> = pares com data de faturamento no mês; <b>carteira</b> = pares ainda em carteira com previsão no mês. Ambos da base dele, por cliente. Estoque não está aqui (vem do giro do cliente). A data da base vai em cada linha.
+  <p class="pe">Gestor · só leitura nesta versão. Verde claro = faturado no mês; verde escuro = em carteira, previsto para o mês. Da base dele, por cliente. Estoque ainda não está aqui.
     <a href="#" id="bt-sair" style="color:var(--mu)">sair</a></p>
 </div>
 
@@ -189,22 +195,31 @@ $("bt-perguntar").onclick = async () => {
   const totMes = {}; for (const m of colunas) totMes[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).fat || 0), 0);
   const bases = [...new Set(data.map(r => r.base_em))].sort();
   const muitosClientes = new Set(linhas.map(r => r.cliente)).size > 1;
-  let html = `<div class="card"><b>${fmt(totF)} pares faturados</b> · <b>${fmt(totC)} em carteira</b> (previstos) — ${linhas.length} produto(s) · base de ${bases.map(dmy).join(" e ")}${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
-  html += `<div class="card" style="overflow-x:auto"><table><thead><tr>${muitosClientes ? "<th>cliente</th>" : ""}<th>ref.</th><th>nome</th><th>cor</th>`;
+  // célula = UM número: faturado + carteira do mês; a cor diz o que é (claro = faturado, escuro = carteira, meio a meio = os dois)
+  const celula = (fat, cart) => {
+    const v = fat + cart;
+    if (!v) return `<td class="n mu">0</td>`;
+    const cls = fat && cart ? "mix" : (fat ? "fat" : "cart");
+    return `<td class="n ${cls}">${fmt(v)}</td>`;
+  };
+  const totMesC = {}; for (const m of colunas) totMesC[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).cart || 0), 0);
+  let html = `<div class="card"><b>${fmt(totF)} faturados</b> · <b>${fmt(totC)} em carteira</b> — ${linhas.length} produto(s) · base de ${bases.map(dmy).join(" e ")}` +
+             `<div class="legenda"><i style="background:#245c3d"></i>faturado <i style="background:#0f3a24"></i>carteira</div>${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
+  html += `<div class="card" style="overflow-x:auto;padding:8px"><table><thead><tr>${muitosClientes ? "<th>cliente</th>" : ""}<th>ref.</th><th>nome</th><th>cor</th>`;
   for (const m of colunas) html += `<th class="n">${mesBR(m)}</th>`;
   html += `<th class="n">total</th></tr></thead><tbody>`;
   for (const r of linhas) {
     html += `<tr>${muitosClientes ? `<td>${r.cliente}</td>` : ""}<td class="mu">${r.referencia}</td><td>${r.descricao}</td><td>${r.cor}</td>`;
     for (const m of colunas) {
       if (!COBERTURA.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
-      const c = r.meses[m];
-      html += `<td class="n">${c ? fmt(c.fat) : "0"}${c && c.cart ? `<br><span class="mu">cart. ${fmt(c.cart)}</span>` : ""}</td>`;
+      const c = r.meses[m] || { fat: 0, cart: 0 };
+      html += celula(c.fat, c.cart);
     }
-    html += `<td class="n"><b>${fmt(r.tot_fat)}</b>${r.tot_cart ? `<br><span class="mu">cart. ${fmt(r.tot_cart)}</span>` : ""}</td></tr>`;
+    html += celula(r.tot_fat, r.tot_cart) + `</tr>`;
   }
   html += `<tr class="tot">${muitosClientes ? "<td></td>" : ""}<td colspan="3">total</td>`;
-  for (const m of colunas) html += `<td class="n">${COBERTURA.includes(m) ? fmt(totMes[m]) : "—"}</td>`;
-  html += `<td class="n">${fmt(totF)}</td></tr></tbody></table></div>`;
+  for (const m of colunas) html += COBERTURA.includes(m) ? celula(totMes[m], totMesC[m]) : `<td class="n">—</td>`;
+  html += celula(totF, totC) + `</tr></tbody></table></div>`;
   $("resultado").innerHTML = html;
 };
 arranque();
