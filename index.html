@@ -121,12 +121,22 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 
 // ---------- a pergunta
 let COBERTURA = [];   // meses com carga, do banco — para dizer "não há carga" em vez de tabela vazia
+// A API devolve no máximo 1.000 linhas por pedido, EM SILÊNCIO (26/09: set–dez "sumiram"). Tudo se lê em páginas até acabar.
+async function tudo(consulta){
+  const PAG = 1000; let de = 0, out = [];
+  for (;;) {
+    const { data, error } = await consulta.range(de, de + PAG - 1);
+    if (error) return { data: out, error };
+    out = out.concat(data || []);
+    if (!data || data.length < PAG) return { data: out, error: null };
+    de += PAG;
+  }
+}
 async function prepararPergunta(){
-  const { data: cli } = await sb.from("venda_mensal").select("cliente").order("cliente");
-  const nomes = [...new Set((cli||[]).map(r => r.cliente))];
+  const { data: cob } = await tudo(sb.from("v_cobertura").select("cliente,mes,pares_fat,pares_cart").order("mes").order("cliente"));
+  const nomes = [...new Set((cob||[]).map(r => r.cliente))].sort();
   $("lista-clientes").innerHTML = nomes.map(n => `<option value="${n}">`).join("");
-  const { data: meses } = await sb.from("venda_mensal").select("mes").order("mes");
-  COBERTURA = [...new Set((meses||[]).map(r => r.mes.slice(0,7)))];
+  COBERTURA = [...new Set((cob||[]).map(r => r.mes.slice(0,7)))].sort();
   $("cobertura").textContent = COBERTURA.length ? "meses com carga no banco: " + COBERTURA.map(mesBR).join(", ") : "o banco ainda não tem carga nenhuma";
   // período padrão: o SEMESTRE do último mês carregado (ordem dele, 26/09: "o semestre dividindo os meses por colunas")
   if (COBERTURA.length && !$("de").value) {
@@ -150,13 +160,15 @@ $("bt-perguntar").onclick = async () => {
     return;
   }
   if (pedidos.length > 12) { msg("msg-pergunta", "Período de até 12 meses por consulta.", "erro"); return; }
+  msg("msg-pergunta", "buscando…", "ok");
   // por cliente, lojas somadas (ordem dele, 25/09: "não coloca por porta ainda") — a loja fica no banco, pronta
-  let q = sb.from("venda_mensal").select("mes,cliente,porta,referencia,cor,descricao,pares_fat,pares_cart,base_em,fonte")
-            .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("porta").order("pares_fat", { ascending: false }).limit(3000);
+  let q = sb.from("v_venda_produto_mes").select("mes,cliente,referencia,cor,descricao,pares_fat,pares_cart,base_em")
+            .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("referencia").order("cor");
   if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
   if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
-  const { data, error } = await q;
+  const { data, error } = await tudo(q);
   if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
+  msg("msg-pergunta", "");
   const avisos = [];
   if (semCarga.length) avisos.push(`sem carga para ${semCarga.map(mesBR).join(", ")} — esses meses NÃO estão na soma`);
   if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>COBERTURA.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
