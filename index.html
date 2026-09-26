@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestor</title>
-<!-- GESTOR — painel interno, v1 (TI, 25/09/2026). O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
-     dentro; vamos botar um nome que não bloqueia a mente". A consulta de pares é a primeira função, não a identidade. Só LEITURA.
+<!-- GESTOR — painel interno, v1.5 (TI, 25–26/09/2026). O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
+     dentro; vamos botar um nome que não bloqueia a mente". Só LEITURA.
      Publicado em repositório PÚBLICO (GitHub Pages): aqui só HTML/CSS/JS e a chave publicável — nada de segredo, caminho de
      máquina ou nome real de cliente em exemplo. Login com e-mail e senha (Auth do Supabase); sem login não vê nada.
-     A pergunta dele: cliente × produto × período → pares. Período aceita intervalo desde o primeiro dia; quando não há carga para
-     um mês pedido, a tela DIZ — tabela vazia é armadilha. Mostra a data da base que gerou cada número.
+     DUAS ABAS (ordem dele, 26/09): CARTEIRA (faturado + carteira por produto e mês, da base dele) e GIRO (venda e estoque por
+     produto e mês, das análises de giro). Mesmos filtros; cada aba tem a sua cobertura de meses e diz quando não há carga —
+     tabela vazia é armadilha. Mostra a data da base que gerou cada número.
      O que NÃO tem, de propósito: voz (o ditado do iPhone no campo já serve), qualquer escrita (cancelar/transferir é outro projeto),
      gráfico. Os marcadores https://bdkazfzgecbhmiewfmjb.supabase.co e sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB são preenchidos por publica_portal.py (a chave publicável é feita
      para ficar na página; o que protege o dado é a política por linha, não a chave). -->
@@ -37,13 +38,20 @@ tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
 td.fat{background:#245c3d;color:#dff5e7;font-weight:700}
 td.cart{background:#0f3a24;color:#9be7b8}
 td.mix{background:linear-gradient(90deg,#245c3d 50%,#0f3a24 50%);color:#dff5e7;font-weight:700}
+/* giro: venda em verde claro (é venda), estoque em azul — cores diferentes para o olho não confundir com a carteira */
+td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .legenda{font-size:.75rem;color:var(--mu);margin:6px 0 0}
 .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px}
 .oculto{display:none}
+/* abas e o seletor venda/estoque: botões pequenos, lado a lado */
+.abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
+.abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
+.abas button.ativa,.seletor button.ativa{background:var(--acc);color:#0b0c10;border-color:var(--acc)}
+.seletor{margin:10px 0 0}.seletor button{padding:8px;font-size:.85rem}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600">· quantos pares?</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -61,6 +69,10 @@ td.mix{background:linear-gradient(90deg,#245c3d 50%,#0f3a24 50%);color:#dff5e7;f
 </div>
 
 <div id="tela-pergunta" class="oculto">
+  <div class="abas">
+    <button data-aba="carteira" class="ativa">Carteira</button>
+    <button data-aba="giro">Análise de giro</button>
+  </div>
   <div class="card">
     <label>cliente (parte do nome basta)</label><input id="cliente" list="lista-clientes" placeholder="ex.: LOJA EXEMPLO" autocapitalize="characters">
     <datalist id="lista-clientes"></datalist>
@@ -74,8 +86,8 @@ td.mix{background:linear-gradient(90deg,#245c3d 50%,#0f3a24 50%);color:#dff5e7;f
     <div class="mu" id="cobertura" style="margin-top:10px"></div>
   </div>
   <div id="resultado"></div>
-  <p class="pe">Gestor · só leitura nesta versão. Verde claro = faturado no mês; verde escuro = em carteira, previsto para o mês. Da base dele, por cliente. Estoque ainda não está aqui.
-    <a href="#" id="bt-sair" style="color:var(--mu)">sair</a></p>
+  <p class="pe" id="rodape"></p>
+  <p class="pe"><a href="#" id="bt-sair" style="color:var(--mu)">sair</a></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -125,8 +137,32 @@ $("bt-definir").onclick = async () => {
 $("bt-sair").onclick = async e => { e.preventDefault(); await sb.auth.signOut(); mostrar("tela-login"); };
 function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errados","Email not confirmed":"e-mail ainda não confirmado"})[m] || m; }
 
+// ---------- as abas
+// Cada aba tem a sua fonte, a sua cobertura de meses e o seu rodapé. Os filtros são os mesmos.
+const ABAS = {
+  carteira: { subtitulo: "· quantos pares?", visao_cob: "v_cobertura", cob: [],
+              rodape: "Carteira: verde claro = faturado no mês; verde escuro = em carteira, previsto para o mês. Da base dele, por cliente (lojas somadas)." },
+  giro:     { subtitulo: "· análise de giro", visao_cob: "v_cobertura_giro", cob: [],
+              rodape: "Giro: venda e estoque do cliente por produto e mês, das análises de giro. A Casa Pio não entrega por cor. Célula vazia (—) = a AG não tem o dado; 0 = vendeu zero." },
+};
+let ABA = "carteira";
+let MEDIDA_GIRO = "venda";         // o que a célula do giro mostra: venda ou estoque (um número por célula, ordem dele)
+let ULTIMO_GIRO = null;            // último resultado do giro, para trocar venda/estoque sem ir ao banco de novo
+function trocarAba(nova){
+  ABA = nova;
+  for (const b of document.querySelectorAll(".abas button")) b.classList.toggle("ativa", b.dataset.aba === nova);
+  $("subtitulo").textContent = ABAS[nova].subtitulo;
+  $("rodape").textContent = ABAS[nova].rodape;
+  $("resultado").innerHTML = ""; msg("msg-pergunta", "");
+  mostrarCobertura();
+}
+for (const b of document.querySelectorAll(".abas button")) b.onclick = () => trocarAba(b.dataset.aba);
+function mostrarCobertura(){
+  const cob = ABAS[ABA].cob;
+  $("cobertura").textContent = cob.length ? "meses com carga no banco: " + cob.map(mesBR).join(", ") : "o banco ainda não tem carga nenhuma nesta aba";
+}
+
 // ---------- a pergunta
-let COBERTURA = [];   // meses com carga, do banco — para dizer "não há carga" em vez de tabela vazia
 // A API devolve no máximo 1.000 linhas por pedido, EM SILÊNCIO (26/09: set–dez "sumiram"). Tudo se lê em páginas até acabar.
 async function tudo(consulta){
   const PAG = 1000; let de = 0, out = [];
@@ -139,33 +175,47 @@ async function tudo(consulta){
   }
 }
 async function prepararPergunta(){
-  const { data: cob } = await tudo(sb.from("v_cobertura").select("cliente,mes,pares_fat,pares_cart").order("mes").order("cliente"));
-  const nomes = [...new Set((cob||[]).map(r => r.cliente))].sort();
-  $("lista-clientes").innerHTML = nomes.map(n => `<option value="${n}">`).join("");
-  COBERTURA = [...new Set((cob||[]).map(r => r.mes.slice(0,7)))].sort();
-  $("cobertura").textContent = COBERTURA.length ? "meses com carga no banco: " + COBERTURA.map(mesBR).join(", ") : "o banco ainda não tem carga nenhuma";
+  const nomes = new Set();
+  for (const a of Object.values(ABAS)) {
+    const { data: cob } = await tudo(sb.from(a.visao_cob).select("cliente,mes").order("mes").order("cliente"));
+    for (const r of cob || []) nomes.add(r.cliente);
+    a.cob = [...new Set((cob||[]).map(r => r.mes.slice(0,7)))].sort();
+  }
+  $("lista-clientes").innerHTML = [...nomes].sort().map(n => `<option value="${n}">`).join("");
   // período padrão: o SEMESTRE do último mês carregado (ordem dele, 26/09: "o semestre dividindo os meses por colunas")
-  if (COBERTURA.length && !$("de").value) {
-    const ult = COBERTURA[COBERTURA.length - 1], ano = ult.slice(0, 4), m = +ult.slice(5, 7);
+  const cob = ABAS.carteira.cob.length ? ABAS.carteira.cob : ABAS.giro.cob;
+  if (cob.length && !$("de").value) {
+    const ult = cob[cob.length - 1], ano = ult.slice(0, 4), m = +ult.slice(5, 7);
     $("de").value = ano + (m <= 6 ? "-01" : "-07"); $("ate").value = ano + (m <= 6 ? "-06" : "-12");
   }
+  trocarAba(ABA);
 }
 function mesesEntre(de, ate){
   const out = []; let [a,m] = de.split("-").map(Number); const [a2,m2] = ate.split("-").map(Number);
   while (a < a2 || (a === a2 && m <= m2)) { out.push(a + "-" + String(m).padStart(2,"0")); m++; if (m > 12) { m = 1; a++; } }
   return out;
 }
-$("bt-perguntar").onclick = async () => {
-  msg("msg-pergunta", ""); $("resultado").innerHTML = "";
-  const cliente = $("cliente").value.trim(), produto = $("produto").value.trim(), de = $("de").value, ate = $("ate").value;
-  if (!de || !ate || de > ate) { msg("msg-pergunta", "Período inválido: escolha de e até (o de não pode ser depois do até).", "erro"); return; }
+// valida o período contra a cobertura da aba; devolve {pedidos, semCarga} ou null (já avisou)
+function periodo(){
+  const de = $("de").value, ate = $("ate").value, cob = ABAS[ABA].cob;
+  if (!de || !ate || de > ate) { msg("msg-pergunta", "Período inválido: escolha de e até (o de não pode ser depois do até).", "erro"); return null; }
   const pedidos = mesesEntre(de, ate);
-  const semCarga = pedidos.filter(m => !COBERTURA.includes(m));
+  const semCarga = pedidos.filter(m => !cob.includes(m));
   if (semCarga.length === pedidos.length) {
-    msg("msg-pergunta", `<b>Não há carga no banco para ${semCarga.map(mesBR).join(", ")}.</b> Meses carregados: ${COBERTURA.map(mesBR).join(", ") || "nenhum"}. O número não existe aqui — não é zero.`, "aviso");
-    return;
+    msg("msg-pergunta", `<b>Não há carga no banco para ${semCarga.map(mesBR).join(", ")}.</b> Meses carregados nesta aba: ${cob.map(mesBR).join(", ") || "nenhum"}. O número não existe aqui — não é zero.`, "aviso");
+    return null;
   }
-  if (pedidos.length > 12) { msg("msg-pergunta", "Período de até 12 meses por consulta.", "erro"); return; }
+  if (pedidos.length > 12) { msg("msg-pergunta", "Período de até 12 meses por consulta.", "erro"); return null; }
+  return { de, ate, pedidos, semCarga, cob };
+}
+$("bt-perguntar").onclick = () => (ABA === "giro" ? perguntarGiro() : perguntarCarteira());
+
+// ---------- CARTEIRA
+async function perguntarCarteira(){
+  msg("msg-pergunta", ""); $("resultado").innerHTML = "";
+  const p = periodo(); if (!p) return;
+  const { de, ate, pedidos, semCarga, cob } = p;
+  const cliente = $("cliente").value.trim(), produto = $("produto").value.trim();
   msg("msg-pergunta", "buscando…", "ok");
   // por cliente, lojas somadas (ordem dele, 25/09: "não coloca por porta ainda") — a loja fica no banco, pronta
   let q = sb.from("v_venda_produto_mes").select("mes,cliente,referencia,cor,descricao,pares_fat,pares_cart,base_em")
@@ -177,10 +227,10 @@ $("bt-perguntar").onclick = async () => {
   msg("msg-pergunta", "");
   const avisos = [];
   if (semCarga.length) avisos.push(`sem carga para ${semCarga.map(mesBR).join(", ")} — esses meses NÃO estão na soma`);
-  if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>COBERTURA.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
+  if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>cob.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
   // ORDEM DELE (26/09): uma linha por PRODUTO — referência, nome e cor em colunas separadas — e os MESES em colunas.
-  // Lojas somadas (por cliente). Célula = faturado; carteira embaixo, em cinza, quando houver. Mês sem carga = "s/ carga", nunca zero.
-  const colunas = pedidos;                                  // os meses pedidos (o padrão é o semestre inteiro)
+  // Lojas somadas (por cliente). Célula = UM número (faturado + carteira); a cor diz o que é. Mês sem carga = "s/ carga", nunca zero.
+  const colunas = pedidos;
   const g = new Map();
   for (const r of data) {
     const k = [r.cliente, r.referencia, r.descricao || "", r.cor].join("|");
@@ -192,17 +242,16 @@ $("bt-perguntar").onclick = async () => {
   }
   const linhas = [...g.values()].sort((x, y) => (x.cliente.localeCompare(y.cliente)) || (y.tot_fat - x.tot_fat));
   const totF = linhas.reduce((s, r) => s + r.tot_fat, 0), totC = linhas.reduce((s, r) => s + r.tot_cart, 0);
-  const totMes = {}; for (const m of colunas) totMes[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).fat || 0), 0);
+  const totMes = {}, totMesC = {};
+  for (const m of colunas) { totMes[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).fat || 0), 0); totMesC[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).cart || 0), 0); }
   const bases = [...new Set(data.map(r => r.base_em))].sort();
   const muitosClientes = new Set(linhas.map(r => r.cliente)).size > 1;
-  // célula = UM número: faturado + carteira do mês; a cor diz o que é (claro = faturado, escuro = carteira, meio a meio = os dois)
   const celula = (fat, cart) => {
     const v = fat + cart;
     if (!v) return `<td class="n mu">0</td>`;
     const cls = fat && cart ? "mix" : (fat ? "fat" : "cart");
     return `<td class="n ${cls}">${fmt(v)}</td>`;
   };
-  const totMesC = {}; for (const m of colunas) totMesC[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).cart || 0), 0);
   let html = `<div class="card"><b>${fmt(totF)} faturados</b> · <b>${fmt(totC)} em carteira</b> — ${linhas.length} produto(s) · base de ${bases.map(dmy).join(" e ")}` +
              `<div class="legenda"><i style="background:#245c3d"></i>faturado <i style="background:#0f3a24"></i>carteira</div>${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
   html += `<div class="card" style="overflow-x:auto;padding:8px"><table><thead><tr>${muitosClientes ? "<th>cliente</th>" : ""}<th>ref.</th><th>nome</th><th>cor</th>`;
@@ -211,17 +260,81 @@ $("bt-perguntar").onclick = async () => {
   for (const r of linhas) {
     html += `<tr>${muitosClientes ? `<td>${r.cliente}</td>` : ""}<td class="mu">${r.referencia}</td><td>${r.descricao}</td><td>${r.cor}</td>`;
     for (const m of colunas) {
-      if (!COBERTURA.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
+      if (!cob.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
       const c = r.meses[m] || { fat: 0, cart: 0 };
       html += celula(c.fat, c.cart);
     }
     html += celula(r.tot_fat, r.tot_cart) + `</tr>`;
   }
   html += `<tr class="tot">${muitosClientes ? "<td></td>" : ""}<td colspan="3">total</td>`;
-  for (const m of colunas) html += COBERTURA.includes(m) ? celula(totMes[m], totMesC[m]) : `<td class="n">—</td>`;
+  for (const m of colunas) html += cob.includes(m) ? celula(totMes[m], totMesC[m]) : `<td class="n">—</td>`;
   html += celula(totF, totC) + `</tr></tbody></table></div>`;
   $("resultado").innerHTML = html;
-};
+}
+
+// ---------- GIRO (ordem dele, 26/09: "uma outra aba como análise de giro… venda e estoque desses clientes, julho a dezembro")
+async function perguntarGiro(){
+  msg("msg-pergunta", ""); $("resultado").innerHTML = ""; ULTIMO_GIRO = null;
+  const p = periodo(); if (!p) return;
+  const { de, ate, pedidos, semCarga, cob } = p;
+  const cliente = $("cliente").value.trim(), produto = $("produto").value.trim();
+  msg("msg-pergunta", "buscando…", "ok");
+  let q = sb.from("v_giro_produto_mes").select("mes,cliente,referencia,cor,descricao,venda,estoque,base_em")
+            .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("referencia").order("cor");
+  if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
+  if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
+  const { data, error } = await tudo(q);
+  if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
+  msg("msg-pergunta", "");
+  const avisos = [];
+  if (semCarga.length) avisos.push(`sem giro para ${semCarga.map(mesBR).join(", ")} — o giro de um mês sobe quando o mês fecha`);
+  if (!data.length) { msg("msg-pergunta", `Nenhuma linha de giro para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>cob.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
+  // uma linha por produto (cliente, ref, nome, cor — a Casa Pio vem sem cor); meses em colunas; célula = venda OU estoque (seletor)
+  const g = new Map();
+  for (const r of data) {
+    const k = [r.cliente, r.referencia, r.descricao || "", r.cor].join("|");
+    const a = g.get(k) || { cliente: r.cliente, referencia: r.referencia, descricao: r.descricao || "", cor: r.cor, meses: {}, tot_venda: 0 };
+    a.meses[r.mes.slice(0, 7)] = { venda: r.venda, estoque: r.estoque };
+    a.tot_venda += r.venda || 0;
+    g.set(k, a);
+  }
+  const linhas = [...g.values()].sort((x, y) => (x.cliente.localeCompare(y.cliente)) || (y.tot_venda - x.tot_venda));
+  ULTIMO_GIRO = { linhas, colunas: pedidos, cob, avisos, bases: [...new Set(data.map(r => r.base_em))].sort() };
+  desenharGiro();
+}
+function desenharGiro(){
+  const { linhas, colunas, cob, avisos, bases } = ULTIMO_GIRO;
+  const med = MEDIDA_GIRO, cls = med === "venda" ? "fat" : "est";
+  const muitosClientes = new Set(linhas.map(r => r.cliente)).size > 1;
+  const semCor = linhas.every(r => !r.cor);
+  const celula = v => v === null || v === undefined ? `<td class="n mu">—</td>` : (v ? `<td class="n ${cls}">${fmt(v)}</td>` : `<td class="n mu">0</td>`);
+  // totais por mês: soma só do que tem dado; estoque total é a soma dos estoques (do mês), venda total é a soma das vendas
+  const totMes = {}; for (const m of colunas) { const vs = linhas.map(r => (r.meses[m] || {})[med]).filter(v => v !== null && v !== undefined); totMes[m] = vs.length ? vs.reduce((s, v) => s + v, 0) : null; }
+  const totGeral = colunas.filter(m => cob.includes(m)).reduce((s, m) => s + (totMes[m] || 0), 0);
+  let html = `<div class="card"><b>${fmt(totGeral)} ${med === "venda" ? "pares vendidos" : "pares em estoque (soma dos meses)"}</b> — ${linhas.length} produto(s) · AG de ${bases.map(dmy).join(" e ")}` +
+             `<div class="seletor"><button data-med="venda" class="${med === "venda" ? "ativa" : ""}">venda</button><button data-med="estoque" class="${med === "estoque" ? "ativa" : ""}">estoque</button></div>` +
+             `${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
+  html += `<div class="card" style="overflow-x:auto;padding:8px"><table><thead><tr>${muitosClientes ? "<th>cliente</th>" : ""}<th>ref.</th><th>nome</th>${semCor ? "" : "<th>cor</th>"}`;
+  for (const m of colunas) html += `<th class="n">${mesBR(m)}</th>`;
+  html += `<th class="n">${med === "venda" ? "total" : "último"}</th></tr></thead><tbody>`;
+  for (const r of linhas) {
+    html += `<tr>${muitosClientes ? `<td>${r.cliente}</td>` : ""}<td class="mu">${r.referencia}</td><td>${r.descricao}</td>${semCor ? "" : `<td>${r.cor}</td>`}`;
+    let ultimo = null, total = 0;
+    for (const m of colunas) {
+      if (!cob.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
+      const v = (r.meses[m] || {})[med];
+      html += celula(v === undefined ? null : v);
+      if (v !== null && v !== undefined) { total += v; ultimo = v; }
+    }
+    // estoque não se soma no tempo: a última coluna mostra o ÚLTIMO estoque conhecido; venda soma
+    html += celula(med === "venda" ? total : ultimo) + `</tr>`;
+  }
+  html += `<tr class="tot">${muitosClientes ? "<td></td>" : ""}<td colspan="${semCor ? 2 : 3}">total</td>`;
+  for (const m of colunas) html += cob.includes(m) ? celula(totMes[m]) : `<td class="n">—</td>`;
+  html += `<td class="n"></td></tr></tbody></table></div>`;
+  $("resultado").innerHTML = html;
+  for (const b of document.querySelectorAll(".seletor button")) b.onclick = () => { MEDIDA_GIRO = b.dataset.med; desenharGiro(); };
+}
 arranque();
 </script>
 </body>
