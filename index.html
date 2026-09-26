@@ -128,7 +128,11 @@ async function prepararPergunta(){
   const { data: meses } = await sb.from("venda_mensal").select("mes").order("mes");
   COBERTURA = [...new Set((meses||[]).map(r => r.mes.slice(0,7)))];
   $("cobertura").textContent = COBERTURA.length ? "meses com carga no banco: " + COBERTURA.map(mesBR).join(", ") : "o banco ainda não tem carga nenhuma";
-  if (COBERTURA.length && !$("de").value) { $("de").value = COBERTURA[0]; $("ate").value = COBERTURA[COBERTURA.length-1]; }
+  // período padrão: o SEMESTRE do último mês carregado (ordem dele, 26/09: "o semestre dividindo os meses por colunas")
+  if (COBERTURA.length && !$("de").value) {
+    const ult = COBERTURA[COBERTURA.length - 1], ano = ult.slice(0, 4), m = +ult.slice(5, 7);
+    $("de").value = ano + (m <= 6 ? "-01" : "-07"); $("ate").value = ano + (m <= 6 ? "-06" : "-12");
+  }
 }
 function mesesEntre(de, ate){
   const out = []; let [a,m] = de.split("-").map(Number); const [a2,m2] = ate.split("-").map(Number);
@@ -145,7 +149,8 @@ $("bt-perguntar").onclick = async () => {
     msg("msg-pergunta", `<b>Não há carga no banco para ${semCarga.map(mesBR).join(", ")}.</b> Meses carregados: ${COBERTURA.map(mesBR).join(", ") || "nenhum"}. O número não existe aqui — não é zero.`, "aviso");
     return;
   }
-  const porLoja = false;   // ordem dele (25/09, 19h): "não coloca por porta ainda, coloca por cliente" — a loja fica no banco, pronta
+  if (pedidos.length > 12) { msg("msg-pergunta", "Período de até 12 meses por consulta.", "erro"); return; }
+  // por cliente, lojas somadas (ordem dele, 25/09: "não coloca por porta ainda") — a loja fica no banco, pronta
   let q = sb.from("venda_mensal").select("mes,cliente,porta,referencia,cor,descricao,pares_fat,pares_cart,base_em,fonte")
             .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("porta").order("pares_fat", { ascending: false }).limit(3000);
   if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
@@ -155,19 +160,39 @@ $("bt-perguntar").onclick = async () => {
   const avisos = [];
   if (semCarga.length) avisos.push(`sem carga para ${semCarga.map(mesBR).join(", ")} — esses meses NÃO estão na soma`);
   if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>COBERTURA.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
-  // "cliente inteiro": soma as lojas do mesmo produto no mesmo mês
-  let linhas = data;
-  if (!porLoja) {
-    const g = new Map();
-    for (const r of data) { const k = [r.mes, r.cliente, r.referencia, r.cor].join("|"); const a = g.get(k) || {...r, porta: "todas", pares_fat: 0, pares_cart: 0}; a.pares_fat += r.pares_fat; a.pares_cart += r.pares_cart; g.set(k, a); }
-    linhas = [...g.values()];
+  // ORDEM DELE (26/09): uma linha por PRODUTO — referência, nome e cor em colunas separadas — e os MESES em colunas.
+  // Lojas somadas (por cliente). Célula = faturado; carteira embaixo, em cinza, quando houver. Mês sem carga = "s/ carga", nunca zero.
+  const colunas = pedidos;                                  // os meses pedidos (o padrão é o semestre inteiro)
+  const g = new Map();
+  for (const r of data) {
+    const k = [r.cliente, r.referencia, r.descricao || "", r.cor].join("|");
+    const a = g.get(k) || { cliente: r.cliente, referencia: r.referencia, descricao: r.descricao || "", cor: r.cor, meses: {}, tot_fat: 0, tot_cart: 0 };
+    const m = r.mes.slice(0, 7);
+    const c = a.meses[m] || { fat: 0, cart: 0 };
+    c.fat += r.pares_fat; c.cart += r.pares_cart; a.meses[m] = c; a.tot_fat += r.pares_fat; a.tot_cart += r.pares_cart;
+    g.set(k, a);
   }
-  const totF = linhas.reduce((s,r) => s + r.pares_fat, 0), totC = linhas.reduce((s,r) => s + r.pares_cart, 0);
+  const linhas = [...g.values()].sort((x, y) => (x.cliente.localeCompare(y.cliente)) || (y.tot_fat - x.tot_fat));
+  const totF = linhas.reduce((s, r) => s + r.tot_fat, 0), totC = linhas.reduce((s, r) => s + r.tot_cart, 0);
+  const totMes = {}; for (const m of colunas) totMes[m] = linhas.reduce((s, r) => s + ((r.meses[m] || {}).fat || 0), 0);
   const bases = [...new Set(data.map(r => r.base_em))].sort();
-  let html = `<div class="card"><b>${fmt(totF)} pares faturados</b> · <b>${fmt(totC)} em carteira</b> (previstos para o período) — ${linhas.length} linha(s)${porLoja ? ", por loja" : ", cliente inteiro"} · base de ${bases.map(dmy).join(" e ")}${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
-  html += `<div class="card"><table><thead><tr><th>mês</th><th>cliente</th><th>produto</th><th class="n">faturado</th><th class="n">carteira</th></tr></thead><tbody>`;
-  for (const r of linhas) html += `<tr><td>${mesBR(r.mes)}<br><span class="mu">${dmy(r.base_em)}</span></td><td>${r.cliente}${porLoja ? `<br><span class="mu">loja ${r.porta || "?"}</span>` : ""}</td><td>${r.referencia} ${r.cor}<br><span class="mu">${r.descricao||""}</span></td><td class="n">${fmt(r.pares_fat)}</td><td class="n mu">${fmt(r.pares_cart)}</td></tr>`;
-  html += `<tr class="tot"><td colspan="3">total</td><td class="n">${fmt(totF)}</td><td class="n">${fmt(totC)}</td></tr></tbody></table></div>`;
+  const muitosClientes = new Set(linhas.map(r => r.cliente)).size > 1;
+  let html = `<div class="card"><b>${fmt(totF)} pares faturados</b> · <b>${fmt(totC)} em carteira</b> (previstos) — ${linhas.length} produto(s) · base de ${bases.map(dmy).join(" e ")}${avisos.length ? `<div class="msg aviso">${avisos.join("; ")}</div>` : ""}</div>`;
+  html += `<div class="card" style="overflow-x:auto"><table><thead><tr>${muitosClientes ? "<th>cliente</th>" : ""}<th>ref.</th><th>nome</th><th>cor</th>`;
+  for (const m of colunas) html += `<th class="n">${mesBR(m)}</th>`;
+  html += `<th class="n">total</th></tr></thead><tbody>`;
+  for (const r of linhas) {
+    html += `<tr>${muitosClientes ? `<td>${r.cliente}</td>` : ""}<td class="mu">${r.referencia}</td><td>${r.descricao}</td><td>${r.cor}</td>`;
+    for (const m of colunas) {
+      if (!COBERTURA.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
+      const c = r.meses[m];
+      html += `<td class="n">${c ? fmt(c.fat) : "0"}${c && c.cart ? `<br><span class="mu">cart. ${fmt(c.cart)}</span>` : ""}</td>`;
+    }
+    html += `<td class="n"><b>${fmt(r.tot_fat)}</b>${r.tot_cart ? `<br><span class="mu">cart. ${fmt(r.tot_cart)}</span>` : ""}</td></tr>`;
+  }
+  html += `<tr class="tot">${muitosClientes ? "<td></td>" : ""}<td colspan="3">total</td>`;
+  for (const m of colunas) html += `<td class="n">${COBERTURA.includes(m) ? fmt(totMes[m]) : "—"}</td>`;
+  html += `<td class="n">${fmt(totF)}</td></tr></tbody></table></div>`;
   $("resultado").innerHTML = html;
 };
 arranque();
