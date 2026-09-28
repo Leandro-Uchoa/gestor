@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestor</title>
-<!-- GESTOR — painel interno, v1.5 (TI, 25–26/09/2026). O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
+<!-- GESTOR — painel interno, v1.6 (TI, 25–28/09/2026). O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
      dentro; vamos botar um nome que não bloqueia a mente". Só LEITURA.
      Publicado em repositório PÚBLICO (GitHub Pages): aqui só HTML/CSS/JS e a chave publicável — nada de segredo, caminho de
      máquina ou nome real de cliente em exemplo. Login com e-mail e senha (Auth do Supabase); sem login não vê nada.
@@ -48,6 +48,10 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
 .abas button.ativa,.seletor button.ativa{background:var(--acc);color:#0b0c10;border-color:var(--acc)}
 .seletor{margin:10px 0 0}.seletor button{padding:8px;font-size:.85rem}
+/* ordem dele (28/09): filtro de cliente por NOME, um toque — nada de digitar no celular */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.chips button{width:auto;margin:0;padding:9px 12px;border-radius:999px;background:transparent;color:var(--ink);border:1px solid var(--bd);font-weight:600;font-size:.85rem}
+.chips button.ativa{background:var(--acc);color:#0b0c10;border-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -74,8 +78,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
     <button data-aba="giro">Análise de giro</button>
   </div>
   <div class="card">
-    <label>cliente (parte do nome basta)</label><input id="cliente" list="lista-clientes" placeholder="ex.: LOJA EXEMPLO" autocapitalize="characters">
-    <datalist id="lista-clientes"></datalist>
+    <label>cliente</label>
+    <div class="chips" id="chips-cliente"></div>
     <label>produto (referência ou nome; vazio = todos)</label><input id="produto" placeholder="ex.: nome do tênis ou referência" autocapitalize="characters">
     <div class="linha">
       <div><label>de (mês)</label><input id="de" type="month"></div>
@@ -181,7 +185,7 @@ async function prepararPergunta(){
     for (const r of cob || []) nomes.add(r.cliente);
     a.cob = [...new Set((cob||[]).map(r => r.mes.slice(0,7)))].sort();
   }
-  $("lista-clientes").innerHTML = [...nomes].sort().map(n => `<option value="${n}">`).join("");
+  montarChips([...nomes].sort());
   // período padrão: o SEMESTRE do último mês carregado (ordem dele, 26/09: "o semestre dividindo os meses por colunas")
   const cob = ABAS.carteira.cob.length ? ABAS.carteira.cob : ABAS.giro.cob;
   if (cob.length && !$("de").value) {
@@ -189,6 +193,16 @@ async function prepararPergunta(){
     $("de").value = ano + (m <= 6 ? "-01" : "-07"); $("ate").value = ano + (m <= 6 ? "-06" : "-12");
   }
   trocarAba(ABA);
+}
+// filtro de cliente: um botão por nome que existe no banco (das duas abas) + "todos"; um toque seleciona, outro toque no mesmo solta
+let CLIENTE_SEL = "";
+function montarChips(nomes){
+  const todos = ["", ...nomes];
+  $("chips-cliente").innerHTML = todos.map(n => `<button type="button" data-cli="${n}" class="${n === CLIENTE_SEL ? "ativa" : ""}">${n || "todos"}</button>`).join("");
+  for (const b of document.querySelectorAll("#chips-cliente button")) b.onclick = () => {
+    CLIENTE_SEL = (b.dataset.cli === CLIENTE_SEL) ? "" : b.dataset.cli;
+    for (const x of document.querySelectorAll("#chips-cliente button")) x.classList.toggle("ativa", x.dataset.cli === CLIENTE_SEL);
+  };
 }
 function mesesEntre(de, ate){
   const out = []; let [a,m] = de.split("-").map(Number); const [a2,m2] = ate.split("-").map(Number);
@@ -215,12 +229,12 @@ async function perguntarCarteira(){
   msg("msg-pergunta", ""); $("resultado").innerHTML = "";
   const p = periodo(); if (!p) return;
   const { de, ate, pedidos, semCarga, cob } = p;
-  const cliente = $("cliente").value.trim(), produto = $("produto").value.trim();
+  const cliente = CLIENTE_SEL, produto = $("produto").value.trim();
   msg("msg-pergunta", "buscando…", "ok");
   // por cliente, lojas somadas (ordem dele, 25/09: "não coloca por porta ainda") — a loja fica no banco, pronta
   let q = sb.from("v_venda_produto_mes").select("mes,cliente,referencia,cor,descricao,pares_fat,pares_cart,base_em")
             .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("referencia").order("cor");
-  if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
+  if (cliente) q = q.eq("cliente", cliente);
   if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
   const { data, error } = await tudo(q);
   if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
@@ -277,11 +291,11 @@ async function perguntarGiro(){
   msg("msg-pergunta", ""); $("resultado").innerHTML = ""; ULTIMO_GIRO = null;
   const p = periodo(); if (!p) return;
   const { de, ate, pedidos, semCarga, cob } = p;
-  const cliente = $("cliente").value.trim(), produto = $("produto").value.trim();
+  const cliente = CLIENTE_SEL, produto = $("produto").value.trim();
   msg("msg-pergunta", "buscando…", "ok");
   let q = sb.from("v_giro_produto_mes").select("mes,cliente,referencia,cor,descricao,venda,estoque,base_em")
             .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("referencia").order("cor");
-  if (cliente) q = q.ilike("cliente", "%" + cliente + "%");
+  if (cliente) q = q.eq("cliente", cliente);
   if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
   const { data, error } = await tudo(q);
   if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
