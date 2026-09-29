@@ -72,20 +72,27 @@
     if (real != null && real < 0) return `<div class="cb"><div class="b neg" style="height:${alturaNeg(real, meta)}px"></div></div>`;
     return `<div class="cb"><div class="b ${quem}${ouro ? " ouro" : ""}" style="height:${altura(real, meta)}px;animation-delay:${atraso || 0}s"></div></div>`;
   }
+  // abreviação só no celular (ordem dele 29/09, 15:57: "muito poluído"): −3,6k · +2,3k; abaixo de mil fica inteiro
+  const curto = n => { const a = Math.abs(n), s = n < 0 ? "-" : "+"; return a >= 1000 ? s + (a / 1000).toFixed(1).replace(".", ",").replace(",0", "") + "k" : s + a; };
+  const CURTOS = { "CONF_MASC": "C. MASC", "CORRIDA/TREINO": "CORR. TR", "CONF_FEM": "C. FEM", "CLASSICOS": "CLÁSS", "INFANTIL": "INFANT", "CORRE": "CORRE", "RUNNING": "RUNN", "TRAINING": "TRAIN", "RUN INSPIRED": "RUN INSP", "BASKETBALL": "BASKET" };
+  const dois = (n, longo) => `<span class="longo">${longo}</span><span class="cur">${curto(n)}</span>`;
   function desenhar(el, d) {
     if (d.erro) { el.innerHTML = `<div class="msg aviso">${esc(d.erro)}</div>`; return; }
     const per = MESES[+d.mes.slice(5, 7) - 1] + "/" + d.mes.slice(2, 4);
     const tot = d.total, n = d.faixas.length;
     const dt = { cms: bateu(tot.real_c, tot.meta_c), vend: bateu(tot.real_c, tot.meta_c) && bateu(tot.real_v, tot.meta_v) };
-    let cols = "", labs = "", r1 = "", r2 = "", r3 = "", r4 = "";
+    let cols = "", r1 = "", r2 = "", r3 = "", r4 = "";
     d.faixas.forEach((f, i) => {
       const g = dourado(f, tot), est = f.estado === "sem_tratamento" ? "padrao" : f.estado;
       const neg = f.real_v < 0 || f.real_c < 0;
-      cols += `<div class="col ${est}${neg ? " poco" : ""}"><div class="bars">${barra("cms", f.real_c, f.meta_c, g.cms, i * .06)}${barra("vend", f.real_v, f.meta_v, g.vend, i * .06 + .05)}</div></div>`;
+      const nome = f.nome.split(" / ").map(esc).join("<br>"), nomeCurto = esc(CURTOS[f.id] || f.nome.slice(0, 7));
+      // o nome mora embaixo do PRÓPRIO par de barras; o toque na coluna mostra a meta (no celular a meta não fica na tela)
+      cols += `<div class="col ${est}${neg ? " poco" : ""}" data-i="${i}"><div class="bars">${barra("cms", f.real_c, f.meta_c, g.cms, i * .06)}${barra("vend", f.real_v, f.meta_v, g.vend, i * .06 + .05)}</div>` +
+              `<div class="nome"><span class="longo">${nome}</span><span class="cur">${nomeCurto}</span></div>` +
+              `<div class="pop"><span class="cms">meta ${fmt(f.meta_c)}</span><span class="vend">meta ${fmt(f.meta_v)}</span></div></div>`;
       const [ec, cc] = extra(f.real_c, f.meta_c), [ev, cv] = extra(f.real_v, f.meta_v);
-      r1 += `<div class="c met cms ${est}">${fmt(f.meta_c)}</div>`; r2 += `<div class="c fal cms ${cc} ${est}">${ec}</div>`;
-      r3 += `<div class="c met vend ${est}">${fmt(f.meta_v)}</div>`; r4 += `<div class="c fal vend ${cv} ${est}">${ev}</div>`;
-      labs += `<div class="c lb ${est}">${esc(f.nome)}</div>`;
+      r1 += `<div class="c met cms ${est}">${fmt(f.meta_c)}</div>`; r2 += `<div class="c fal cms ${cc} ${est}">${dois(f.real_c - f.meta_c, ec)}</div>`;
+      r3 += `<div class="c met vend ${est}">${fmt(f.meta_v)}</div>`; r4 += `<div class="c fal vend ${cv} ${est}">${dois(f.real_v - f.meta_v, ev)}</div>`;
     });
     const [etc, ctc] = extra(tot.real_c, tot.meta_c), [etv, ctv] = extra(tot.real_v, tot.meta_v);
     const marcaNome = d.marca === "OLY" ? "Olympikus calçados" : (d.marca === "UA" ? "Under Armour calçados" : d.marca);
@@ -93,19 +100,19 @@
       <div class="cab"><h2>${esc(marcaNome)} · ${esc(d.nome)}</h2><span class="per">${per} · pares</span>
         <div class="leg"><span><i class="lc"></i>CMS</span><span><i class="lv"></i>${esc(d.nome)}</span></div></div>
       <div class="grade">
-        <div class="tot"><p class="t">TOTAL</p><div class="bars">${barra("cms", tot.real_c, tot.meta_c, dt.cms, 0)}${barra("vend", tot.real_v, tot.meta_v, dt.vend, .05)}</div></div>
-        <div class="eixo"><span style="bottom:196px">150%</span><span style="bottom:${H100 - 4}px">100%</span><span style="bottom:${Math.round(H100 / 2) - 4}px">50%</span><span style="bottom:-4px">0</span></div>
+        <div class="tot col" data-i="t"><div class="bars">${barra("cms", tot.real_c, tot.meta_c, dt.cms, 0)}${barra("vend", tot.real_v, tot.meta_v, dt.vend, .05)}</div><div class="nome"><b>TOTAL</b></div>
+          <div class="pop"><span class="cms">meta ${fmt(tot.meta_c)}</span><span class="vend">meta ${fmt(tot.meta_v)}</span></div></div>
         <div class="area"><div class="gr" style="bottom:200px"></div><div class="gr cem" style="bottom:${H100}px"></div><div class="gr" style="bottom:${Math.round(H100 / 2)}px"></div><div class="gr" style="bottom:0"></div><div class="cols">${cols}</div></div>
       </div>
       <div class="faixa">
-        <div class="r"><div class="tc met cms">${fmt(tot.meta_c)}</div><div class="rot cms">meta</div><div class="lin">${r1}</div></div>
-        <div class="r"><div class="tc fal cms ${ctc}">${etc}</div><div class="rot cms">CMS</div><div class="lin">${r2}</div></div>
-        <div class="r"><div class="tc met vend">${fmt(tot.meta_v)}</div><div class="rot vend">meta</div><div class="lin">${r3}</div></div>
-        <div class="r"><div class="tc fal vend ${ctv}">${etv}</div><div class="rot vend">${esc(d.nome)}</div><div class="lin">${r4}</div></div>
+        <div class="r meta"><div class="tc met cms">${fmt(tot.meta_c)}</div><div class="lin">${r1}</div></div>
+        <div class="r"><div class="tc fal cms ${ctc}">${dois(tot.real_c - tot.meta_c, etc)}</div><div class="lin">${r2}</div></div>
+        <div class="r meta"><div class="tc met vend">${fmt(tot.meta_v)}</div><div class="lin">${r3}</div></div>
+        <div class="r"><div class="tc fal vend ${ctv}">${dois(tot.real_v - tot.meta_v, etv)}</div><div class="lin">${r4}</div></div>
       </div>
-      <div class="lab"><div class="tc">total</div><div></div><div class="lin">${labs}</div></div>
-      <p class="pe">Carta campanha ${esc(d.carta)} · preposto ${esc(d.preposto)} · meta lida em ${dmyh(d.lido_em)} · real da CMS lido na Carta em ${d.cms_lido ? dmyh(d.cms_lido) : "—"} · <b>real de ${esc(d.nome)}: base de ${dmy(d.base_em)}${d.calculado ? " (calculado " + dmyh(d.calculado).slice(-5) + ")" : ""}</b> · potencial = faturado + carteira do mês${d.faltas.length ? " · sem real na base: " + esc(d.faltas.join(", ")) : ""}</p>
+      <p class="pe">base de ${dmy(d.base_em).slice(0, 5)} · meta lida ${dmy(d.lido_em).slice(0, 5)}</p>
     </div>`;
+    for (const c of el.querySelectorAll(".metas .col")) c.onclick = () => { const on = c.classList.contains("aberta"); for (const x of el.querySelectorAll(".metas .col.aberta")) x.classList.remove("aberta"); if (!on) c.classList.add("aberta"); };
   }
   window.Metas = { carregar, desenhar, dourado, altura, extra, fmt };
 })();
