@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestor</title>
-<!-- GESTOR — painel interno, v1.6 (TI, 25–28/09/2026). O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
+<!-- GESTOR — painel interno, v1.7 (TI, 25–29/09/2026). Aba METAS: desenho em metas.js, números do banco (v_meta_real,
+     v_decisao_vigente), modelo aprovado por ele em 29/09. O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
      dentro; vamos botar um nome que não bloqueia a mente". Só LEITURA.
      Publicado em repositório PÚBLICO (GitHub Pages): aqui só HTML/CSS/JS e a chave publicável — nada de segredo, caminho de
      máquina ou nome real de cliente em exemplo. Login com e-mail e senha (Auth do Supabase); sem login não vê nada.
@@ -52,6 +53,37 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
 .chips button{width:auto;margin:0;padding:9px 12px;border-radius:999px;background:transparent;color:var(--ink);border:1px solid var(--bd);font-weight:600;font-size:.85rem}
 .chips button.ativa{background:var(--acc);color:#0b0c10;border-color:var(--acc)}
+/* ---- METAS: o modelo aprovado por ele em 29/09 (ATA 23/09). Painel claro dentro do app escuro: as cores do modelo são as dele. ---- */
+.metas{background:#fff;color:#1c1814;border-radius:14px;padding:14px 12px 12px;font-size:13px;--cmsF:#1a6fd6;--vendF:#0f9f6a;--cmsP:#85B7EB;--vendP:#9FE1CB;--ouro:#eda100;--mu2:#7c7268;--bd2:#d9d2c6;--gl2:#ebe7df}
+.metas .cab{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}.metas h2{font-size:15px;margin:0;font-weight:800}.metas .per{color:var(--mu2);font-size:12px}
+.metas .leg{display:flex;gap:14px;font-size:11px;color:var(--mu2);margin-left:auto}.metas .leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}.metas .lc{background:var(--cmsF)}.metas .lv{background:var(--vendF)}
+.metas .grade{display:grid;grid-template-columns:84px 32px minmax(0,1fr);align-items:end}
+.metas .tot{padding-right:10px;border-right:1.5px solid var(--bd2)}.metas .tot .t{font-size:11px;letter-spacing:.08em;margin:0 0 6px;font-weight:800}
+.metas .bars{height:200px;display:flex;align-items:flex-end;justify-content:center;gap:6px;position:relative}.metas .tot .bars{gap:9px}
+.metas .cb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;width:15px}
+.metas .b{width:15px;border-radius:3px 3px 0 0;transform-origin:bottom;animation:sobe 1.4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.metas .b.cms{background:var(--cmsP)}.metas .b.vend{background:var(--vendP)}
+.metas .col.foco .b.cms,.metas .tot .b.cms{background:var(--cmsF)}.metas .col.foco .b.vend,.metas .tot .b.vend{background:var(--vendF)}
+.metas .b.ouro{background:var(--ouro)!important;box-shadow:0 0 10px 1px rgba(237,161,0,.45)}
+.metas .b.neg{position:absolute;left:0;right:0;top:100%;background:#d9534f;border-radius:0 0 3px 3px;transform-origin:top}
+.metas .col.abandonado .b{opacity:.28;filter:grayscale(1)}
+.metas .eixo{position:relative;height:200px;font-size:10px;color:var(--mu2);text-align:right;padding-right:5px}.metas .eixo span{position:absolute;right:5px;background:#fff;padding:0 1px}
+.metas .area{position:relative;height:200px}.metas .gr{position:absolute;left:0;right:0;border-top:1px solid var(--gl2)}.metas .gr.cem{border-top:1.5px dashed #6b6560}
+.metas .cols{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--n),1fr)}.metas .col{display:flex;align-items:flex-end;justify-content:center}
+.metas .faixa{display:grid;grid-template-columns:84px 32px minmax(0,1fr);margin-top:6px;border-top:1px solid var(--bd2)}.metas .faixa .lin{display:grid;grid-template-columns:repeat(var(--n),1fr)}
+.metas .faixa .c{text-align:center;font-variant-numeric:tabular-nums;padding:2px 1px;white-space:nowrap;min-width:0;font-size:11.5px}.metas .faixa .r{display:contents}
+.metas .faixa .rot{font-size:9px;color:var(--mu2);text-align:right;padding:2px 4px 2px 0;white-space:nowrap;grid-column:2;overflow:hidden}.metas .faixa .rot.cms{color:var(--cmsF)}.metas .faixa .rot.vend{color:var(--vendF)}
+.metas .faixa .tc{text-align:center;font-variant-numeric:tabular-nums;padding:2px 3px;font-size:11.5px;border-right:1.5px solid var(--bd2);grid-column:1}
+.metas .met.cms{color:var(--cmsF)}.metas .met.vend{color:var(--vendF)}.metas .met{font-weight:600}
+.metas .fal.cms{background:#e9f1fb;color:var(--cmsF)}.metas .fal.vend{background:#e6f6ef;color:var(--vendF)}.metas .fal.excedente{color:#0f9f6a;font-weight:800}
+.metas .c.abandonado{opacity:.5}
+.metas .lab{display:grid;grid-template-columns:84px 32px minmax(0,1fr);margin-top:5px}.metas .lab .lin{display:grid;grid-template-columns:repeat(var(--n),1fr)}
+.metas .lab .c{text-align:center;font-size:9.5px;color:var(--mu2);line-height:1.2;padding:0 1px}.metas .lab .tc{grid-column:1;text-align:center;font-size:10px;color:var(--mu2)}
+.metas .lab .c.foco{color:#1c1814;font-weight:800}.metas .lab .c.abandonado{opacity:.45}
+.metas .pe{color:var(--mu2);font-size:10.5px;margin:12px 0 0}.metas .pe b{color:#1c1814}
+@media (max-width:420px){.metas .grade,.metas .faixa,.metas .lab{grid-template-columns:58px 26px minmax(0,1fr)}.metas .b,.metas .cb{width:10px}.metas .bars{gap:3px}.metas .faixa .c{font-size:10px}.metas .lab .c{font-size:8.5px}}
+@media (prefers-reduced-motion:reduce){.metas .b{animation:none}}
 </style>
 </head>
 <body>
@@ -76,8 +108,13 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
   <div class="abas">
     <button data-aba="carteira" class="ativa">Carteira</button>
     <button data-aba="giro">Análise de giro</button>
+    <button data-aba="metas">Metas</button>
   </div>
-  <div class="card">
+  <div id="tela-metas" class="oculto">
+    <div class="card" style="padding:10px 14px"><label>mês</label><div class="chips" id="chips-mes"></div></div>
+    <div id="metas-painel"></div>
+  </div>
+  <div class="card" id="filtros">
     <label>cliente</label>
     <div class="chips" id="chips-cliente"></div>
     <label>produto (referência ou nome; vazio = todos)</label><input id="produto" placeholder="ex.: nome do tênis ou referência" autocapitalize="characters">
@@ -95,6 +132,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="metas.js?v=17"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -148,7 +186,18 @@ const ABAS = {
               rodape: "Carteira: verde claro = faturado no mês; verde escuro = em carteira, previsto para o mês. Da base dele, por cliente (lojas somadas)." },
   giro:     { subtitulo: "· análise de giro", visao_cob: "v_cobertura_giro", cob: [],
               rodape: "Giro: venda e estoque do cliente por produto e mês, das análises de giro. A Casa Pio não entrega por cor. Célula vazia (—) = a AG não tem o dado; 0 = vendeu zero." },
+  metas:    { subtitulo: "· metas", visao_cob: null, cob: [],
+              rodape: "Metas: meta da Carta Campanha e real do mês (faturado + carteira do mês, só dos clientes que pontuam). CMS primeiro, azul; o vendedor, verde. Dourado só quando a regra comercial paga. Foco e abandonado são decisão dele, na segunda-feira." },
 };
+let MES_METAS = null;
+async function mostrarMetas(){
+  const el = $("metas-painel"); el.innerHTML = `<div class="msg ok">buscando…</div>`;
+  const d = await Metas.carregar(sb, MES_METAS);
+  const meses = d.meses || [];
+  $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}">${mesBR(m)}</button>`).join("");
+  for (const b of document.querySelectorAll("#chips-mes button")) b.onclick = () => { MES_METAS = b.dataset.mes; mostrarMetas(); };
+  Metas.desenhar(el, d);
+}
 let ABA = "carteira";
 let MEDIDA_GIRO = "venda";         // o que a célula do giro mostra: venda ou estoque (um número por célula, ordem dele)
 let ULTIMO_GIRO = null;            // último resultado do giro, para trocar venda/estoque sem ir ao banco de novo
@@ -158,6 +207,9 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
+  const metas = nova === "metas";
+  $("tela-metas").classList.toggle("oculto", !metas); $("filtros").classList.toggle("oculto", metas); $("resultado").classList.toggle("oculto", metas);
+  if (metas) { mostrarMetas(); return; }
   mostrarCobertura();
 }
 for (const b of document.querySelectorAll(".abas button")) b.onclick = () => trocarAba(b.dataset.aba);
@@ -181,6 +233,7 @@ async function tudo(consulta){
 async function prepararPergunta(){
   const nomes = new Set();
   for (const a of Object.values(ABAS)) {
+    if (!a.visao_cob) continue;
     const { data: cob } = await tudo(sb.from(a.visao_cob).select("cliente,mes").order("mes").order("cliente"));
     for (const r of cob || []) nomes.add(r.cliente);
     a.cob = [...new Set((cob||[]).map(r => r.mes.slice(0,7)))].sort();
