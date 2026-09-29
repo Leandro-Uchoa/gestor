@@ -65,6 +65,9 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .metas .pop{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% - 4px);background:#1c1814;color:#fff;font-size:10px;padding:5px 7px;border-radius:7px;white-space:nowrap;z-index:5;line-height:1.5}
 .metas .pop .cms{color:#85B7EB;display:block}.metas .pop .vend{color:#9FE1CB;display:block}.metas .col.aberta .pop{display:block}
 .metas .col{cursor:pointer}
+.metas .b.vazia{height:0;border-top:2px dotted var(--mu2);width:15px;background:none}
+.metas .rot100{position:absolute;right:4px;top:-13px;font-size:9px;color:#b0281f;font-weight:700;background:#fff;padding:0 3px}
+.metas .medida{color:#1c1814}.metas.futuro .medida{color:#7c4dff}
 .metas .cb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;width:15px}
 .metas .b{width:15px;border-radius:3px 3px 0 0;transform-origin:bottom;animation:sobe 1.4s cubic-bezier(.2,.8,.2,1) both}
 @keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
@@ -134,7 +137,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="metas.js?v=18"></script>
+<script src="metas.js?v=20"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -195,7 +198,8 @@ async function mostrarMetas(){
   const el = $("metas-painel"); el.innerHTML = `<div class="msg ok">buscando…</div>`;
   const d = await Metas.carregar(sb, MES_METAS);
   const meses = d.meses || [];
-  $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}">${mesBR(m)}</button>`).join("");
+  // SET · OUT · NOV · DEZ, abrindo no mês corrente (pedido dele, 29/09); à frente é carteira, não real
+  $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}">${MESES[+m.slice(5,7)-1].toUpperCase()}</button>`).join("");
   for (const b of document.querySelectorAll("#chips-mes button")) b.onclick = () => { MES_METAS = b.dataset.mes; mostrarMetas(); };
   Metas.desenhar(el, d);
 }
