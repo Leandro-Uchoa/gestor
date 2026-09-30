@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestor</title>
-<!-- GESTOR — painel interno, v1.8 (TI, 25–29/09/2026). Aba METAS: desenho em metas.js, números do banco (v_meta_real,
-     v_decisao_vigente), modelo aprovado por ele em 29/09. O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap">
+<!-- GESTOR — painel interno, v2.0 (TI, 25–30/09/2026). Aba METAS: desenho em metas.js, números do banco (v_meta_real,
+     carta_real, v_carteira_faixa, v_decisao_vigente), visual aprovado por ele em 30/09. O nome é dele: "portal de consulta de carteira é UMA das coisas que vai ter
      dentro; vamos botar um nome que não bloqueia a mente". Só LEITURA.
      Publicado em repositório PÚBLICO (GitHub Pages): aqui só HTML/CSS/JS e a chave publicável — nada de segredo, caminho de
      máquina ou nome real de cliente em exemplo. Login com e-mail e senha (Auth do Supabase); sem login não vê nada.
@@ -53,42 +54,76 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
 .chips button{width:auto;margin:0;padding:9px 12px;border-radius:999px;background:transparent;color:var(--ink);border:1px solid var(--bd);font-weight:600;font-size:.85rem}
 .chips button.ativa{background:var(--acc);color:#0b0c10;border-color:var(--acc)}
-/* ---- METAS: o modelo aprovado por ele em 29/09 (ATA 23/09). Painel claro dentro do app escuro: as cores do modelo são as dele. ---- */
-.metas{background:#fff;color:#1c1814;border-radius:14px;padding:14px 12px 12px;font-size:13px;--cmsF:#1a6fd6;--vendF:#0f9f6a;--cmsP:#85B7EB;--vendP:#9FE1CB;--ouro:#eda100;--mu2:#7c7268;--bd2:#d9d2c6;--gl2:#ebe7df}
-.metas .cab{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}.metas h2{font-size:15px;margin:0;font-weight:800}.metas .per{color:var(--mu2);font-size:12px}
-.metas .leg{display:flex;gap:14px;font-size:11px;color:var(--mu2);margin-left:auto}.metas .leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}.metas .lc{background:var(--cmsF)}.metas .lv{background:var(--vendF)}
-.metas .grade{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:end}
-.metas .tot{padding-right:8px;border-right:1.5px solid var(--bd2);position:relative}
-.metas .bars{height:200px;display:flex;align-items:flex-end;justify-content:center;gap:6px;position:relative}.metas .tot .bars{gap:9px}
-.metas .nome{text-align:center;font-size:9.5px;color:var(--mu2);line-height:1.15;margin-top:4px;min-height:22px}.metas .col.foco .nome{color:#1c1814;font-weight:800}.metas .col.abandonado .nome{opacity:.45}
-.metas .cur{display:none}
-.metas .pop{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% - 4px);background:#1c1814;color:#fff;font-size:10px;padding:5px 7px;border-radius:7px;white-space:nowrap;z-index:5;line-height:1.5}
-.metas .pop .cms{color:#85B7EB;display:block}.metas .pop .vend{color:#9FE1CB;display:block}.metas .col.aberta .pop{display:block}
-.metas .col{cursor:pointer}
-.metas .b.vazia{height:0;border-top:2px dotted var(--mu2);width:15px;background:none}
-.metas .rot100{position:absolute;right:4px;top:-13px;font-size:9px;color:#b0281f;font-weight:700;background:#fff;padding:0 3px}
-.metas .medida{color:#1c1814}.metas.futuro .medida{color:#7c4dff}
-.metas .cb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;width:15px}
-.metas .b{width:15px;border-radius:3px 3px 0 0;transform-origin:bottom;animation:sobe 1.4s cubic-bezier(.2,.8,.2,1) both}
+/* ---- METAS: o visual aprovado por ele em 30/09 (BOSS; canvas "Revisão · celular" e "Revisão · computador"). Cores e medidas
+   são as do desenho; o que é regra está no cabeçalho de metas.js. Painel escuro, fonte Sora. ---- */
+.mt{--cf:#4C8DFF;--cp:#3A67B0;--vf:#3EE6A0;--vp:#2B9C7A;--ouro:#F2B632;--prata:#C9D1DC;--txt:#F2F4F7;--mut:#9AA3B2;--eixo:#3A4250;--l100:#6B7486;--mm:#6B7486;--rot:#8A93A3;
+    background:#0E1116;color:var(--txt);font-family:'Sora',system-ui,sans-serif;margin:0 -16px;padding:4px 0 8px 16px;display:flex;flex-direction:column;gap:24px}
+.mt .rot{font-size:12px;letter-spacing:.14em;color:var(--rot);font-weight:600;margin-bottom:12px}
+.mt .sec{display:flex;flex-direction:column}.mt .sec.fam,.mt .leg,.mt .pe{padding-right:16px}
+.mt .rolo{overflow-x:auto;-webkit-overflow-scrolling:touch}.mt .fila{display:flex;align-items:stretch;width:max-content;padding-right:16px}
+/* o cartão do TOTAL: roxo, separado, barras e linha de 100% próprias, números maiores */
+.mt .tot{width:158px;flex-shrink:0;margin-right:26px;padding:14px 12px 14px;border-radius:18px;background:#241D52;border:1px solid #4E43A8;display:flex;flex-direction:column}
+.mt .tot .nm{font-size:12px;font-weight:800;letter-spacing:.12em;color:#D9D3FF;min-height:0}
+.mt .tot .st{margin-top:6px;gap:14px}.mt .tot .st .s{width:18px;height:18px}
+.mt .tot .bars{height:200px;gap:8px;border-bottom-color:#6A5FC4}.mt .tot .l100{left:-2px;right:-2px;border-color:#BDB5FF}
+.mt .tot .b{width:34px;border-radius:6px 6px 0 0}.mt .tot .b.c{background:#9DB4FF}.mt .tot .b.v{background:#7BF0C4}
+.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#B9C9FF}.mt .tot .g.v{color:#8FF5CF}.mt .tot .m{color:#A59ED8}
+.mt .trava{margin-top:12px;padding-top:10px;border-top:1px solid #4E43A8;display:flex;flex-direction:column;gap:6px}
+.mt .trava .tl{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;letter-spacing:.08em;color:#D9D3FF}.mt .trava .tl b{font-size:15px;font-weight:800;color:#fff}
+.mt .trava .tb{position:relative;height:6px;border-radius:3px;background:#3A3175}.mt .trava .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#7BF0C4}
+/* as faixas: um cartão por faixa, na fila; três tons */
+.mt .fxs{display:flex;gap:10px}
+.mt .fx{width:108px;flex-shrink:0;min-width:0;display:flex;flex-direction:column;padding:14px 10px 12px;border-radius:16px;background:#12161D;border:1px solid #1E2530}
+.mt .fx.foco{background:#18202C;border-color:#2C3A52}
+.mt .nm{font-size:12px;line-height:1.3;min-height:32px;font-weight:400}.mt .fx.foco .nm{font-weight:800}.mt .fx.abandonado .nm{color:var(--mut)}
+.mt .st{height:18px;display:flex;justify-content:center;gap:12px}
+.mt .s{display:inline-block;width:16px;height:16px;opacity:0}.mt .s svg{width:100%;height:100%;display:block}.mt .s.on{opacity:1}.mt .s svg path{fill:var(--ouro)}.mt .s.prata svg path{fill:var(--prata)}
+.mt .bars{position:relative;height:186px;display:flex;align-items:flex-end;justify-content:center;gap:6px;border-bottom:1px solid var(--eixo)}
+.mt .l100{position:absolute;left:-4px;right:-4px;bottom:66.67%;border-top:1.5px dashed var(--l100)}
+.mt .rot100{position:absolute;right:0;top:-14px;font-size:9px;color:#ff9a9a;font-weight:700;white-space:nowrap}
+.mt .b{width:24px;border-radius:5px 5px 0 0;transform-origin:bottom;animation:sobe 1.3s cubic-bezier(.2,.8,.2,1) both}
 @keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.metas .b.cms{background:var(--cmsP)}.metas .b.vend{background:var(--vendP)}
-.metas .col.foco .b.cms,.metas .tot .b.cms{background:var(--cmsF)}.metas .col.foco .b.vend,.metas .tot .b.vend{background:var(--vendF)}
-.metas .b.ouro{background:var(--ouro)!important;box-shadow:0 0 10px 1px rgba(237,161,0,.45)}
-.metas .b.neg{position:absolute;left:0;right:0;top:100%;background:#d9534f;border-radius:0 0 3px 3px;transform-origin:top}
-.metas .col.abandonado .b{opacity:.28;filter:grayscale(1)}
-.metas .area{position:relative}.metas .gr{position:absolute;left:0;right:0;border-top:1px solid var(--gl2)}.metas .gr.cem{border-top:1.5px dashed #6b6560}
-.metas .area .gr{bottom:auto}.metas .area .gr:nth-child(1){top:0}.metas .area .gr:nth-child(2){top:67px}.metas .area .gr:nth-child(3){top:133px}.metas .area .gr:nth-child(4){top:200px}
-.metas .cols{position:relative;display:grid;grid-template-columns:repeat(var(--n),1fr)}.metas .col{position:relative;display:flex;flex-direction:column;justify-content:flex-end}
-.metas .faixa{display:grid;grid-template-columns:76px minmax(0,1fr);margin-top:4px;border-top:1px solid var(--bd2)}.metas .faixa .lin{display:grid;grid-template-columns:repeat(var(--n),1fr)}
-.metas .faixa .c{text-align:center;font-variant-numeric:tabular-nums;padding:2px 1px;white-space:nowrap;min-width:0;font-size:11.5px}.metas .faixa .r{display:contents}
-.metas .faixa .tc{text-align:center;font-variant-numeric:tabular-nums;padding:2px 3px;font-size:11.5px;border-right:1.5px solid var(--bd2);grid-column:1}
-.metas .met.cms{color:var(--cmsF)}.metas .met.vend{color:var(--vendF)}.metas .met{font-weight:600}
-.metas .fal.cms{background:#e9f1fb;color:var(--cmsF)}.metas .fal.vend{background:#e6f6ef;color:var(--vendF)}.metas .fal.excedente{color:#0f9f6a;font-weight:800}
-.metas .c.abandonado{opacity:.5}
-.metas .pe{color:var(--mu2);font-size:10.5px;margin:10px 0 0}
-@media (max-width:600px){.metas .grade,.metas .faixa{grid-template-columns:52px minmax(0,1fr)}.metas .b,.metas .cb{width:10px}.metas .bars{gap:3px}.metas .tot .bars{gap:6px}
-  .metas .longo{display:none}.metas .cur{display:inline}.metas .faixa .r.meta{display:none}.metas .faixa .c,.metas .faixa .tc{font-size:11px;padding:3px 1px}.metas .nome{font-size:9px}}
-@media (prefers-reduced-motion:reduce){.metas .b{animation:none}}
+.mt .fx .b.c{background:var(--cp)}.mt .fx .b.v{background:var(--vp)}.mt .fx.foco .b.c{background:var(--cf)}.mt .fx.foco .b.v{background:var(--vf)}
+.mt .fx.abandonado .b{opacity:.55}
+.mt .b.ouro{background:var(--ouro)!important}
+.mt .b.vazia{border-top:2px dotted var(--mut);height:0}
+.mt .num{display:flex;flex-direction:column;min-width:0}.mt .cel{display:flex;flex-direction:column;min-width:0}
+.mt .g{font-size:16px;font-weight:700;margin-top:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.mt .cel.v .g{margin-top:6px}
+.mt .m{font-size:11px;color:var(--mm);white-space:nowrap}.mt .m.fat{font-size:10px}
+.mt .fx .g.c{color:#8FA9D6}.mt .fx.foco .g.c{color:#7FAEFF}.mt .fx.abandonado .g.c{color:var(--mut)}
+.mt .fx .g.v{color:#7CC9AE}.mt .fx.foco .g.v{color:#5CF0B4}.mt .fx.abandonado .g.v{color:var(--mut)}
+.mt .fx .g.ok{color:#fff}
+/* outras famílias em R$: bloco próprio, tons padrão */
+.mt .fms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mt .fm{display:flex;flex-direction:column;padding:12px 6px 10px;border-radius:14px;background:#12161D;border:1px solid #1E2530;min-width:0}
+.mt .fm .nm{font-size:11px;font-weight:600;min-height:16px}
+.mt .fm .bars{height:130px;margin-top:8px;gap:5px}.mt .fm .l100{left:-2px;right:-2px}
+.mt .fm .b{width:18px;border-radius:4px 4px 0 0}.mt .fm .b.c{background:var(--cp)}.mt .fm .b.v{background:var(--vp)}
+.mt .fm .g{font-size:13px;margin-top:8px}.mt .fm .cel.v .g{margin-top:4px}.mt .fm .m{font-size:10px}
+.mt .fm .g.c{color:#8FA9D6}.mt .fm .g.v{color:#4ADE9C}.mt .fm .g.ok{color:#fff}
+.mt .leg{display:flex;flex-wrap:wrap;gap:12px 16px;font-size:11px;color:var(--rot)}.mt .leg span{display:flex;align-items:center;gap:6px}
+.mt .leg .q{width:10px;height:10px;border-radius:3px;display:inline-block}.mt .leg .q.c{background:var(--cf)}.mt .leg .q.v{background:var(--vf)}.mt .leg .s{width:13px;height:13px}
+.mt .pe{color:var(--rot);font-size:11px;margin:0}
+/* o seletor de mês: segmentado, como no desenho */
+.segm{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:6px;padding:4px;border-radius:14px;background:#161B24;margin:0 0 14px}
+.segm button{height:44px;border:0;border-radius:10px;background:transparent;color:#C4CAD4;font-family:'Sora',system-ui,sans-serif;font-size:14px;font-weight:600;margin:0;padding:0;width:auto}
+.segm button.ativa{background:#F2F4F7;color:#0E1116;font-weight:800}.segm .longo{display:none}
+/* computador: total à esquerda com 48px até as faixas; faixas em grade; famílias alinhadas sob as faixas */
+@media (min-width:900px){
+  .mt{margin:0;padding:4px 0 8px;gap:28px}.mt .sec.fam,.mt .leg,.mt .pe{padding-right:0}
+  .mt .fila{width:auto;padding-right:0}.mt .tot{width:250px;margin-right:48px;padding:18px 18px 16px;border-radius:20px}
+  .mt .tot .nm{font-size:13px}.mt .tot .st{gap:40px}.mt .tot .st .s{width:20px;height:20px}.mt .tot .bars{height:210px;gap:12px}.mt .tot .l100{left:0;right:0}
+  .mt .tot .b{width:52px;border-radius:7px 7px 0 0}.mt .tot .g{font-size:26px}
+  .mt .fxs{flex:1;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:12px}.mt .fx{width:auto;padding:14px 12px 12px}
+  .mt .st{gap:22px}.mt .bars{height:210px;gap:8px}.mt .b{width:32px}
+  .mt .fam .fms{padding-left:298px;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:12px}
+  .mt .fm{padding:14px 12px 12px;border-radius:16px}.mt .fm .nm{font-size:12px;min-height:0}.mt .fm .bars{height:150px;margin-top:10px;gap:8px}.mt .fm .l100{left:-4px;right:-4px}
+  .mt .fm .b{width:32px;border-radius:5px 5px 0 0}.mt .fm .g{font-size:14px}.mt .fm .m{font-size:11px}
+  .segm{display:inline-flex;gap:4px;border-radius:12px;padding:4px}.segm button{height:40px;padding:0 18px;border-radius:9px}.segm .longo{display:inline}.segm .cur{display:none}
+}
+/* computador: no TOTAL a CMS e o vendedor ficam lado a lado (cabe); nas faixas e famílias ficam empilhados (medido 30/09: lado a lado não cabe) */
+@media (min-width:900px){.mt .tot .num{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.mt .tot .g,.mt .tot .cel.v .g{margin-top:0}}
+@media (prefers-reduced-motion:reduce){.mt .b{animation:none}}
 </style>
 </head>
 <body>
@@ -116,7 +151,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
     <button data-aba="metas">Metas</button>
   </div>
   <div id="tela-metas" class="oculto">
-    <div class="card" style="padding:10px 14px"><label>mês</label><div class="chips" id="chips-mes"></div></div>
+    <div class="segm" id="chips-mes"></div>
     <div id="metas-painel"></div>
   </div>
   <div class="card" id="filtros">
@@ -137,12 +172,13 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="metas.js?v=20"></script>
+<script src="metas.js?v=22"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
 const $ = id => document.getElementById(id);
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const MESES_LONGOS = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
 const fmt = n => Number(n).toLocaleString("pt-BR");
 const mesBR = iso => { const [a,m] = iso.slice(0,7).split("-"); return MESES[+m-1] + "/" + a.slice(2); };
 const dmy = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4) : "";
@@ -199,7 +235,7 @@ async function mostrarMetas(){
   const d = await Metas.carregar(sb, MES_METAS);
   const meses = d.meses || [];
   // SET · OUT · NOV · DEZ, abrindo no mês corrente (pedido dele, 29/09); à frente é carteira, não real
-  $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}">${MESES[+m.slice(5,7)-1].toUpperCase()}</button>`).join("");
+  $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}"><span class="longo">${MESES_LONGOS[+m.slice(5,7)-1]}</span><span class="cur">${MESES[+m.slice(5,7)-1].toUpperCase()}</span></button>`).join("");
   for (const b of document.querySelectorAll("#chips-mes button")) b.onclick = () => { MES_METAS = b.dataset.mes; mostrarMetas(); };
   Metas.desenhar(el, d);
 }
