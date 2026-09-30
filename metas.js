@@ -13,6 +13,7 @@
       nenhuma estrela; o total do vendedor NÃO é exigido (palavra dele, 17/09).
    6. Outras famílias em R$ (acessório, meias, chinelo, confecção) em bloco próprio: meta, falta e barras de CMS e vendedor.
       % em VALOR (real_rs ÷ valor_ref_rs), nunca o % da tela. Faixa sem meta cadastrada aparece "sem meta" — meta nunca é inventada.
+      Família batida pela CMS DOURA (barra + estrela), pela meta própria da família em valor — não depende do total de tênis (30/09).
    7. Seletor de mês no topo (index.html). Mês à frente mostra "carteira": a do vendedor calculada da base (CART por mês de PREV FAT,
       só quem pontua); a da CMS é a leitura do NÚCLEO.
    8. Animação: as barras sobem em ~1,3 s ao abrir e PARAM. Sem ícones, sem emoji, sem texto explicativo.
@@ -161,9 +162,13 @@
     });
     let fams = "";
     d.familias.forEach((f, i) => {
+      // família em R$ é meta própria em valor: o ouro da CMS acende quando ela bate a meta DAQUELA família, sem depender do total de
+      // tênis (Léo via BOSS, 30/09). O ouro do vendedor na família segue desligado com as outras estrelas dele.
+      const ouroC = bateu(f.real_c, f.meta_c);
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
-        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, false, i * .06)}${barra("v", f.real_v, f.meta_v, false, i * .06 + .05)}</div>
+        <div class="st">${estrela("c", ouroC)}</div>
+        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${barra("v", f.real_v, f.meta_v, false, i * .06 + .05)}</div>
         <div class="num">${celula("c", gapReais(f.real_c, f.meta_c), metaReais(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c, true))}${celula("v", gapReais(f.real_v, f.meta_v), metaReais(f.meta_v), bateu(f.real_v, f.meta_v), fatCart(f.fat_v, f.real_v, true))}</div>
       </div>`;
     });
