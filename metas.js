@@ -69,7 +69,7 @@
       tudo(sb.from("faixa_carta").select("faixa,ordem,total,unidade").eq("marca", marca).order("ordem")),
       tudo(sb.from("v_meta_real").select("preposto,faixa,total,unidade,meta_pares,valor_ref_rs,carta,lido_em").eq("marca", marca).eq("mes", mes01).in("preposto", [preposto, "TODOS"])),
       tudo(sb.from("v_carteira_faixa").select("faixa,pares_fat,pares_cart,base_em").eq("marca", marca).eq("mes", mes01).eq("preposto", preposto)),
-      tudo(sb.from("carta_real").select("preposto,faixa,real_pares,real_rs,fat_pares,fat_rs,lido_em").eq("marca", marca).eq("mes", mes01).in("preposto", [preposto, "TODOS"])),
+      tudo(sb.from("carta_real").select("preposto,faixa,real_pares,real_rs,fat_pares,fat_rs,base,lido_em").eq("marca", marca).eq("mes", mes01).in("preposto", [preposto, "TODOS"])),
       tudo(sb.from("v_decisao_vigente").select("faixa,estado").eq("marca", marca).eq("preposto", preposto).eq("mes", mes01)),
       sb.from("preposto").select("nome").eq("preposto", preposto).maybeSingle(),
       sb.from("carga").select("carregado_em").eq("fonte", "DETALHADA").eq("status", "ok").order("id", { ascending: false }).limit(1),
@@ -111,6 +111,10 @@
              base_em: (faixas.find(f => f.base_em) || {}).base_em, calculado: cg.data && cg.data[0] ? cg.data[0].carregado_em : null,
              carta: totRow ? totRow.carta : "", lido_em: totRow ? totRow.lido_em : null,
              vend_lido: (faixas.find(f => f.vend_lido) || {}).vend_lido, cms_lido: (totRow && totRow.lido_c && totRow.lido_c.lido_em) || (faixas.find(f => f.cms_lido) || {}).cms_lido,
+             // a BASE da leitura (01/10): "faturado" = mês fechado, lido como faturado; "potencial" = faturado + carteira. Vem da leitura do TOTAL
+             // (ou da primeira faixa com leitura); a página só escreve "faturado" se a leitura disser faturado.
+             base_c: (totRow && totRow.lido_c && totRow.lido_c.base) || ((cr.data.find(r => r.preposto === "TODOS") || {}).base) || null,
+             base_v: (!futuro && totRow && totRow.lido_v && totRow.lido_v.base) || ((!futuro && (cr.data.find(r => r.preposto === preposto) || {}).base) || null),
              fam_lido_c: (familias.find(f => f.cms_lido) || {}).cms_lido, fam_lido_v: (familias.find(f => f.vend_lido) || {}).vend_lido };
   }
 
@@ -139,7 +143,8 @@
   const estrela = (quem, on, tom) => `<i class="s ${quem}${on ? " on" : ""}${tom ? " " + tom : ""}">${ESTRELA}</i>`;
   const celula = (quem, gap, meta, ok, fat) => `<div class="cel ${quem}"><b class="g ${quem}${ok ? " ok" : ""}">${gap}</b><span class="m">${meta}</span>${fat ? `<span class="m fat">${fat}</span>` : ""}</div>`;
   // faturado separado do potencial, quando a leitura trouxe (regra 9): "fat N + cart M"
-  const fatCart = (fat, real, reais) => (fat == null || real == null) ? "" : (reais ? `fat R$ ${kk(fat)} + cart R$ ${kk(real - fat)}` : `fat ${fmt(fat)} + cart ${fmt(real - fat)}`);
+  // mês fechado lido como faturado tem fat == real: não há carteira a mostrar
+  const fatCart = (fat, real, reais) => (fat == null || real == null || fat === real) ? "" : (reais ? `fat R$ ${kk(fat)} + cart R$ ${kk(real - fat)}` : `fat ${fmt(fat)} + cart ${fmt(real - fat)}`);
 
   function desenhar(el, d) {
     if (d.erro) { el.innerHTML = `<div class="msg aviso">${esc(d.erro)}</div>`; return; }
@@ -180,10 +185,14 @@
     const fonteM = d.lido_em ? `meta lida ${dm(d.lido_em)}` : "meta não cadastrada";
     const difere = (a, b) => a && b && Math.abs(new Date(a) - new Date(b)) > 60 * 1000;
     const fonteF = d.familias.length ? ((difere(d.fam_lido_c, d.cms_lido) || difere(d.fam_lido_v, d.vend_lido)) ? ` · famílias R$ lidas ${dmh(d.fam_lido_c || d.fam_lido_v)}` : "") : "";
-    const potencial = d.futuro ? "" : " · potencial (faturado + carteira)";
+    // a base da leitura, por fonte (BOSS, 01/10): "setembro fechado · faturado · …" só quando a leitura diz faturado; senão "potencial"
+    const nomeMes = MESES[+d.mes.slice(5, 7) - 1];
+    const fechado = !d.futuro && d.base_c === "faturado" && (d.base_v === "faturado" || d.base_v == null);
+    const baseTxt = d.futuro ? "" : (fechado ? ` · ${nomeMes} fechado · faturado` :
+      (d.base_c === "faturado" || d.base_v === "faturado" ? ` · CMS ${d.base_c === "faturado" ? "faturado" : "potencial"} · ${esc(d.nome)} ${d.base_v === "faturado" ? "faturado" : "potencial"}` : " · potencial (faturado + carteira)"));
     el.innerHTML = `<div class="mt${d.futuro ? " futuro" : ""}${d.semMeta ? " sem-meta" : ""}" style="--n:${d.faixas.length}">
       <div class="sec">
-        <div class="rot">CALÇADOS · PARES${d.futuro ? " EM CARTEIRA" : ""}</div>
+        <div class="rot">CALÇADOS · PARES${d.futuro ? " EM CARTEIRA" : (fechado ? " FATURADOS" : "")}</div>
         <div class="rolo"><div class="fila">
           <div class="tot">
             <div class="nm">TOTAL</div>
@@ -197,7 +206,7 @@
       </div>
       ${d.familias.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$${d.futuro ? " EM CARTEIRA" : ""}</div><div class="fms">${fams}</div></div>` : ""}
       <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>${esc(d.nome)}</span><span><i class="s on">${ESTRELA}</i>100%</span>${ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%</span>` : ""}</div>
-      <p class="pe">${fonteC} · ${fonteV}${potencial} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
+      <p class="pe">${fonteC} · ${fonteV}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
   }
   window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk };
