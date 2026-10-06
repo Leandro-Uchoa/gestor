@@ -172,6 +172,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=24"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
@@ -182,6 +183,8 @@ const MESES_LONGOS = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JUL
 const fmt = n => Number(n).toLocaleString("pt-BR");
 const mesBR = iso => { const [a,m] = iso.slice(0,7).split("-"); return MESES[+m-1] + "/" + a.slice(2); };
 const dmy = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4) : "";
+// texto do banco ou de erro NUNCA entra em HTML sem passar pelo esc (achado 3 do Conselho, 06/10) — gestor_lib.js
+const esc = GestorLib.esc;
 function msg(id, texto, tipo){ $(id).innerHTML = texto ? `<div class="msg ${tipo||"aviso"}">${texto}</div>` : ""; }
 function mostrar(tela){ for (const t of ["tela-login","tela-senha","tela-pergunta"]) $(t).classList.toggle("oculto", t !== tela); }
 
@@ -200,20 +203,20 @@ sb.auth.onAuthStateChange((evento, sessao) => {
 $("bt-entrar").onclick = async () => {
   msg("msg-login", "");
   const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("senha").value });
-  if (error) { msg("msg-login", "Não entrou: " + traduz(error.message), "erro"); return; }
+  if (error) { msg("msg-login", "Não entrou: " + esc(traduz(error.message)), "erro"); return; }
   mostrar("tela-pergunta"); await prepararPergunta();
 };
 $("bt-esqueci").onclick = async () => {
   const email = $("email").value.trim();
   if (!email) { msg("msg-login", "Escreva o e-mail primeiro.", "aviso"); return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href.split("#")[0] });
-  msg("msg-login", error ? "Não consegui: " + traduz(error.message) : "Se o e-mail tiver login, chegou um link para definir a senha.", error ? "erro" : "ok");
+  msg("msg-login", error ? "Não consegui: " + esc(traduz(error.message)) : "Se o e-mail tiver login, chegou um link para definir a senha.", error ? "erro" : "ok");
 };
 $("bt-definir").onclick = async () => {
   const s = $("senha-nova").value;
   if (s.length < 8) { msg("msg-senha", "Mínimo 8 caracteres.", "erro"); return; }
   const { error } = await sb.auth.updateUser({ password: s });
-  if (error) { msg("msg-senha", "Não salvou: " + traduz(error.message), "erro"); return; }
+  if (error) { msg("msg-senha", "Não salvou: " + esc(traduz(error.message)), "erro"); return; }
   history.replaceState(null, "", location.pathname);
   mostrar("tela-pergunta"); await prepararPergunta();
 };
@@ -255,7 +258,9 @@ function trocarAba(nova){
 }
 for (const b of document.querySelectorAll(".abas button")) b.onclick = () => trocarAba(b.dataset.aba);
 function mostrarCobertura(){
-  const cob = ABAS[ABA].cob;
+  const a = ABAS[ABA], cob = a.cob;
+  // consulta que FALHOU não vira "sem carga" (achado 2 do Conselho, 06/10): o erro é dito como erro, e a pergunta fica travada
+  if (a.erro) { $("cobertura").textContent = "não consegui ler a cobertura desta aba (" + a.erro + ") — recarregue a página; sem a cobertura não respondo"; return; }
   $("cobertura").textContent = cob.length ? "meses com carga no banco: " + cob.map(mesBR).join(", ") : "o banco ainda não tem carga nenhuma nesta aba";
 }
 
@@ -275,7 +280,10 @@ async function prepararPergunta(){
   const nomes = new Set();
   for (const a of Object.values(ABAS)) {
     if (!a.visao_cob) continue;
-    const { data: cob } = await tudo(sb.from(a.visao_cob).select("cliente,mes").order("mes").order("cliente"));
+    const { data: cob, error } = await tudo(sb.from(a.visao_cob).select("cliente,mes").order("mes").order("cliente"));
+    // erro (inclusive numa página intermediária da leitura) = cobertura DESCONHECIDA, não vazia: a aba fica marcada com o erro
+    a.erro = error ? String(error.message || error) : null;
+    if (a.erro) { a.cob = []; continue; }
     for (const r of cob || []) nomes.add(r.cliente);
     a.cob = [...new Set((cob||[]).map(r => r.mes.slice(0,7)))].sort();
   }
@@ -292,7 +300,7 @@ async function prepararPergunta(){
 let CLIENTE_SEL = "";
 function montarChips(nomes){
   const todos = ["", ...nomes];
-  $("chips-cliente").innerHTML = todos.map(n => `<button type="button" data-cli="${n}" class="${n === CLIENTE_SEL ? "ativa" : ""}">${n || "todos"}</button>`).join("");
+  $("chips-cliente").innerHTML = todos.map(n => `<button type="button" data-cli="${esc(n)}" class="${n === CLIENTE_SEL ? "ativa" : ""}">${esc(n) || "todos"}</button>`).join("");
   for (const b of document.querySelectorAll("#chips-cliente button")) b.onclick = () => {
     CLIENTE_SEL = (b.dataset.cli === CLIENTE_SEL) ? "" : b.dataset.cli;
     for (const x of document.querySelectorAll("#chips-cliente button")) x.classList.toggle("ativa", x.dataset.cli === CLIENTE_SEL);
@@ -306,6 +314,7 @@ function mesesEntre(de, ate){
 // valida o período contra a cobertura da aba; devolve {pedidos, semCarga} ou null (já avisou)
 function periodo(){
   const de = $("de").value, ate = $("ate").value, cob = ABAS[ABA].cob;
+  if (ABAS[ABA].erro) { msg("msg-pergunta", "A cobertura desta aba não foi lida (" + esc(ABAS[ABA].erro) + "). Não digo que não há carga: não sei. Recarregue a página.", "erro"); return null; }
   if (!de || !ate || de > ate) { msg("msg-pergunta", "Período inválido: escolha de e até (o de não pode ser depois do até).", "erro"); return null; }
   const pedidos = mesesEntre(de, ate);
   const semCarga = pedidos.filter(m => !cob.includes(m));
@@ -329,13 +338,14 @@ async function perguntarCarteira(){
   let q = sb.from("v_venda_produto_mes").select("mes,cliente,referencia,cor,descricao,pares_fat,pares_cart,base_em")
             .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("referencia").order("cor");
   if (cliente) q = q.eq("cliente", cliente);
-  if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
+  // o texto do usuário entra no filtro entre aspas, literal (achado 4 do Conselho): vírgula, parêntese, aspas e % não viram sintaxe
+  if (produto) q = q.or(GestorLib.filtroProduto(produto));
   const { data, error } = await tudo(q);
-  if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
+  if (error) { msg("msg-pergunta", "O banco recusou: " + esc(error.message), "erro"); return; }
   msg("msg-pergunta", "");
   const avisos = [];
   if (semCarga.length) avisos.push(`sem carga para ${semCarga.map(mesBR).join(", ")} — esses meses NÃO estão na soma`);
-  if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>cob.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
+  if (!data.length) { msg("msg-pergunta", `Nenhuma linha para ${esc(cliente)||"todos"} × ${esc(produto)||"todos"} nos meses carregados (${pedidos.filter(m=>cob.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
   // ORDEM DELE (26/09): uma linha por PRODUTO — referência, nome e cor em colunas separadas — e os MESES em colunas.
   // Lojas somadas (por cliente). Célula = UM número (faturado + carteira); a cor diz o que é. Mês sem carga = "s/ carga", nunca zero.
   const colunas = pedidos;
@@ -366,7 +376,7 @@ async function perguntarCarteira(){
   for (const m of colunas) html += `<th class="n">${mesBR(m)}</th>`;
   html += `<th class="n">total</th></tr></thead><tbody>`;
   for (const r of linhas) {
-    html += `<tr>${muitosClientes ? `<td>${r.cliente}</td>` : ""}<td class="mu">${r.referencia}</td><td>${r.descricao}</td><td>${r.cor}</td>`;
+    html += `<tr>${muitosClientes ? `<td>${esc(r.cliente)}</td>` : ""}<td class="mu">${esc(r.referencia)}</td><td>${esc(r.descricao)}</td><td>${esc(r.cor)}</td>`;
     for (const m of colunas) {
       if (!cob.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
       const c = r.meses[m] || { fat: 0, cart: 0 };
@@ -390,13 +400,13 @@ async function perguntarGiro(){
   let q = sb.from("v_giro_produto_mes").select("mes,cliente,referencia,cor,descricao,venda,estoque,base_em")
             .gte("mes", de + "-01").lte("mes", ate + "-01").order("mes").order("cliente").order("referencia").order("cor");
   if (cliente) q = q.eq("cliente", cliente);
-  if (produto) q = q.or(`referencia.ilike.%${produto}%,descricao.ilike.%${produto}%`);
+  if (produto) q = q.or(GestorLib.filtroProduto(produto));
   const { data, error } = await tudo(q);
-  if (error) { msg("msg-pergunta", "O banco recusou: " + error.message, "erro"); return; }
+  if (error) { msg("msg-pergunta", "O banco recusou: " + esc(error.message), "erro"); return; }
   msg("msg-pergunta", "");
   const avisos = [];
   if (semCarga.length) avisos.push(`sem giro para ${semCarga.map(mesBR).join(", ")} — o giro de um mês sobe quando o mês fecha`);
-  if (!data.length) { msg("msg-pergunta", `Nenhuma linha de giro para ${cliente||"todos"} × ${produto||"todos"} nos meses carregados (${pedidos.filter(m=>cob.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
+  if (!data.length) { msg("msg-pergunta", `Nenhuma linha de giro para ${esc(cliente)||"todos"} × ${esc(produto)||"todos"} nos meses carregados (${pedidos.filter(m=>cob.includes(m)).map(mesBR).join(", ")}). ${avisos.join("; ")}`, "aviso"); return; }
   // uma linha por produto (cliente, ref, nome, cor — a Casa Pio vem sem cor); meses em colunas; célula = venda OU estoque (seletor)
   const g = new Map();
   for (const r of data) {
@@ -426,7 +436,7 @@ function desenharGiro(){
   for (const m of colunas) html += `<th class="n">${mesBR(m)}</th>`;
   html += `<th class="n">${med === "venda" ? "total" : "último"}</th></tr></thead><tbody>`;
   for (const r of linhas) {
-    html += `<tr>${muitosClientes ? `<td>${r.cliente}</td>` : ""}<td class="mu">${r.referencia}</td><td>${r.descricao}</td>${semCor ? "" : `<td>${r.cor}</td>`}`;
+    html += `<tr>${muitosClientes ? `<td>${esc(r.cliente)}</td>` : ""}<td class="mu">${esc(r.referencia)}</td><td>${esc(r.descricao)}</td>${semCor ? "" : `<td>${esc(r.cor)}</td>`}`;
     let ultimo = null, total = 0;
     for (const m of colunas) {
       if (!cob.includes(m)) { html += `<td class="n mu">s/ carga</td>`; continue; }
