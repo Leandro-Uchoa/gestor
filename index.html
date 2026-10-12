@@ -89,8 +89,14 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
    (a META, a referência), Under Armour = vermelho da marca, e cada família numa cor fácil de distinguir */
 .mt .f-FTW{background:#2E3EFC}.mt .f-MEOLY{background:#FFFF1A}.mt .f-CHOLY{background:#FF8A00}.mt .f-ACOLY{background:#B06CFF}.mt .f-CFOLY{background:#2EC4E6}.mt .f-UA{background:#E3001B}
 /* visão do gestor (12/10): uma barra por vendedor, lado a lado, em cada cartão; nome e % embaixo de cada barra */
-.mt.cmpv .tot{width:auto;min-width:0}.mt.cmpv .bars{gap:4px;align-items:flex-end}.mt.cmpv .pb{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;flex:1}
-.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px;margin-bottom:2px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);margin-top:3px;max-width:100%;overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#9DA8FF}
+.mt.cmpv .tot{width:auto;min-width:0}.mt.cmpv .bars{gap:4px;align-items:flex-end;margin-bottom:36px}
+/* 13:1x: a coluna de cada vendedor é uma área de altura cheia; a barra é absoluta no pé (altura --h), a estrela no topo dela, os rótulos FORA (abaixo da área) —
+   antes os rótulos empurravam a barra e a Mari (76%) aparecia acima dos 90% */
+.mt.cmpv .pb{position:relative;height:100%;min-width:0;flex:1}
+.mt.cmpv .pb .b{position:absolute;bottom:0;left:0;right:0;margin:0 auto}
+.mt.cmpv .pb .s{position:absolute;left:0;right:0;margin:0 auto;bottom:calc(var(--h) + 3px)}
+.mt.cmpv .pb .pn{position:absolute;top:100%;left:0;right:0;text-align:center;margin-top:5px}.mt.cmpv .pb .pp{position:absolute;top:100%;left:0;right:0;text-align:center;margin-top:18px}
+.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#9DA8FF}
 .mt.cmpv .pb .pp{font-size:9px;font-weight:700;color:var(--txt)}.mt.cmpv .fx{width:200px}.mt.cmpv .tot{width:230px}.mt.cmpv .fms{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:900px){.mt.cmpv .fx{width:auto}.mt.cmpv .tot{width:300px}.mt.cmpv .pb .pn{font-size:9px}.mt.cmpv .fms{grid-template-columns:repeat(var(--n),minmax(0,1fr))}}
 .mt .t15 .fp{grid-column:2;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--mut);margin-top:-4px}.mt .t15 .fp span{display:flex;align-items:center;gap:4px;white-space:nowrap}
@@ -203,7 +209,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=34"></script>
+<script src="metas.js?v=35"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);

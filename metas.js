@@ -342,7 +342,10 @@
     // dourado (12/10, palavra dele): a CMS fica dourada quando bate; o vendedor só fica dourado se a CMS bateu E ele bateu
     const barras = (pega, g) => { const dc = ok.find(d => d.soCms), pc = dc ? pega(dc) : null, cmsOk = !!(pc && bateu(pc.real, pc.meta, g));
       return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, b = bateu(real, meta, g), ouro = cms ? b : (cmsOk && b);
-        return `<div class="pb${cms ? " pc" : ""}"><i class="s v${b ? " on" : ""}">${ESTRELA}</i><div class="b ${cms ? "c" : "v"}${ouro ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta)}%;animation-delay:${i * .05}s"></div><span class="pn" title="${esc(d.nome)}">${esc(inicial(d))}</span><span class="pp">${pctTxt(real, meta)}</span></div>`; }).join(""); };
+        // 13:1x, bug visto por ele no celular (a Mari com 76% acima da linha dos 90%): os rótulos embaixo empurravam a barra para cima.
+        // Agora a barra é absoluta no pé da coluna (altura em --h), a estrela senta no topo dela e os rótulos ficam FORA da área das barras.
+        const h = altura(real, meta);
+        return `<div class="pb${cms ? " pc" : ""}" style="--h:${h}%"><i class="s v${b ? " on" : ""}">${ESTRELA}</i><div class="b ${cms ? "c" : "v"}${ouro ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${h}%;animation-delay:${i * .05}s"></div><span class="pn" title="${esc(d.nome)}">${esc(inicial(d))}</span><span class="pp">${pctTxt(real, meta)}</span></div>`; }).join(""); };
     const cartao = (cls, nome, pega, g) => `<div class="${cls} cmp"><div class="nm">${esc(nome)}</div><div class="bars">${g === GATILHO_TOTAL ? linhasTotal("") : `<i class="l100" style="bottom:${(g / TETO * 100).toFixed(2)}%"></i>`}${barras(pega, g)}</div></div>`;
     const tot = cartao("tot", "TOTAL", d => d.soCms ? { real: d.total.real_c, meta: d.total.meta_c } : { real: d.total.real_v, meta: d.total.meta_v }, GATILHO_TOTAL);
     const faixasIds = ref.faixas.map(f => f.id), famIds = ref.familias.map(f => f.id);
