@@ -22,10 +22,18 @@
   10. A RÉGUA DA VULCABRAS, definitiva (Léo via BOSS, 12/10): tênis (cada marca sozinha, em pares) — o TOTAL bate com 90% da meta,
       cada FAIXA bate com 100%; as outras famílias (confecção, acessório, chinelo, meias), em valor — cada uma bate com 95%, sem
       faixas dentro. A linha tracejada do TOTAL fica nos 90%, a das famílias nos 95%, a das faixas nos 100%. O ouro da CMS segue a
-      mesma régua. A camada da CMS para pagar o vendedor (trava dos 15%, 50%) continua DESLIGADA. */
+      mesma régua. A camada da CMS para pagar o vendedor (50%, estrelas do vendedor) continua DESLIGADA.
+  11. A TRAVA DOS 15% (regra interna da CMS; pedido dele, 12/10): duas barras ACIMA dos gráficos — o MÊS do seletor e o
+      TRIMESTRE dele — com o % e quanto falta em R$ para os 15% (ou quanto passou). Conta: numerador = R$ das outras famílias
+      Olympikus (acessório, chinelo, meias, confecção) + a Under Armour INTEIRA (tênis UA incluso, uma família só);
+      denominador = a META de tênis Olympikus em R$ (valor_ref_rs do total de tênis na Carta), NÃO o tênis vendido — correção
+      dele de 12/10, valendo do trimestre que começou em outubro. Trimestre = soma dos três meses nos dois lados; mês à frente
+      entra com a carteira (potencial). É individual (cada vendedor sozinho) e SÓ O VENDEDOR aparece — palavra dele, 12/10:
+      "no caso dos 15% a CMS não é relevante (…) o da CMS não precisa aparecer, só o do vendedor". */
 (function () {
   const ESTRELAS_VENDEDOR = false;     // ordem dele, 30/09: fora até segunda ordem (a regra ouro/prata está em estrelaVendedor)
-  const TRAVA_15 = false;              // idem: o bloco da trava não entra na tela
+  const TRAVA_15 = 0.15;               // regra 11: outras famílias + UA ≥ 15% da META de tênis OLY (R$)
+  const FAM_OLY = ["ACOLY", "CHOLY", "MEOLY", "CFOLY"];   // o numerador do lado Olympikus; a UA entra inteira pelo TT GERAL dela
   const GATILHO_TOTAL = 0.90;          // regra 10: o total de tênis bate com 90% da meta
   const GATILHO_FAIXA = 1.00;          //          cada faixa de tênis bate com 100%
   const GATILHO_FAMILIA = 0.95;        //          cada família em R$ bate com 95%
@@ -73,7 +81,9 @@
     for (let m = +primeiro.slice(5, 7); m <= 12; m++) meses.push(ano + "-" + String(m).padStart(2, "0"));
     mes = mes && meses.includes(mes) ? mes : (meses.includes(hoje) ? hoje : meses[meses.length - 1]);
     const mes01 = mes + "-01", futuro = mes > hoje;
-    const [fx, vm, cf, cr, dec, pre, cg] = await Promise.all([
+    // o trimestre do mês do seletor (regra 11): out → out, nov, dez
+    const q0 = Math.floor((+mes.slice(5, 7) - 1) / 3) * 3 + 1, triMeses = [0, 1, 2].map(i => mes.slice(0, 4) + "-" + String(q0 + i).padStart(2, "0")), tri01 = triMeses.map(m => m + "-01");
+    const [fx, vm, cf, cr, dec, pre, cg, t15r, t15m] = await Promise.all([
       tudo(sb.from("faixa_carta").select("faixa,ordem,total,unidade").eq("marca", marca).order("ordem")),
       tudo(sb.from("v_meta_real").select("preposto,faixa,total,unidade,meta_pares,valor_ref_rs,carta,lido_em").eq("marca", marca).eq("mes", mes01).in("preposto", [preposto, "TODOS"])),
       tudo(sb.from("v_carteira_faixa").select("faixa,pares_fat,pares_cart,base_em").eq("marca", marca).eq("mes", mes01).eq("preposto", preposto)),
@@ -81,7 +91,11 @@
       tudo(sb.from("v_decisao_vigente").select("faixa,estado").eq("marca", marca).eq("preposto", preposto).eq("mes", mes01)),
       sb.from("preposto").select("nome").eq("preposto", preposto).maybeSingle(),
       sb.from("carga").select("carregado_em").eq("fonte", "DETALHADA").eq("status", "ok").order("id", { ascending: false }).limit(1),
+      // trava dos 15% (regra 11): as outras famílias OLY e a UA inteira (TT GERAL da UA), e a META de tênis OLY em R$, nos 3 meses do trimestre
+      tudo(sb.from("carta_real").select("preposto,mes,marca,faixa,real_rs,base,lido_em").in("marca", ["OLY", "UA"]).in("mes", tri01).eq("preposto", preposto).in("faixa", FAM_OLY.concat(["TT GERAL"]))),
+      tudo(sb.from("meta_mensal").select("preposto,mes,valor_ref_rs").eq("marca", "OLY").eq("faixa", "TT CALCADOS").in("mes", tri01).eq("preposto", preposto)),
     ]);
+    const trava15 = (t15r.error || t15m.error) ? null : contaTrava15(mes, triMeses, t15r.data, t15m.data, preposto);
     if (fx.error || vm.error || cf.error || cr.error) return { erro: "o banco recusou: " + (fx.error || vm.error || cf.error || cr.error).message, meses, mes };
     const meta = {}; for (const r of vm.data) meta[r.preposto + "|" + r.faixa] = r;
     const base = {}; for (const r of cf.data) base[r.faixa] = r;
@@ -115,7 +129,7 @@
                     real_v: (!futuro && totRow && totRow.lido_v) ? totRow.lido_v.real_pares : soma("real_v"), real_c: (totRow && totRow.lido_c) ? totRow.lido_c.real_pares : soma("real_c") };
     const semMeta = total.meta_v == null || total.meta_c == null;
     if (faixas.every(f => f.real_c == null)) avisos.push("CMS sem leitura para " + MESES[+mes.slice(5, 7) - 1]);
-    return { mes, meses, hoje, futuro, marca, preposto, nome: (pre.data && pre.data.nome) || preposto, faixas, familias, total, semMeta, avisos, trava15: null,
+    return { mes, meses, hoje, futuro, marca, preposto, nome: (pre.data && pre.data.nome) || preposto, faixas, familias, total, semMeta, avisos, trava15,
              base_em: (faixas.find(f => f.base_em) || {}).base_em, calculado: cg.data && cg.data[0] ? cg.data[0].carregado_em : null,
              carta: totRow ? totRow.carta : "", lido_em: totRow ? totRow.lido_em : null,
              vend_lido: (faixas.find(f => f.vend_lido) || {}).vend_lido, cms_lido: (totRow && totRow.lido_c && totRow.lido_c.lido_em) || (faixas.find(f => f.cms_lido) || {}).cms_lido,
@@ -127,6 +141,29 @@
   }
 
   // ---------- as regras
+  // trava dos 15% (regra 11): por mês e no trimestre, SÓ do vendedor (v) — a CMS não entra: "não é relevante" (ele, 12/10).
+  // Devolve null quando não há meta de tênis. v: num (R$ das outras famílias OLY + UA inteira), meta (R$ da meta de tênis OLY),
+  // pct (num/meta), falta (15% da meta − num; negativo = passou), ok. Mês sem leitura entra com zero no numerador e sem meta no
+  // denominador: o trimestre soma o que existe.
+  function contaTrava15(mes, triMeses, leituras, metas, preposto) {
+    const lado = (quem, meses) => {
+      let num = 0, meta = 0, temMeta = false, base = null, lido = null;
+      for (const r of leituras) {
+        if (r.preposto !== quem || !meses.includes(r.mes.slice(0, 7))) continue;
+        const familia = (r.marca === "OLY" && FAM_OLY.includes(r.faixa)) || (r.marca === "UA" && r.faixa === "TT GERAL");
+        if (!familia) continue;
+        num += +r.real_rs || 0; base = base || r.base; lido = lido || r.lido_em;
+      }
+      for (const m of metas) if (m.preposto === quem && meses.includes(m.mes.slice(0, 7)) && m.valor_ref_rs != null) { meta += +m.valor_ref_rs; temMeta = true; }
+      if (!temMeta) return null;
+      const alvo15 = meta * TRAVA_15;
+      return { num, meta, pct: meta ? num / meta : null, falta: alvo15 - num, ok: num >= alvo15, base, lido };
+    };
+    const bloco = meses => ({ v: lado(preposto, meses) });
+    const m = bloco([mes]), t = bloco(triMeses);
+    if (!m.v && !t.v) return null;
+    return { mes: m, tri: t, triMeses };
+  }
   // ouro da CMS: só quando ela bateu o TOTAL (90%, regra 10) — no total e em cada faixa que bateu (100%) (regra 5)
   function dourado(f, tot) {
     const cmsTotal = bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
@@ -136,7 +173,7 @@
   // "prata" = CMS bateu total e faixa, ele NÃO bateu a faixa mas bateu os 15%; sem os 15% (trava15 !== true) nenhuma estrela.
   // O total do vendedor não é exigido (palavra dele, 17/09: "se a CMS fecha a meta e eu não, meu recebimento da faixa é 50%").
   function estrelaVendedor(f, tot, trava15) {
-    if (trava15 !== true) return null;
+    if (trava15 !== true) return null;                      // quem chama passa d.trava15.mes.v.ok (regra 11) quando as estrelas ligarem
     const cmsF = bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(f.real_c, f.meta_c, GATILHO_FAIXA);
     if (!cmsF) return null;
     return bateu(f.real_v, f.meta_v, GATILHO_FAIXA) ? "ouro" : "prata";
@@ -164,11 +201,12 @@
     const escTot = d.semMeta ? Math.max(1, tot.real_v || 0, tot.real_c || 0) : null;
     const cmsTot = !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
     const metaTot = m => m == null ? "sem meta" : pct(GATILHO_TOTAL) + " de " + fmtP(m);     // regra 10: o total bate com 90% da meta
-    const totV = ESTRELAS_VENDEDOR ? estrelaVendedor({ real_c: tot.real_c, meta_c: tot.meta_c, real_v: tot.real_v, meta_v: tot.meta_v }, tot, d.trava15) : null;
+    const ok15 = !!(d.trava15 && d.trava15.mes && d.trava15.mes.v && d.trava15.mes.v.ok);
+    const totV = ESTRELAS_VENDEDOR ? estrelaVendedor({ real_c: tot.real_c, meta_c: tot.meta_c, real_v: tot.real_v, meta_v: tot.meta_v }, tot, ok15) : null;
     let cards = "";
     d.faixas.forEach((f, i) => {
       const g = d.semMeta ? { cms: false, vend: false } : dourado(f, tot), est = f.estado === "sem_tratamento" ? "padrao" : f.estado;
-      const tomV = ESTRELAS_VENDEDOR ? estrelaVendedor(f, tot, d.trava15) : null;
+      const tomV = ESTRELAS_VENDEDOR ? estrelaVendedor(f, tot, ok15) : null;
       const fe = f.meta_v || f.meta_c ? null : escala;
       cards += `<div class="fx ${esc(est)}">
         <div class="nm">${esc(f.nome)}</div>
@@ -191,8 +229,22 @@
         <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true))}</div>
       </div>`;
     });
-    // bloco da trava dos 15% (desligado, TRAVA_15): entra no cartão do total quando ele mandar
-    const trava = (TRAVA_15 && d.trava15 != null) ? `<div class="trava"><div class="tl"><span>TRAVA 15%</span><b>${esc(d.trava15.pct)}</b></div><div class="tb"><i style="width:${Math.min(100, d.trava15.pct_meta || 0)}%"></i></div><span class="m">${esc(d.trava15.texto || "")}</span></div>` : "";
+    const trava = "";                                       // o bloco antigo no cartão do total saiu; a trava mora acima dos gráficos (regra 11)
+    // ---- a TRAVA DOS 15% acima dos gráficos (regra 11): uma linha para o mês, uma para o trimestre; só a barra do vendedor,
+    // marca nos 15%; à direita o % e o que falta (ou passou) em R$. A CMS não aparece (ele, 12/10).
+    const nomeMes = MESES[+d.mes.slice(5, 7) - 1];
+    const pctTxt = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
+    const faltaTxt = l => l == null ? "sem meta de tênis" : (l.falta > 0 ? "faltam R$ " + kk(l.falta) : "R$ " + kk(-l.falta) + " acima");
+    const linhaT15 = (rot, b) => {
+      const esc15 = Math.max(TRAVA_15 * 2, (b.v && b.v.pct) || 0);                               // a régua vai até o dobro dos 15% (ou até o %)
+      const w = l => l && l.pct != null ? Math.min(100, l.pct / esc15 * 100).toFixed(1) : 0;
+      return `<div class="lin"><div class="nm">${esc(rot)}</div>
+        <div class="trk"><i class="mk" style="left:${(TRAVA_15 / esc15 * 100).toFixed(1)}%"></i>
+          <div class="tb v"><i class="${b.v && b.v.ok ? "ok" : ""}" style="width:${w(b.v)}%"></i></div></div>
+        <div class="val"><b class="${b.v && b.v.ok ? "ok" : ""}">${pctTxt(b.v && b.v.pct)}</b><span>${faltaTxt(b.v)}</span></div></div>`;
+    };
+    const t15 = d.trava15 ? `<div class="t15"><div class="rot">TRAVA DOS 15% · outras famílias + UA sobre a META de tênis</div>
+      ${linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}</div>` : "";
     // rodapé: hora da leitura por fonte (regra 9)
     const fonteC = d.cms_lido ? `${medida} CMS lido ${dmh(d.cms_lido)}` : `${medida} CMS: sem leitura`;
     const fonteV = d.vend_lido ? `${medida} ${esc(d.nome)} lido ${dmh(d.vend_lido)}` : (d.base_em ? `${medida} ${esc(d.nome)} pela base de ${dm(d.base_em)}${d.calculado ? " (" + dmh(d.calculado).slice(-5) + ")" : ""}` : `${medida} ${esc(d.nome)}: sem base`);
@@ -200,11 +252,11 @@
     const difere = (a, b) => a && b && Math.abs(new Date(a) - new Date(b)) > 60 * 1000;
     const fonteF = d.familias.length ? ((difere(d.fam_lido_c, d.cms_lido) || difere(d.fam_lido_v, d.vend_lido)) ? ` · famílias R$ lidas ${dmh(d.fam_lido_c || d.fam_lido_v)}` : "") : "";
     // a base da leitura, por fonte (BOSS, 01/10): "setembro fechado · faturado · …" só quando a leitura diz faturado; senão "potencial"
-    const nomeMes = MESES[+d.mes.slice(5, 7) - 1];
     const fechado = !d.futuro && d.base_c === "faturado" && (d.base_v === "faturado" || d.base_v == null);
     const baseTxt = d.futuro ? "" : (fechado ? ` · ${nomeMes} fechado · faturado` :
       (d.base_c === "faturado" || d.base_v === "faturado" ? ` · CMS ${d.base_c === "faturado" ? "faturado" : "potencial"} · ${esc(d.nome)} ${d.base_v === "faturado" ? "faturado" : "potencial"}` : " · potencial (faturado + carteira)"));
     el.innerHTML = `<div class="mt${d.futuro ? " futuro" : ""}${d.semMeta ? " sem-meta" : ""}" style="--n:${d.faixas.length}">
+      ${t15}
       <div class="sec">
         <div class="rot">CALÇADOS · PARES${d.futuro ? " EM CARTEIRA" : (fechado ? " FATURADOS" : "")}</div>
         <div class="rolo"><div class="fila">
@@ -223,5 +275,5 @@
       <p class="pe">${fonteC} · ${fonteV}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
   }
-  window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk };
+  window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk, contaTrava15 };
 })();

@@ -71,6 +71,16 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .trava{margin-top:12px;padding-top:10px;border-top:1px solid #4E43A8;display:flex;flex-direction:column;gap:6px}
 .mt .trava .tl{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;letter-spacing:.08em;color:#D9D3FF}.mt .trava .tl b{font-size:15px;font-weight:800;color:#fff}
 .mt .trava .tb{position:relative;height:6px;border-radius:3px;background:#3A3175}.mt .trava .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#7BF0C4}
+.mt .t15{display:flex;flex-direction:column;gap:12px;padding:14px 14px 12px;margin-right:16px;border-radius:16px;background:#151A24;border:1px solid #262D3A}
+.mt .t15 .rot{margin-bottom:0}
+.mt .t15 .lin{display:grid;grid-template-columns:86px 1fr 112px;gap:10px;align-items:center}
+.mt .t15 .lin .nm{font-size:11px;font-weight:700;letter-spacing:.08em;color:#D9D3FF}
+.mt .t15 .trk{position:relative;display:flex;flex-direction:column;gap:4px;padding:6px 0}
+.mt .t15 .trk .tb{position:relative;height:8px;border-radius:4px;background:#262D3A}
+.mt .t15 .trk .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;width:0;transition:width 1.3s cubic-bezier(.2,.7,.2,1)}
+.mt .t15 .trk .tb.c i{background:var(--cf)}.mt .t15 .trk .tb.v i{background:var(--vf)}.mt .t15 .trk .tb.v i.ok{background:var(--ouro)}
+.mt .t15 .trk .mk{position:absolute;top:0;bottom:0;border-left:1.5px dashed var(--l100)}
+.mt .t15 .val{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;color:var(--mut);line-height:1.25}.mt .t15 .val b{font-size:16px;font-weight:800;color:#fff}.mt .t15 .val b.ok{color:var(--ouro)}.mt .t15 .val .c{color:var(--rot)}
 /* as faixas: um cartão por faixa, na fila; três tons */
 .mt .fxs{display:flex;gap:10px}
 .mt .fx{width:108px;flex-shrink:0;min-width:0;display:flex;flex-direction:column;padding:14px 10px 12px;border-radius:16px;background:#12161D;border:1px solid #1E2530}
@@ -112,6 +122,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 @media (min-width:900px){
   .mt{margin:0;padding:4px 0 8px;gap:28px}.mt .sec.fam,.mt .leg,.mt .pe{padding-right:0}
   .mt .fila{width:auto;padding-right:0}.mt .tot{width:250px;margin-right:48px;padding:18px 18px 16px;border-radius:20px}
+  .mt .t15{margin-right:0;padding:16px 20px 14px}.mt .t15 .lin{grid-template-columns:170px 1fr 170px;gap:16px}.mt .t15 .val b{font-size:18px}
   .mt .tot .nm{font-size:13px}.mt .tot .st{gap:40px}.mt .tot .st .s{width:20px;height:20px}.mt .tot .bars{height:210px;gap:12px}.mt .tot .l100{left:0;right:0}
   .mt .tot .b{width:52px;border-radius:7px 7px 0 0}.mt .tot .g{font-size:26px}
   .mt .fxs{flex:1;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:12px}.mt .fx{width:auto;padding:14px 12px 12px}
@@ -173,7 +184,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=25"></script>
+<script src="metas.js?v=26"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
