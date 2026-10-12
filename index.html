@@ -173,7 +173,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.4</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.5</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -202,7 +202,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
   </div>
   <div class="card" id="filtros">
     <label>cliente</label>
-    <div class="chips" id="chips-cliente"></div>
+    <button type="button" id="abre-clientes" class="sec" style="width:auto;margin:0;padding:9px 14px;border-radius:999px">todos ▾</button>
+    <div class="chips oculto" id="chips-cliente" style="margin-top:8px"></div>
     <label>marca · família (toque para ligar mais de uma)</label>
     <div class="chips" id="chips-familia"></div>
     <div id="bloco-sub" class="oculto"><label>subfamília</label><div class="chips" id="chips-sub"></div></div>
@@ -218,7 +219,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=46"></script>
+<script src="metas.js?v=47"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -375,6 +376,8 @@ const NOME_SUB = { "CLASSICOS": "CLÁSSICOS", "CONF_FEM": "CONF. FEMININO", "CON
 // nomes de exibição dos clientes (cadastro, como ele fala); o que não estiver aqui aparece como está no banco
 const NOME_CLI = { "BANBAN CALCADOS": "Ban Ban", "CASA PIO": "Casa Pio", "LOJAS NOROESTE": "Noroeste", "POLYELLE": "Polyélle", "SAPATARIA NOVA": "Sapataria Nova" };
 let CLIENTE_SEL = new Set(), FAMILIA_SEL = new Set(), SUB_SEL = new Set(), CLIENTES = [], MESES_DISP = [], MESES_SEL = new Set();   // conjuntos: múltipla escolha (12/10)
+let ABERTO_CLI = false;                                                                      // a lista de clientes abre pela setinha
+document.addEventListener("DOMContentLoaded", () => { $("abre-clientes").onclick = () => { ABERTO_CLI = !ABERTO_CLI; montarChips(); }; });
 async function prepararPergunta(){
   const nomes = new Set();
   for (const [k, visao] of [["carteira", "v_cobertura"], ["giro", "v_cobertura_giro"]]) {
@@ -399,6 +402,9 @@ function chips(id, lista, sel){
 const liga = (sel, v) => { if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); };
 function montarChips(){
   for (const b of chips("chips-cliente", [["", "todos"], ...CLIENTES.map(c => [c, NOME_CLI[c] || c])], CLIENTE_SEL)) b.onclick = () => { liga(CLIENTE_SEL, b.dataset.v); montarChips(); consultar(); };
+  const sel = [...CLIENTE_SEL].map(c => NOME_CLI[c] || c);
+  $("abre-clientes").textContent = (sel.length ? (sel.length <= 2 ? sel.join(" + ") : sel.length + " clientes") : "todos") + (ABERTO_CLI ? " ▴" : " ▾");
+  $("chips-cliente").classList.toggle("oculto", !ABERTO_CLI);
   for (const b of chips("chips-familia", [["", "todas"], ...FAMILIAS.map(f => [f, f])], FAMILIA_SEL)) b.onclick = () => { liga(FAMILIA_SEL, b.dataset.v); for (const x of [...SUB_SEL]) if (!subsDisponiveis().includes(x)) SUB_SEL.delete(x); montarChips(); consultar(); };
   $("chips-meses").innerHTML = MESES_DISP.map(m => `<button type="button" data-m="${m}" class="${MESES_SEL.has(m) ? "ativa" : ""}">${mesBR(m)}</button>`).join("");
   for (const b of document.querySelectorAll("#chips-meses button")) b.onclick = () => { const m = b.dataset.m; if (MESES_SEL.has(m)) MESES_SEL.delete(m); else MESES_SEL.add(m); montarChips(); consultar(); };
