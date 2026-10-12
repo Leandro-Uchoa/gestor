@@ -210,7 +210,21 @@
   const linha = (g, dentro) => `<i class="l100"${g === 1 ? "" : ` style="bottom:${(g / TETO * 100).toFixed(2)}%"`}>${dentro || ""}</i>`;
   // 12/10, 12:5x (ele, olhando outubro): no TOTAL de tênis são DUAS linhas — a dos 90% (gatilho, tracejada, com o rótulo) e a dos 100%
   // (contínua, a mesma que atravessa as faixas). Uma barra acima dos 90% e abaixo dos 100% é "gatilho sim, meta não".
-  const linhasTotal = dentro => `<i class="l100 cheia"><span class="lr">100%</span></i>` + linha(GATILHO_TOTAL, `<span class="lr">${pct(GATILHO_TOTAL)}</span>${dentro || ""}`);
+  // 13:1x, pelo celular: a dos 90% é CONTÍNUA e forte (só no total); a dos 100% é TRACEJADA e atravessa — sai do total e cruza todas
+  // as faixas até o fim (alinhar100 desenha a travessia na fila, na altura exata da linha do total, e alinha as linhas das faixas a ela).
+  const linhasTotal = dentro => `<i class="l100 cem"><span class="lr">100%</span></i><i class="l100 forte" style="bottom:${(GATILHO_TOTAL / TETO * 100).toFixed(2)}%"><span class="lr">${pct(GATILHO_TOTAL)}</span>${dentro || ""}</i>`;
+  function alinhar100(el) {
+    const fila = el.querySelector(".fila"), cem = el.querySelector(".tot .l100.cem");
+    if (!fila || !cem) return;
+    const desenha = () => {
+      const fr = fila.getBoundingClientRect(), y = cem.getBoundingClientRect().top;
+      let tr = fila.querySelector(":scope > .atravessa");
+      if (!tr) { tr = document.createElement("i"); tr.className = "atravessa"; fila.appendChild(tr); }
+      tr.style.top = (y - fr.top) + "px";
+      for (const b of fila.querySelectorAll(".fx .bars")) { const l = b.querySelector(".l100"); if (l) l.style.bottom = (b.getBoundingClientRect().bottom - y) + "px"; }
+    };
+    desenha(); window.addEventListener("resize", desenha, { passive: true });
+  }
   const pct = g => Math.round(g * 100) + "%";
   // faturado separado do potencial, quando a leitura trouxe (regra 9): "fat N + cart M"
   // mês fechado lido como faturado tem fat == real: não há carteira a mostrar
@@ -307,6 +321,7 @@
       <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${V && ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%: CMS bateu, ${esc(d.nome)} não, com os 15%</span>` : ""}</div>
       <p class="pe">${fonteC}${V ? " · " + fonteV : ""}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
+    alinhar100(el);
   }
   // ---------- a visão do gestor (12/10, via BOSS): "abre na CMS total; um botão 'ver vendedores' mostra uma barra por vendedor,
   // lado a lado", na ordem fixa. Cada cartão (total, faixas, famílias) ganha uma barra por preposto, com a estrela de quem bateu e o
@@ -342,6 +357,7 @@
       <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>vendedor</span><span><i class="q" style="background:var(--ouro)"></i>dourado = bateu (o vendedor só com a CMS batendo)</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span></div>
       <p class="pe">${medida} de cada um pela leitura da Carta${ok[0].cms_lido ? " · lida " + dmh(ok[0].cms_lido) : ""}${ds.filter(d => d.erro).length ? " · sem dado: " + ds.filter(d => d.erro).map(d => esc(d.nome)).join(", ") : ""}</p>
     </div>`;
+    alinhar100(el);
   }
   window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk, contaTrava15, carregarTodos, desenharComparativo, posPrep };
 })();
