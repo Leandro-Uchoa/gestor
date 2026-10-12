@@ -30,9 +30,12 @@
       dele de 12/10, valendo do trimestre que começou em outubro. Trimestre = soma dos três meses nos dois lados; mês à frente
       entra com a carteira (potencial). É individual (cada vendedor sozinho) e SÓ O VENDEDOR aparece — palavra dele, 12/10:
       "no caso dos 15% a CMS não é relevante (…) o da CMS não precisa aparecer, só o do vendedor".
-  12. AS CORES DA CMS (ordem dele via BOSS, 12/10): amarelo Olympikus #FFFF1A e preto #151515 (as mesmas vão para o CMS PASS 2.0).
-      CMS = barra amarela; vendedor = barra branca; FOCO = borda amarela; "bateu" = VERDE na barra e no número (o dourado fica só
-      na estrela, com contorno, para não se confundir com o amarelo da marca). As cores moram no CSS do index.html. */
+  12. AS CORES DA CMS (ordem dele via BOSS, 12/10): amarelo Olympikus #FFFF1A e preto #151515 (as mesmas vão para o CMS PASS 2.0),
+      nos ACENTOS (abas, mês ativo, bordas do foco e do total). ⚠️ 12:3x, correção dele: "as barras de atingimento NÃO podem ser
+      amarelas, porque ela só vai ficar DOURADA quando a CMS bater". Barras: CMS = azul (#5B6BFF), vendedor = branca; DOURADO = bateu:
+      a CMS dourada quando bate; o vendedor só fica dourado se a CMS bateu E ele bateu; CMS não bateu → ninguém dourado, mesmo que
+      ele tenha batido. A estrela do vendedor segue a regra 13 (ele bateu = estrela), separada da cor da barra. CSS no index.html.
+  13. ESTRELAS DO VENDEDOR (reunião 12/10, via BOSS): ouro = ele bateu; prata = CMS bateu, ele não, e ele tem os 15%; sem os 15%, nenhuma. */
 (function () {
   const ESTRELAS_VENDEDOR = true;      // 12/10 (reunião, via BOSS): "ligar as estrelas: bateu tem estrela, não bateu fica sem" — regra em estrelaVendedor
   const TRAVA_15 = 0.15;               // regra 11: outras famílias + UA ≥ 15% da META de tênis OLY (R$)
@@ -228,7 +231,7 @@
       cards += `<div class="fx ${esc(est)}">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", g.cms)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!tomV, tomV) : ""}</div>
-        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${V ? barra("v", f.real_v, f.meta_v, tomV === "ouro", i * .06 + .05, fe) : ""}</div>
+        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${V ? barra("v", f.real_v, f.meta_v, g.cms && bateu(f.real_v, f.meta_v, GATILHO_FAIXA), i * .06 + .05, fe) : ""}</div>
         <div class="num">${celula("c", gapPares(f.real_c, f.meta_c), metaPares(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c))}${V ? celula("v", gapPares(f.real_v, f.meta_v), metaPares(f.meta_v), bateu(f.real_v, f.meta_v), d.futuro ? "" : fatCart(f.fat_v, f.real_v)) : ""}</div>
       </div>`;
     });
@@ -243,7 +246,7 @@
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", ouroC)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!tomF, tomF) : ""}</div>
-        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, tomF === "ouro", i * .06 + .05) : ""}</div>
+        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, ouroC && bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), i * .06 + .05) : ""}</div>
         <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${V ? celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true)) : ""}</div>
       </div>`;
     });
@@ -290,7 +293,7 @@
           <div class="tot">
             <div class="nm">TOTAL</div>
             <div class="st">${estrela("c", cmsTot)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
-            <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot) : ""}</div>
+            <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, cmsTot && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL), .05, escTot) : ""}</div>
             <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${V ? celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false) : ""}</div>
             ${trava}
           </div>
@@ -315,9 +318,13 @@
     if (!ok.length) { el.innerHTML = `<div class="msg aviso">${esc((ds[0] && ds[0].erro) || "sem dado")}</div>`; return; }
     const ref = ok[0], medida = ref.futuro ? "carteira" : "real";
     const pctTxt = (r, m) => (r == null || !m) ? "—" : Math.round(r / m * 100) + "%";
-    // uma barra por preposto: a CMS pela sua meta, cada vendedor pela dele; cor da CMS (amarelo) e do vendedor (branco); verde = bateu
-    const barras = (pega, g) => ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, b = bateu(real, meta, g);
-      return `<div class="pb"><i class="s v${b ? " on" : ""}">${ESTRELA}</i><div class="b ${cms ? "c" : "v"}${b ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta)}%;animation-delay:${i * .05}s"></div><span class="pn">${esc(d.nome)}</span><span class="pp">${pctTxt(real, meta)}</span></div>`; }).join("");
+    // a CMS pela sua meta (barra normal, amarela) e, ao lado, cada vendedor pela dele em barra PEQUENA com a inicial embaixo
+    // (12/10: "pode ser bem pequenininho ali, e embaixo só a inicial do vendedor"); verde = bateu
+    const inicial = d => d.soCms ? "CMS" : (d.nome || "?").trim().charAt(0).toUpperCase();
+    // dourado (12/10, palavra dele): a CMS fica dourada quando bate; o vendedor só fica dourado se a CMS bateu E ele bateu
+    const barras = (pega, g) => { const dc = ok.find(d => d.soCms), pc = dc ? pega(dc) : null, cmsOk = !!(pc && bateu(pc.real, pc.meta, g));
+      return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, b = bateu(real, meta, g), ouro = cms ? b : (cmsOk && b);
+        return `<div class="pb${cms ? " pc" : ""}"><i class="s v${b ? " on" : ""}">${ESTRELA}</i><div class="b ${cms ? "c" : "v"}${ouro ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta)}%;animation-delay:${i * .05}s"></div><span class="pn" title="${esc(d.nome)}">${esc(inicial(d))}</span><span class="pp">${pctTxt(real, meta)}</span></div>`; }).join(""); };
     const cartao = (cls, nome, pega, g) => `<div class="${cls} cmp"><div class="nm">${esc(nome)}</div><div class="bars"><i class="l100" style="bottom:${(g / TETO * 100).toFixed(2)}%"></i>${barras(pega, g)}</div></div>`;
     const tot = cartao("tot", "TOTAL", d => d.soCms ? { real: d.total.real_c, meta: d.total.meta_c } : { real: d.total.real_v, meta: d.total.meta_v }, GATILHO_TOTAL);
     const faixasIds = ref.faixas.map(f => f.id), famIds = ref.familias.map(f => f.id);
@@ -329,7 +336,7 @@
       <div class="sec"><div class="rot">CALÇADOS · PARES${ref.futuro ? " EM CARTEIRA" : ""} · ${esc(nomeMes.toUpperCase())} · UMA BARRA POR VENDEDOR</div>
         <div class="rolo"><div class="fila">${tot}<div class="fxs">${fxs}</div></div></div></div>
       ${famIds.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$</div><div class="fms">${fms}</div></div>` : ""}
-      <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>vendedor</span><span><i class="q" style="background:var(--ok)"></i>bateu</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span></div>
+      <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>vendedor</span><span><i class="q" style="background:var(--ouro)"></i>dourado = bateu (o vendedor só com a CMS batendo)</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span></div>
       <p class="pe">${medida} de cada um pela leitura da Carta${ok[0].cms_lido ? " · lida " + dmh(ok[0].cms_lido) : ""}${ds.filter(d => d.erro).length ? " · sem dado: " + ds.filter(d => d.erro).map(d => esc(d.nome)).join(", ") : ""}</p>
     </div>`;
   }

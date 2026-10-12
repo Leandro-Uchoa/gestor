@@ -58,7 +58,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .chips button.ativa{background:var(--acc);color:#151515;border-color:var(--acc)}
 /* ---- METAS: o visual aprovado por ele em 30/09 (BOSS; canvas "Revisão · celular" e "Revisão · computador"). Cores e medidas
    são as do desenho; o que é regra está no cabeçalho de metas.js. Painel escuro, fonte Sora. ---- */
-.mt{--cf:#FFFF1A;--cp:#B5B52A;--vf:#FFFFFF;--vp:#A6A6A6;--ouro:#F2B632;--prata:#C9D1DC;--txt:#F2F2F2;--mut:#9A9A9A;--eixo:#3A3A3A;--l100:#7A7A7A;--mm:#8A8A8A;--rot:#9A9A9A;
+.mt{--cf:#5B6BFF;--cp:#3A45B0;--vf:#F2F2F2;--vp:#9A9A9A;--ouro:#F2B632;--prata:#C9D1DC;--txt:#F2F2F2;--mut:#9A9A9A;--eixo:#3A3A3A;--l100:#7A7A7A;--mm:#8A8A8A;--rot:#9A9A9A;
     background:#151515;color:var(--txt);font-family:'Sora',system-ui,sans-serif;margin:0 -16px;padding:4px 0 8px 16px;display:flex;flex-direction:column;gap:24px}
 .mt .rot{font-size:12px;letter-spacing:.14em;color:var(--rot);font-weight:600;margin-bottom:12px}
 .mt .sec{display:flex;flex-direction:column}.mt .sec.fam,.mt .leg,.mt .pe{padding-right:16px}
@@ -68,8 +68,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .tot .nm{font-size:12px;font-weight:800;letter-spacing:.12em;color:#FFFF1A;min-height:0}
 .mt .tot .st{margin-top:6px;gap:14px}.mt .tot .st .s{width:18px;height:18px}
 .mt .tot .bars{height:200px;gap:8px;border-bottom-color:#4A4A4A}.mt .tot .l100{left:-2px;right:-2px;border-color:#9A9A9A}
-.mt .tot .b{width:34px;border-radius:6px 6px 0 0}.mt .tot .b.c{background:#FFFF1A}.mt .tot .b.v{background:#FFFFFF}
-.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#FFFF1A}.mt .tot .g.v{color:#FFFFFF}.mt .tot .m{color:#9A9A9A}
+.mt .tot .b{width:34px;border-radius:6px 6px 0 0}.mt .tot .b.c{background:var(--cf)}.mt .tot .b.v{background:var(--vf)}
+.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#9DA8FF}.mt .tot .g.v{color:#FFFFFF}.mt .tot .m{color:#9A9A9A}
 .mt .trava{margin-top:12px;padding-top:10px;border-top:1px solid #4E43A8;display:flex;flex-direction:column;gap:6px}
 .mt .trava .tl{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;letter-spacing:.08em;color:#D9D3FF}.mt .trava .tl b{font-size:15px;font-weight:800;color:#fff}
 .mt .trava .tb{position:relative;height:6px;border-radius:3px;background:#3A3175}.mt .trava .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#7BF0C4}
@@ -86,13 +86,13 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .f-FTW{background:#2E3EFC}.mt .f-MEOLY{background:#FFFF1A}.mt .f-CHOLY{background:#FF8A00}.mt .f-ACOLY{background:#B06CFF}.mt .f-CFOLY{background:#2EC4E6}.mt .f-UA{background:#E3001B}
 /* visão do gestor (12/10): uma barra por vendedor, lado a lado, em cada cartão; nome e % embaixo de cada barra */
 .mt.cmpv .tot{width:auto;min-width:0}.mt.cmpv .bars{gap:4px;align-items:flex-end}.mt.cmpv .pb{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;flex:1}
-.mt.cmpv .pb .b{width:100%;max-width:26px;min-width:8px}.mt.cmpv .pb .s{width:11px;height:11px;margin-bottom:2px}.mt.cmpv .pb .pn{font-size:8px;color:var(--mut);margin-top:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px;margin-bottom:2px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);margin-top:3px;max-width:100%;overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#9DA8FF}
 .mt.cmpv .pb .pp{font-size:9px;font-weight:700;color:var(--txt)}.mt.cmpv .fx{width:200px}.mt.cmpv .tot{width:230px}.mt.cmpv .fms{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:900px){.mt.cmpv .fx{width:auto}.mt.cmpv .tot{width:300px}.mt.cmpv .pb .pn{font-size:9px}.mt.cmpv .fms{grid-template-columns:repeat(var(--n),minmax(0,1fr))}}
 .mt .t15 .fp{grid-column:2;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--mut);margin-top:-4px}.mt .t15 .fp span{display:flex;align-items:center;gap:4px;white-space:nowrap}
 .mt .t15 .fp i{display:inline-block;width:8px;height:8px;border-radius:2px}
-.mt .t15 .trk .mk{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed #C8C8C8;z-index:1}.mt .t15 .trk .mk.ok{border-color:var(--ok)}
-.mt .t15 .val{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;color:var(--mut);line-height:1.25}.mt .t15 .val b{font-size:16px;font-weight:800;color:#fff}.mt .t15 .val b.ok{color:var(--ok)}.mt .t15 .val .c{color:var(--rot)}
+.mt .t15 .trk .mk{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed #C8C8C8;z-index:1}.mt .t15 .trk .mk.ok{border-color:var(--ouro)}
+.mt .t15 .val{display:flex;flex-direction:column;align-items:flex-end;font-size:11px;color:var(--mut);line-height:1.25}.mt .t15 .val b{font-size:16px;font-weight:800;color:#fff}.mt .t15 .val b.ok{color:var(--ouro)}.mt .t15 .val .c{color:var(--rot)}
 .mt .t15 .lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:10px;color:var(--rot);margin-top:2px}.mt .t15 .lg span{display:flex;align-items:center;gap:5px}
 .mt .t15 .lg i{display:inline-block;width:10px;height:10px;border-radius:3px}.mt .t15 .lg i.mk{width:0;height:12px;border-left:2px dashed #C8C8C8;border-radius:0}
 /* as faixas: um cartão por faixa, na fila; três tons */
@@ -109,14 +109,14 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 @keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .mt .fx .b.c{background:var(--cp)}.mt .fx .b.v{background:var(--vp)}.mt .fx.foco .b.c{background:var(--cf)}.mt .fx.foco .b.v{background:var(--vf)}
 .mt .fx.abandonado .b{opacity:.55}
-.mt .b.ouro{background:var(--ok)!important}
+.mt .b.ouro{background:var(--ouro)!important}
 .mt .b.vazia{border-top:2px dotted var(--mut);height:0}
 .mt .num{display:flex;flex-direction:column;min-width:0}.mt .cel{display:flex;flex-direction:column;min-width:0}
 .mt .g{font-size:16px;font-weight:700;margin-top:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.mt .cel.v .g{margin-top:6px}
 .mt .m{font-size:11px;color:var(--mm);white-space:nowrap}.mt .m.fat{font-size:10px}
-.mt .fx .g.c{color:#D6D64A}.mt .fx.foco .g.c{color:#FFFF1A}.mt .fx.abandonado .g.c{color:var(--mut)}
+.mt .fx .g.c{color:#8A96E0}.mt .fx.foco .g.c{color:#9DA8FF}.mt .fx.abandonado .g.c{color:var(--mut)}
 .mt .fx .g.v{color:#D0D0D0}.mt .fx.foco .g.v{color:#FFFFFF}.mt .fx.abandonado .g.v{color:var(--mut)}
-.mt .fx .g.ok{color:var(--ok)}
+.mt .fx .g.ok{color:var(--ouro)}
 /* outras famílias em R$: bloco próprio, tons padrão */
 .mt .fms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .mt .fm{display:flex;flex-direction:column;padding:12px 6px 10px;border-radius:14px;background:#1C1C1C;border:1px solid #2C2C2C;min-width:0}
@@ -124,7 +124,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .fm .bars{height:130px;margin-top:8px;gap:5px}.mt .fm .l100{left:-2px;right:-2px}
 .mt .fm .b{width:18px;border-radius:4px 4px 0 0}.mt .fm .b.c{background:var(--cp)}.mt .fm .b.v{background:var(--vp)}
 .mt .fm .g{font-size:13px;margin-top:8px}.mt .fm .cel.v .g{margin-top:4px}.mt .fm .m{font-size:10px}
-.mt .fm .g.c{color:#D6D64A}.mt .fm .g.v{color:#D0D0D0}.mt .fm .g.ok{color:var(--ok)}
+.mt .fm .g.c{color:#8A96E0}.mt .fm .g.v{color:#D0D0D0}.mt .fm .g.ok{color:var(--ouro)}
 .mt .leg{display:flex;flex-wrap:wrap;gap:12px 16px;font-size:11px;color:var(--rot)}.mt .leg span{display:flex;align-items:center;gap:6px}
 .mt .leg .q{width:10px;height:10px;border-radius:3px;display:inline-block}.mt .leg .q.c{background:var(--cf)}.mt .leg .q.v{background:var(--vf)}.mt .leg .s{width:13px;height:13px}
 .mt .pe{color:var(--rot);font-size:11px;margin:0}
@@ -199,7 +199,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=30"></script>
+<script src="metas.js?v=32"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -265,21 +265,23 @@ let MES_METAS = null, PREPOSTO_METAS = null, PREPOSTOS = null, MARCA_METAS = "OL
 async function listarPrepostos(){
   if (PREPOSTOS) return PREPOSTOS;
   const { data } = await sb.from("preposto").select("preposto,nome,ordem").order("ordem");
-  PREPOSTOS = (data || []).map(p => ({ preposto: p.preposto, nome: p.preposto === "TODOS" ? "CMS completa" : p.nome, ordem: p.ordem }));
+  PREPOSTOS = (data || []).map(p => ({ preposto: p.preposto, nome: p.preposto === "TODOS" ? "CMS" : p.nome, ordem: p.ordem }));   // 12/10: "bota só CMS"
   return PREPOSTOS;
 }
 async function mostrarMetas(){
   const el = $("metas-painel"); el.innerHTML = `<div class="msg ok">buscando…</div>`;
   const ps = await listarPrepostos();
   if (!PREPOSTO_METAS) PREPOSTO_METAS = (ps[0] || {}).preposto || null;
-  $("chips-preposto").innerHTML = ps.map(p => `<button type="button" data-preposto="${p.preposto}" class="${!VER_VENDEDORES && p.preposto === PREPOSTO_METAS ? "ativa" : ""}">${esc(p.nome)}</button>`).join("") +
-    `<button type="button" id="ver-vendedores" class="${VER_VENDEDORES ? "ativa" : ""}">ver vendedores</button>` +
+  // 12/10: o botão "ver vendedores" vive dentro da visão CMS — ao lado das colunas da CMS entram as barras pequenas de cada vendedor
+  const naCms = PREPOSTO_METAS === "TODOS";
+  $("chips-preposto").innerHTML = ps.map(p => `<button type="button" data-preposto="${p.preposto}" class="${p.preposto === PREPOSTO_METAS ? "ativa" : ""}">${esc(p.nome)}</button>`).join("") +
+    (naCms ? `<button type="button" id="ver-vendedores" class="${VER_VENDEDORES ? "ativa" : ""}" style="border-style:dashed">${VER_VENDEDORES ? "só a CMS" : "ver vendedores"}</button>` : "") +
     `<span style="flex-basis:100%"></span>` +
     ["OLY", "UA"].map(m => `<button type="button" data-marca="${m}" class="${m === MARCA_METAS ? "ativa" : ""}">${m === "OLY" ? "OLYMPIKUS" : "UNDER ARMOUR"}</button>`).join("");
-  for (const b of document.querySelectorAll("#chips-preposto button[data-preposto]")) b.onclick = () => { PREPOSTO_METAS = b.dataset.preposto; VER_VENDEDORES = false; mostrarMetas(); };
+  for (const b of document.querySelectorAll("#chips-preposto button[data-preposto]")) b.onclick = () => { PREPOSTO_METAS = b.dataset.preposto; mostrarMetas(); };
   for (const b of document.querySelectorAll("#chips-preposto button[data-marca]")) b.onclick = () => { MARCA_METAS = b.dataset.marca; mostrarMetas(); };
-  $("ver-vendedores").onclick = () => { VER_VENDEDORES = !VER_VENDEDORES; mostrarMetas(); };
-  if (VER_VENDEDORES) {
+  if (naCms) $("ver-vendedores").onclick = () => { VER_VENDEDORES = !VER_VENDEDORES; mostrarMetas(); };
+  if (naCms && VER_VENDEDORES) {
     const ds = await Metas.carregarTodos(sb, MES_METAS, MARCA_METAS, ps);
     const meses = (ds[0] && ds[0].meses) || [];
     $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === ((ds[0] && ds[0].mes) || MES_METAS) ? "ativa" : ""}"><span class="longo">${MESES_LONGOS[+m.slice(5,7)-1]}</span><span class="cur">${MESES[+m.slice(5,7)-1].toUpperCase()}</span></button>`).join("");
