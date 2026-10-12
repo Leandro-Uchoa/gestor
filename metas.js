@@ -240,16 +240,23 @@
     const nomeMes = MESES[+d.mes.slice(5, 7) - 1];
     const pctTxt = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
     const faltaTxt = l => l == null ? "sem meta de tênis" : (l.falta > 0 ? "faltam R$ " + kk(l.falta) : "R$ " + kk(-l.falta) + " acima");
-    // a barra é EMPILHADA por família (pedido dele, 12/10): cada tom é uma família; a ordem é fixa para o olho comparar mês e trimestre
+    // a barra é a COMPOSIÇÃO (pedido dele, 12/10, 2ª rodada): o tênis Olympikus (a META, azul Olympikus) primeiro, e as famílias
+    // empilhadas depois, cada uma numa cor fácil de distinguir (UA no vermelho da marca); a régua vai até onde as famílias somam 15%
+    // da meta (ou até o fim do que existe, se passou) — assim o vazio entre o fim da pilha e a linha É o que falta.
+    // Embaixo da barra, o % de cada família sobre a meta de tênis ("de cabeça a gente faz a conta" — ele quer ver).
     const FAMS15 = [["MEOLY", "MEIAS"], ["CHOLY", "CHINELO"], ["ACOLY", "ACESSÓRIO"], ["CFOLY", "CONFECÇÃO"], ["UA", "UNDER ARMOUR"]];
     const linhaT15 = (rot, b) => {
-      const l = b.v, esc15 = Math.max(TRAVA_15 * 2, (l && l.pct) || 0);                       // a régua vai até o dobro dos 15% (ou até o %)
-      const seg = l ? FAMS15.map(([k]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 && l.meta ? `<i class="f-${k}" style="width:${(p / l.meta / esc15 * 100).toFixed(2)}%"></i>` : ""; }).join("") : "";
+      const l = b.v;
+      if (!l) return `<div class="lin"><div class="nm">${esc(rot)}</div><div class="trk"><div class="tb v"></div></div><div class="val"><b>—</b><span>sem meta de tênis</span></div></div>`;
+      const ref = Math.max(l.meta + l.num, l.meta * (1 + TRAVA_15)), w = v => (v / ref * 100).toFixed(2);
+      const seg = `<i class="f-FTW" style="width:${w(l.meta)}%"></i>` + FAMS15.map(([k]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 ? `<i class="f-${k}" style="width:${w(p)}%"></i>` : ""; }).join("");
+      const fp = FAMS15.map(([k, n]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 ? `<span><i class="f-${k}"></i>${n.toLowerCase()} ${pctTxt(p / l.meta)}</span>` : ""; }).join("");
       return `<div class="lin"><div class="nm">${esc(rot)}</div>
-        <div class="trk"><i class="mk${l && l.ok ? " ok" : ""}" style="left:${(TRAVA_15 / esc15 * 100).toFixed(1)}%"></i><div class="tb v">${seg}</div></div>
-        <div class="val"><b class="${l && l.ok ? "ok" : ""}">${pctTxt(l && l.pct)}</b><span>${faltaTxt(l)}</span></div></div>`;
+        <div class="trk"><i class="mk${l.ok ? " ok" : ""}" style="left:${w(l.meta * (1 + TRAVA_15))}%"></i><div class="tb v">${seg}</div></div>
+        <div class="val"><b class="${l.ok ? "ok" : ""}">${pctTxt(l.pct)}</b><span>${faltaTxt(l)}</span></div>
+        <div class="fp"><span><i class="f-FTW"></i>tênis olympikus · meta R$ ${kk(l.meta)}</span>${fp}</div></div>`;
     };
-    const legT15 = `<div class="lg">${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}<span><i class="mk"></i>15%</span></div>`;
+    const legT15 = `<div class="lg"><span><i class="f-FTW"></i>TÊNIS OLYMPIKUS (META)</span>${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}<span><i class="mk"></i>15% DA META</span></div>`;
     const t15 = d.trava15 ? `<div class="t15"><div class="rot">TRAVA DOS 15% · outras famílias + UA sobre a META de tênis</div>
       ${linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}${legT15}</div>` : "";
     // rodapé: hora da leitura por fonte (regra 9)
