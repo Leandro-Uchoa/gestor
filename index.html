@@ -182,7 +182,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.7</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.8</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -228,7 +228,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=49"></script>
+<script src="metas.js?v=50"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -387,7 +387,7 @@ const NOME_SUB = { "CLASSICOS": "CLÁSSICOS", "CONF_FEM": "CONF. FEMININO", "CON
 // nomes de exibição dos clientes (cadastro, como ele fala); o que não estiver aqui aparece como está no banco
 const NOME_CLI = { "BANBAN CALCADOS": "Ban Ban", "CASA PIO": "Casa Pio", "LOJAS NOROESTE": "Noroeste", "POLYELLE": "Polyélle", "SAPATARIA NOVA": "Sapataria Nova" };
 let CLIENTE_SEL = new Set(), FAMILIA_SEL = new Set(), SUB_SEL = new Set(), CLIENTES = [], MESES_DISP = [], MESES_SEL = new Set();   // conjuntos: múltipla escolha (12/10)
-let ABERTO_CLI = false;                                                                      // a lista de clientes abre pela setinha
+let ABERTO_CLI = false, TODOS_CLI = false;       // a lista abre pela setinha; TODOS_CLI = ele escolheu "todos" (a página abre ZERADA: nada escolhido = nada consultado, 12/10)
 document.addEventListener("DOMContentLoaded", () => {
   $("abre-clientes").onclick = (ev) => { ev.stopPropagation(); ABERTO_CLI = !ABERTO_CLI; montarChips(); };
   document.addEventListener("click", (ev) => { if (ABERTO_CLI && !ev.target.closest(".lista-sel")) { ABERTO_CLI = false; montarChips(); } });   // clicou fora: fecha
@@ -415,9 +415,10 @@ function chips(id, lista, sel){
 }
 const liga = (sel, v) => { if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); };
 function montarChips(){
-  for (const b of chips("chips-cliente", [["", "todos"], ...CLIENTES.map(c => [c, NOME_CLI[c] || c])], CLIENTE_SEL)) b.onclick = (ev) => { ev.stopPropagation(); liga(CLIENTE_SEL, b.dataset.v); montarChips(); consultar(); };
+  for (const b of chips("chips-cliente", [["", "todos"], ...CLIENTES.map(c => [c, NOME_CLI[c] || c])], CLIENTE_SEL)) b.onclick = (ev) => { ev.stopPropagation(); if (b.dataset.v === "") { TODOS_CLI = !TODOS_CLI; CLIENTE_SEL.clear(); } else { TODOS_CLI = false; liga(CLIENTE_SEL, b.dataset.v); } montarChips(); consultar(); };
+  const bt = $("chips-cliente").querySelector('button[data-v=""]'); if (bt) bt.classList.toggle("ativa", TODOS_CLI);
   const sel = [...CLIENTE_SEL].map(c => NOME_CLI[c] || c);
-  $("abre-clientes").textContent = (sel.length ? (sel.length <= 2 ? sel.join(" + ") : sel.length + " clientes") : "todos") + (ABERTO_CLI ? " ▴" : " ▾");
+  $("abre-clientes").textContent = (sel.length ? (sel.length <= 2 ? sel.join(" + ") : sel.length + " clientes") : (TODOS_CLI ? "todos" : "escolha o cliente")) + (ABERTO_CLI ? " ▴" : " ▾");
   $("chips-cliente").classList.toggle("oculto", !ABERTO_CLI);
   for (const b of chips("chips-familia", [["", "todas"], ...FAMILIAS.map(f => [f, f])], FAMILIA_SEL)) b.onclick = () => { liga(FAMILIA_SEL, b.dataset.v); for (const x of [...SUB_SEL]) if (!subsDisponiveis().includes(x)) SUB_SEL.delete(x); montarChips(); consultar(); };
   $("chips-meses").innerHTML = MESES_DISP.map(m => `<button type="button" data-m="${m}" class="${MESES_SEL.has(m) ? "ativa" : ""}">${mesBR(m)}</button>`).join("");
@@ -451,23 +452,26 @@ async function consultar(){
   msg("msg-pergunta", ""); $("resultado").innerHTML = "";
   const p = periodo(); if (!p) return;
   const { de, ate, pedidos } = p, n = ++CONSULTA_N;
+  if (!TODOS_CLI && !CLIENTE_SEL.size) { msg("msg-pergunta", "Escolha o cliente na caixinha (um, vários ou todos). A página abre vazia de propósito: assim ela abre na hora.", "aviso"); return; }
   msg("msg-pergunta", "buscando…", "ok");
-  let qv = sb.from("v_venda_produto_mes").select("mes,cliente,referencia,cor,descricao,marca,faixa,pares_fat,pares_cart,base_em").gte("mes", de + "-01").lte("mes", ate + "-01");
-  let qg = sb.from("v_giro_produto_mes").select("mes,cliente,referencia,cor,descricao,marca,venda,estoque,base_em").gte("mes", de + "-01").lte("mes", ate + "-01");
-  if (CLIENTE_SEL.size) { qv = qv.in("cliente", [...CLIENTE_SEL]); qg = qg.in("cliente", [...CLIENTE_SEL]); }
-  const [rv, rg] = await Promise.all([tudo(qv), tudo(qg)]);
+  const t0 = performance.now();
+  // UMA chamada (12/10, "está mais lento que o BI"): a função cg_consulta devolve já por referência+cor, meses dentro — antes eram
+  // dezenas de páginas de 1.000 linhas e cada página refazia a soma inteira no banco
+  const r = await sb.rpc("cg_consulta", { p_clientes: TODOS_CLI ? null : [...CLIENTE_SEL], p_de: de + "-01", p_ate: ate + "-01" });
   if (n !== CONSULTA_N) return;                                   // outro toque veio depois: este resultado já envelheceu
-  if (rv.error || rg.error) { msg("msg-pergunta", "O banco recusou: " + esc((rv.error || rg.error).message), "erro"); return; }
+  if (r.error) { msg("msg-pergunta", "O banco recusou: " + esc(r.error.message), "erro"); return; }
   msg("msg-pergunta", "");
+  const dados = r.data || { linhas: [] };
   // a linha-mãe é a REFERÊNCIA (soma de todas as cores e de todos os clientes filtrados); as filhas são as cores
   const maes = new Map();
-  const mae = r => { let a = maes.get(r.referencia); if (!a) { a = { referencia: r.referencia, descricao: r.descricao || "", fam: familiaDe(r.marca), sub: r.faixa || "", meses: {}, cores: new Map(), venda: 0, cart: 0, fat: 0 }; maes.set(r.referencia, a); }
-    if (!a.descricao && r.descricao) a.descricao = r.descricao; if (!a.fam) a.fam = familiaDe(r.marca); if (!a.sub && r.faixa) a.sub = r.faixa; return a; };
-  const filha = (a, cor) => { const k = cor || ""; let f = a.cores.get(k); if (!f) { f = { cor: k, meses: {}, venda: 0, cart: 0, fat: 0 }; a.cores.set(k, f); } return f; };
-  const soma = (alvo, m, campo, v) => { if (v == null) return; const c = alvo.meses[m] || (alvo.meses[m] = {}); c[campo] = (c[campo] || 0) + v; alvo[campo === "estoque" ? "estoque" : campo] = (alvo[campo === "estoque" ? "estoque" : campo] || 0) + v; };
-  const bases = new Set();
-  for (const r of rv.data) { const a = mae(r), f = filha(a, r.cor), m = r.mes.slice(0, 7); for (const x of [a, f]) { soma(x, m, "fat", r.pares_fat); soma(x, m, "cart", r.pares_cart); } bases.add("base " + dmy(r.base_em)); }
-  for (const r of rg.data) { const a = mae(r), f = filha(a, r.cor), m = r.mes.slice(0, 7); for (const x of [a, f]) { soma(x, m, "venda", r.venda); soma(x, m, "estoque", r.estoque); } bases.add("AG " + dmy(r.base_em)); }
+  const mae = x => { let a = maes.get(x.referencia); if (!a) { a = { referencia: x.referencia, descricao: x.descricao || "", fam: familiaDe(x.marca), sub: x.faixa || "", meses: {}, cores: new Map(), venda: 0, cart: 0, fat: 0 }; maes.set(x.referencia, a); }
+    if (!a.descricao && x.descricao) a.descricao = x.descricao; if (!a.fam) a.fam = familiaDe(x.marca); if (!a.sub && x.faixa) a.sub = x.faixa; return a; };
+  const soma = (alvo, m, campo, v) => { if (v == null) return; const c = alvo.meses[m] || (alvo.meses[m] = {}); c[campo] = (c[campo] || 0) + v; alvo[campo] = (alvo[campo] || 0) + v; };
+  const CAMPOS = { f: "fat", c: "cart", v: "venda", e: "estoque" };
+  for (const x of dados.linhas) { const a = mae(x), f = { cor: x.cor || "", meses: {}, venda: 0, cart: 0, fat: 0 }; a.cores.set(f.cor, f);
+    for (const [m, c] of Object.entries(x.meses || {})) for (const [k, campo] of Object.entries(CAMPOS)) { soma(a, m, campo, c[k]); soma(f, m, campo, c[k]); } }
+  const bases = new Set(); if (dados.base_venda) bases.add("base " + dmy(dados.base_venda)); if (dados.base_giro) bases.add("AG " + dmy(dados.base_giro));
+  bases.add((Math.round(performance.now() - t0) / 1000).toFixed(1).replace(".", ",") + " s");
   let linhas = [...maes.values()];
   if (FAMILIA_SEL.size) linhas = linhas.filter(a => FAMILIA_SEL.has(a.fam));
   if (SUB_SEL.size) linhas = linhas.filter(a => SUB_SEL.has(a.sub));
