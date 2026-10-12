@@ -18,10 +18,17 @@
       só quem pontua); a da CMS é a leitura do NÚCLEO.
    8. Animação: as barras sobem em ~1,3 s ao abrir e PARAM. Sem ícones, sem emoji, sem texto explicativo.
    9. Rodapé: hora da leitura por fonte. REAL = POTENCIAL (faturado + carteira); quando a leitura trouxer o faturado separado
-      (fat_pares), a coluna mostra os dois e não mistura. */
+      (fat_pares), a coluna mostra os dois e não mistura.
+  10. A RÉGUA DA VULCABRAS, definitiva (Léo via BOSS, 12/10): tênis (cada marca sozinha, em pares) — o TOTAL bate com 90% da meta,
+      cada FAIXA bate com 100%; as outras famílias (confecção, acessório, chinelo, meias), em valor — cada uma bate com 95%, sem
+      faixas dentro. A linha tracejada do TOTAL fica nos 90%, a das famílias nos 95%, a das faixas nos 100%. O ouro da CMS segue a
+      mesma régua. A camada da CMS para pagar o vendedor (trava dos 15%, 50%) continua DESLIGADA. */
 (function () {
   const ESTRELAS_VENDEDOR = false;     // ordem dele, 30/09: fora até segunda ordem (a regra ouro/prata está em estrelaVendedor)
   const TRAVA_15 = false;              // idem: o bloco da trava não entra na tela
+  const GATILHO_TOTAL = 0.90;          // regra 10: o total de tênis bate com 90% da meta
+  const GATILHO_FAIXA = 1.00;          //          cada faixa de tênis bate com 100%
+  const GATILHO_FAMILIA = 0.95;        //          cada família em R$ bate com 95%
   const TETO = 1.5;                    // o eixo vai até 150% da meta; a linha dos 100% fica a 2/3 da altura
   const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
   // nome por extenso e ORDEM de exibição (regra 2 e 6); o que não estiver aqui segue a ordem da faixa_carta, com o nome da Carta
@@ -35,7 +42,8 @@
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const dm = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7) : "";
   const dmh = iso => { if (!iso) return "—"; const d = new Date(iso); if (isNaN(d)) return dm(iso); return d.toLocaleDateString("pt-BR").slice(0, 5) + " " + d.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"}); };
-  const bateu = (real, meta) => meta != null && real != null && real >= meta;
+  const bateu = (real, meta, g) => meta != null && real != null && real >= meta * (g == null ? 1 : g);   // g = gatilho (regra 10)
+  const alvo = (meta, g) => meta == null ? null : meta * g;                                                 // a meta que vale: 90% / 95% dela
   const mesAtual = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
   // falta (−) ou excedente (+): pares por extenso até 9.999 (os do vendedor, exatos), em k de 10.000 para cima (os da CMS); R$ em k
   const fmtP = n => Math.abs(n) >= 1e4 ? kk(n) : fmt(Math.abs(n));
@@ -119,19 +127,19 @@
   }
 
   // ---------- as regras
-  // ouro da CMS: só quando ela bateu o TOTAL — no total e em cada faixa que bateu (regra 5)
+  // ouro da CMS: só quando ela bateu o TOTAL (90%, regra 10) — no total e em cada faixa que bateu (100%) (regra 5)
   function dourado(f, tot) {
-    const cmsTotal = bateu(tot.real_c, tot.meta_c);
-    return { cms: cmsTotal && bateu(f.real_c, f.meta_c), vend: estrelaVendedor(f, tot, null) === "ouro" };
+    const cmsTotal = bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
+    return { cms: cmsTotal && bateu(f.real_c, f.meta_c, GATILHO_FAIXA), vend: estrelaVendedor(f, tot, null) === "ouro" };
   }
   // estrela do VENDEDOR (desligada, ESTRELAS_VENDEDOR): "ouro" = CMS bateu total e faixa, ele bateu a faixa e os 15%;
   // "prata" = CMS bateu total e faixa, ele NÃO bateu a faixa mas bateu os 15%; sem os 15% (trava15 !== true) nenhuma estrela.
   // O total do vendedor não é exigido (palavra dele, 17/09: "se a CMS fecha a meta e eu não, meu recebimento da faixa é 50%").
   function estrelaVendedor(f, tot, trava15) {
     if (trava15 !== true) return null;
-    const cmsF = bateu(tot.real_c, tot.meta_c) && bateu(f.real_c, f.meta_c);
+    const cmsF = bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(f.real_c, f.meta_c, GATILHO_FAIXA);
     if (!cmsF) return null;
-    return bateu(f.real_v, f.meta_v) ? "ouro" : "prata";
+    return bateu(f.real_v, f.meta_v, GATILHO_FAIXA) ? "ouro" : "prata";
   }
   // altura em % da área: com meta, 100% da meta = 2/3 da altura (eixo até 150%); sem meta, escala pelo maior valor do bloco
   function altura(real, meta, escala) {
@@ -142,6 +150,9 @@
   const barra = (quem, real, meta, ouro, atraso, escala) => `<div class="b ${quem}${ouro ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta, escala)}%;animation-delay:${atraso || 0}s"></div>`;
   const estrela = (quem, on, tom) => `<i class="s ${quem}${on ? " on" : ""}${tom ? " " + tom : ""}">${ESTRELA}</i>`;
   const celula = (quem, gap, meta, ok, fat) => `<div class="cel ${quem}"><b class="g ${quem}${ok ? " ok" : ""}">${gap}</b><span class="m">${meta}</span>${fat ? `<span class="m fat">${fat}</span>` : ""}</div>`;
+  // a linha tracejada do gatilho: 100% fica a 2/3 da altura (CSS); 90% e 95% descem na proporção (regra 10)
+  const linha = (g, dentro) => `<i class="l100"${g === 1 ? "" : ` style="bottom:${(g / TETO * 100).toFixed(2)}%"`}>${dentro || ""}</i>`;
+  const pct = g => Math.round(g * 100) + "%";
   // faturado separado do potencial, quando a leitura trouxe (regra 9): "fat N + cart M"
   // mês fechado lido como faturado tem fat == real: não há carteira a mostrar
   const fatCart = (fat, real, reais) => (fat == null || real == null || fat === real) ? "" : (reais ? `fat R$ ${kk(fat)} + cart R$ ${kk(real - fat)}` : `fat ${fmt(fat)} + cart ${fmt(real - fat)}`);
@@ -151,7 +162,8 @@
     const tot = d.total, medida = d.futuro ? "carteira" : "real";
     const escala = d.semMeta ? Math.max(1, ...d.faixas.flatMap(f => [f.real_v || 0, f.real_c || 0])) : null;
     const escTot = d.semMeta ? Math.max(1, tot.real_v || 0, tot.real_c || 0) : null;
-    const cmsTot = !d.semMeta && bateu(tot.real_c, tot.meta_c);
+    const cmsTot = !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
+    const metaTot = m => m == null ? "sem meta" : pct(GATILHO_TOTAL) + " de " + fmtP(m);     // regra 10: o total bate com 90% da meta
     const totV = ESTRELAS_VENDEDOR ? estrelaVendedor({ real_c: tot.real_c, meta_c: tot.meta_c, real_v: tot.real_v, meta_v: tot.meta_v }, tot, d.trava15) : null;
     let cards = "";
     d.faixas.forEach((f, i) => {
@@ -169,12 +181,14 @@
     d.familias.forEach((f, i) => {
       // família em R$ é meta própria em valor: o ouro da CMS acende quando ela bate a meta DAQUELA família, sem depender do total de
       // tênis (Léo via BOSS, 30/09). O ouro do vendedor na família segue desligado com as outras estrelas dele.
-      const ouroC = bateu(f.real_c, f.meta_c);
+      // regra 10: a família bate com 95% da meta em valor; a falta/excedente é contra esses 95%, e a linha desce para lá
+      const ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA), ac = alvo(f.meta_c, GATILHO_FAMILIA), av = alvo(f.meta_v, GATILHO_FAMILIA);
+      const metaFam = m => m == null ? "sem meta" : pct(GATILHO_FAMILIA) + " de R$ " + kk(m);
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", ouroC)}</div>
-        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${barra("v", f.real_v, f.meta_v, false, i * .06 + .05)}</div>
-        <div class="num">${celula("c", gapReais(f.real_c, f.meta_c), metaReais(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c, true))}${celula("v", gapReais(f.real_v, f.meta_v), metaReais(f.meta_v), bateu(f.real_v, f.meta_v), fatCart(f.fat_v, f.real_v, true))}</div>
+        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${barra("v", f.real_v, f.meta_v, false, i * .06 + .05)}</div>
+        <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true))}</div>
       </div>`;
     });
     // bloco da trava dos 15% (desligado, TRAVA_15): entra no cartão do total quando ele mandar
@@ -197,15 +211,15 @@
           <div class="tot">
             <div class="nm">TOTAL</div>
             <div class="st">${estrela("c", cmsTot)}${ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
-            <div class="bars"><i class="l100">${d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : ""}</i>${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot)}</div>
-            <div class="num">${celula("c", gapPares(tot.real_c, tot.meta_c), metaPares(tot.meta_c), false)}${celula("v", gapPares(tot.real_v, tot.meta_v), metaPares(tot.meta_v), false)}</div>
+            <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot)}</div>
+            <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false)}</div>
             ${trava}
           </div>
           <div class="fxs">${cards}</div>
         </div></div>
       </div>
       ${d.familias.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$${d.futuro ? " EM CARTEIRA" : ""}</div><div class="fms">${fams}</div></div>` : ""}
-      <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>${esc(d.nome)}</span><span><i class="s on">${ESTRELA}</i>100%</span>${ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%</span>` : ""}</div>
+      <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>${esc(d.nome)}</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%</span>` : ""}</div>
       <p class="pe">${fonteC} · ${fonteV}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
   }
