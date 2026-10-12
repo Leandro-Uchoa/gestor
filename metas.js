@@ -34,7 +34,7 @@
       CMS = barra amarela; vendedor = barra branca; FOCO = borda amarela; "bateu" = VERDE na barra e no número (o dourado fica só
       na estrela, com contorno, para não se confundir com o amarelo da marca). As cores moram no CSS do index.html. */
 (function () {
-  const ESTRELAS_VENDEDOR = false;     // ordem dele, 30/09: fora até segunda ordem (a regra ouro/prata está em estrelaVendedor)
+  const ESTRELAS_VENDEDOR = true;      // 12/10 (reunião, via BOSS): "ligar as estrelas: bateu tem estrela, não bateu fica sem" — regra em estrelaVendedor
   const TRAVA_15 = 0.15;               // regra 11: outras famílias + UA ≥ 15% da META de tênis OLY (R$)
   const FAM_OLY = ["ACOLY", "CHOLY", "MEOLY", "CFOLY"];   // o numerador do lado Olympikus; a UA entra inteira pelo TT GERAL dela
   const GATILHO_TOTAL = 0.90;          // regra 10: o total de tênis bate com 90% da meta
@@ -44,8 +44,13 @@
   const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
   // nome por extenso e ORDEM de exibição (regra 2 e 6); o que não estiver aqui segue a ordem da faixa_carta, com o nome da Carta
   const NOMES = { "CLASSICOS": "CLÁSSICOS", "CONF_FEM": "CONF. FEMININO", "CONF_MASC": "CONF. MASCULINO", "CORRIDA/TREINO": "CORRIDA TREINO", "INFANTIL": "INFANTIL", "CORRE": "CORRE",
-                  "ACOLY": "ACESSÓRIO", "MEOLY": "MEIAS", "CHOLY": "CHINELO", "CFOLY": "CONFECÇÃO", "UA_AC": "ACESSÓRIO", "UA_ME": "MEIAS", "UA_CH": "CHINELO", "UA_CF": "CONFECÇÃO" };
-  const ORDEM = { "CLASSICOS": 1, "CONF_FEM": 2, "CONF_MASC": 3, "CORRIDA/TREINO": 4, "INFANTIL": 5, "CORRE": 6, "ACOLY": 1, "MEOLY": 2, "CHOLY": 3, "CFOLY": 4, "UA_AC": 1, "UA_ME": 2, "UA_CH": 3, "UA_CF": 4 };
+                  "ACOLY": "ACESSÓRIO", "MEOLY": "MEIAS", "CHOLY": "CHINELO", "CFOLY": "CONFECÇÃO", "UA_AC": "ACESSÓRIO", "UA_ME": "MEIAS", "UA_CH": "CHINELO", "UA_CF": "CONFECÇÃO",
+                  "RUN INSPIRED": "RUN INSPIRED", "RUNNING": "RUNNING", "TRAINING": "TRAINING", "BASKETBALL": "BASKETBALL" };
+  const ORDEM = { "CLASSICOS": 1, "CONF_FEM": 2, "CONF_MASC": 3, "CORRIDA/TREINO": 4, "INFANTIL": 5, "CORRE": 6, "ACOLY": 1, "MEOLY": 2, "CHOLY": 3, "CFOLY": 4, "UA_AC": 1, "UA_ME": 2, "UA_CH": 3, "UA_CF": 4,
+                  "RUN INSPIRED": 1, "RUNNING": 2, "TRAINING": 3, "BASKETBALL": 4 };
+  // 12/10 (reunião, via BOSS): ordem fixa por proximidade geográfica — CMS, Léo, Mari, Rafael, Willame, Jorge; os demais depois.
+  // A ordem mora na coluna `ordem` da tabela preposto (0017): código de preposto não entra neste arquivo público.
+  const posPrep = p => (p && p.ordem != null) ? +p.ordem : 99;
   const ESTRELA = '<svg viewBox="0 0 24 24"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z"/></svg>';
 
   const fmt = n => { n = Math.round(n); return (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("pt-BR"); };
@@ -179,11 +184,15 @@
   // estrela do VENDEDOR (desligada, ESTRELAS_VENDEDOR): "ouro" = CMS bateu total e faixa, ele bateu a faixa e os 15%;
   // "prata" = CMS bateu total e faixa, ele NÃO bateu a faixa mas bateu os 15%; sem os 15% (trava15 !== true) nenhuma estrela.
   // O total do vendedor não é exigido (palavra dele, 17/09: "se a CMS fecha a meta e eu não, meu recebimento da faixa é 50%").
-  function estrelaVendedor(f, tot, trava15) {
-    if (trava15 !== true) return null;                      // quem chama passa d.trava15.mes.v.ok (regra 11) quando as estrelas ligarem
-    const cmsF = bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(f.real_c, f.meta_c, GATILHO_FAIXA);
-    if (!cmsF) return null;
-    return bateu(f.real_v, f.meta_v, GATILHO_FAIXA) ? "ouro" : "prata";
+  // 12/10, palavra dele na reunião (via BOSS): "bateu tem estrela, não bateu fica sem. Vantagem dos 15%: com os 15%, 50% em toda
+  // faixa ou família que a CMS bateu e o vendedor não. Única condição: os 15%; o total a 95% não é exigido."
+  // OURO = o vendedor bateu (faixa 100% / família 95% / total 90%). PRATA = ele não bateu, a CMS bateu a mesma faixa/família, e ele
+  // tem os 15% (ok15). Sem os 15%, não há prata. O total dele não entra na conta da faixa.
+  function estrelaVendedor(f, tot, ok15, g) {
+    g = g == null ? GATILHO_FAIXA : g;
+    if (bateu(f.real_v, f.meta_v, g)) return "ouro";
+    if (ok15 === true && bateu(f.real_c, f.meta_c, g)) return "prata";
+    return null;
   }
   // altura em % da área: com meta, 100% da meta = 2/3 da altura (eixo até 150%); sem meta, escala pelo maior valor do bloco
   function altura(real, meta, escala) {
@@ -210,15 +219,15 @@
     const cmsTot = !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
     const metaTot = m => m == null ? "sem meta" : pct(GATILHO_TOTAL) + " de " + fmtP(m);     // regra 10: o total bate com 90% da meta
     const ok15 = !!(d.trava15 && d.trava15.mes && d.trava15.mes.v && d.trava15.mes.v.ok);
-    const totV = ESTRELAS_VENDEDOR ? estrelaVendedor({ real_c: tot.real_c, meta_c: tot.meta_c, real_v: tot.real_v, meta_v: tot.meta_v }, tot, ok15) : null;
+    const totV = (ESTRELAS_VENDEDOR && !d.semMeta && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL)) ? "ouro" : null;   // no total só há ouro (bateu os 90%)
     let cards = "";
     d.faixas.forEach((f, i) => {
       const g = d.semMeta ? { cms: false, vend: false } : dourado(f, tot), est = f.estado === "sem_tratamento" ? "padrao" : f.estado;
-      const tomV = ESTRELAS_VENDEDOR ? estrelaVendedor(f, tot, ok15) : null;
+      const tomV = (ESTRELAS_VENDEDOR && !d.semMeta) ? estrelaVendedor(f, tot, ok15, GATILHO_FAIXA) : null;
       const fe = f.meta_v || f.meta_c ? null : escala;
       cards += `<div class="fx ${esc(est)}">
         <div class="nm">${esc(f.nome)}</div>
-        <div class="st">${estrela("c", g.cms)}${ESTRELAS_VENDEDOR ? estrela("v", !!tomV, tomV) : ""}</div>
+        <div class="st">${estrela("c", g.cms)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!tomV, tomV) : ""}</div>
         <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${V ? barra("v", f.real_v, f.meta_v, tomV === "ouro", i * .06 + .05, fe) : ""}</div>
         <div class="num">${celula("c", gapPares(f.real_c, f.meta_c), metaPares(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c))}${V ? celula("v", gapPares(f.real_v, f.meta_v), metaPares(f.meta_v), bateu(f.real_v, f.meta_v), d.futuro ? "" : fatCart(f.fat_v, f.real_v)) : ""}</div>
       </div>`;
@@ -229,11 +238,12 @@
       // tênis (Léo via BOSS, 30/09). O ouro do vendedor na família segue desligado com as outras estrelas dele.
       // regra 10: a família bate com 95% da meta em valor; a falta/excedente é contra esses 95%, e a linha desce para lá
       const ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA), ac = alvo(f.meta_c, GATILHO_FAMILIA), av = alvo(f.meta_v, GATILHO_FAMILIA);
+      const tomF = (ESTRELAS_VENDEDOR && V) ? estrelaVendedor(f, tot, ok15, GATILHO_FAMILIA) : null;     // 12/10: a família também tem ouro/prata do vendedor
       const metaFam = m => m == null ? "sem meta" : pct(GATILHO_FAMILIA) + " de R$ " + kk(m);
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
-        <div class="st">${estrela("c", ouroC)}</div>
-        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, false, i * .06 + .05) : ""}</div>
+        <div class="st">${estrela("c", ouroC)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!tomF, tomF) : ""}</div>
+        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, tomF === "ouro", i * .06 + .05) : ""}</div>
         <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${V ? celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true)) : ""}</div>
       </div>`;
     });
@@ -279,7 +289,7 @@
         <div class="rolo"><div class="fila">
           <div class="tot">
             <div class="nm">TOTAL</div>
-            <div class="st">${estrela("c", cmsTot)}${ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
+            <div class="st">${estrela("c", cmsTot)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
             <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot) : ""}</div>
             <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${V ? celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false) : ""}</div>
             ${trava}
@@ -288,9 +298,40 @@
         </div></div>
       </div>
       ${d.familias.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$${d.futuro ? " EM CARTEIRA" : ""}</div><div class="fms">${fams}</div></div>` : ""}
-      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%</span>` : ""}</div>
+      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${V && ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%: CMS bateu, ${esc(d.nome)} não, com os 15%</span>` : ""}</div>
       <p class="pe">${fonteC}${V ? " · " + fonteV : ""}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
   }
-  window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk, contaTrava15 };
+  // ---------- a visão do gestor (12/10, via BOSS): "abre na CMS total; um botão 'ver vendedores' mostra uma barra por vendedor,
+  // lado a lado", na ordem fixa. Cada cartão (total, faixas, famílias) ganha uma barra por preposto, com a estrela de quem bateu e o
+  // % embaixo. Carrega o mês uma vez por preposto (as mesmas consultas da aba) e desenha tudo numa página.
+  async function carregarTodos(sb, mes, marca, prepostos) {
+    const lista = prepostos.slice().sort((a, b) => posPrep(a) - posPrep(b));
+    const ds = await Promise.all(lista.map(p => carregar(sb, mes, p.preposto, marca)));
+    return ds.map((d, i) => Object.assign(d, { nome: lista[i].preposto === "TODOS" ? "CMS" : (lista[i].nome || d.nome) }));
+  }
+  function desenharComparativo(el, ds) {
+    const ok = ds.filter(d => !d.erro);
+    if (!ok.length) { el.innerHTML = `<div class="msg aviso">${esc((ds[0] && ds[0].erro) || "sem dado")}</div>`; return; }
+    const ref = ok[0], medida = ref.futuro ? "carteira" : "real";
+    const pctTxt = (r, m) => (r == null || !m) ? "—" : Math.round(r / m * 100) + "%";
+    // uma barra por preposto: a CMS pela sua meta, cada vendedor pela dele; cor da CMS (amarelo) e do vendedor (branco); verde = bateu
+    const barras = (pega, g) => ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, b = bateu(real, meta, g);
+      return `<div class="pb"><i class="s v${b ? " on" : ""}">${ESTRELA}</i><div class="b ${cms ? "c" : "v"}${b ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta)}%;animation-delay:${i * .05}s"></div><span class="pn">${esc(d.nome)}</span><span class="pp">${pctTxt(real, meta)}</span></div>`; }).join("");
+    const cartao = (cls, nome, pega, g) => `<div class="${cls} cmp"><div class="nm">${esc(nome)}</div><div class="bars"><i class="l100" style="bottom:${(g / TETO * 100).toFixed(2)}%"></i>${barras(pega, g)}</div></div>`;
+    const tot = cartao("tot", "TOTAL", d => d.soCms ? { real: d.total.real_c, meta: d.total.meta_c } : { real: d.total.real_v, meta: d.total.meta_v }, GATILHO_TOTAL);
+    const faixasIds = ref.faixas.map(f => f.id), famIds = ref.familias.map(f => f.id);
+    const acha = (d, lista, id) => (d[lista] || []).find(f => f.id === id) || {};
+    const fxs = faixasIds.map(id => cartao("fx padrao", (acha(ref, "faixas", id).nome || id), d => { const f = acha(d, "faixas", id); return d.soCms ? { real: f.real_c, meta: f.meta_c } : { real: f.real_v, meta: f.meta_v }; }, GATILHO_FAIXA)).join("");
+    const fms = famIds.map(id => cartao("fm", (acha(ref, "familias", id).nome || id), d => { const f = acha(d, "familias", id); return d.soCms ? { real: f.real_c, meta: f.meta_c } : { real: f.real_v, meta: f.meta_v }; }, GATILHO_FAMILIA)).join("");
+    const nomeMes = MESES[+ref.mes.slice(5, 7) - 1];
+    el.innerHTML = `<div class="mt cmpv${ref.futuro ? " futuro" : ""}" style="--n:${faixasIds.length}">
+      <div class="sec"><div class="rot">CALÇADOS · PARES${ref.futuro ? " EM CARTEIRA" : ""} · ${esc(nomeMes.toUpperCase())} · UMA BARRA POR VENDEDOR</div>
+        <div class="rolo"><div class="fila">${tot}<div class="fxs">${fxs}</div></div></div></div>
+      ${famIds.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$</div><div class="fms">${fms}</div></div>` : ""}
+      <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>vendedor</span><span><i class="q" style="background:var(--ok)"></i>bateu</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span></div>
+      <p class="pe">${medida} de cada um pela leitura da Carta${ok[0].cms_lido ? " · lida " + dmh(ok[0].cms_lido) : ""}${ds.filter(d => d.erro).length ? " · sem dado: " + ds.filter(d => d.erro).map(d => esc(d.nome)).join(", ") : ""}</p>
+    </div>`;
+  }
+  window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk, contaTrava15, carregarTodos, desenharComparativo, posPrep };
 })();

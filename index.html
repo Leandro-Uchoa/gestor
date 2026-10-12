@@ -84,6 +84,11 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 /* a barra dos 15% é a COMPOSIÇÃO (12/10, 2ª rodada dele: "as cores ficaram muito próximas"): tênis Olympikus = azul Olympikus #2E3EFC
    (a META, a referência), Under Armour = vermelho da marca, e cada família numa cor fácil de distinguir */
 .mt .f-FTW{background:#2E3EFC}.mt .f-MEOLY{background:#FFFF1A}.mt .f-CHOLY{background:#FF8A00}.mt .f-ACOLY{background:#B06CFF}.mt .f-CFOLY{background:#2EC4E6}.mt .f-UA{background:#E3001B}
+/* visão do gestor (12/10): uma barra por vendedor, lado a lado, em cada cartão; nome e % embaixo de cada barra */
+.mt.cmpv .tot{width:auto;min-width:0}.mt.cmpv .bars{gap:4px;align-items:flex-end}.mt.cmpv .pb{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;flex:1}
+.mt.cmpv .pb .b{width:100%;max-width:26px;min-width:8px}.mt.cmpv .pb .s{width:11px;height:11px;margin-bottom:2px}.mt.cmpv .pb .pn{font-size:8px;color:var(--mut);margin-top:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt.cmpv .pb .pp{font-size:9px;font-weight:700;color:var(--txt)}.mt.cmpv .fx{width:200px}.mt.cmpv .tot{width:230px}.mt.cmpv .fms{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:900px){.mt.cmpv .fx{width:auto}.mt.cmpv .tot{width:300px}.mt.cmpv .pb .pn{font-size:9px}.mt.cmpv .fms{grid-template-columns:repeat(var(--n),minmax(0,1fr))}}
 .mt .t15 .fp{grid-column:2;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--mut);margin-top:-4px}.mt .t15 .fp span{display:flex;align-items:center;gap:4px;white-space:nowrap}
 .mt .t15 .fp i{display:inline-block;width:8px;height:8px;border-radius:2px}
 .mt .t15 .trk .mk{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed #C8C8C8;z-index:1}.mt .t15 .trk .mk.ok{border-color:var(--ok)}
@@ -194,7 +199,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=29"></script>
+<script src="metas.js?v=30"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -253,23 +258,36 @@ const ABAS = {
               rodape: "Giro: venda e estoque do cliente por produto e mês, das análises de giro. A Casa Pio não entrega por cor. Célula vazia (—) = a AG não tem o dado; 0 = vendeu zero." },
   metas:    { subtitulo: "· metas", visao_cob: null, cob: [], rodape: "" },        // nenhum texto explicativo na tela (ATA 23/09)
 };
-let MES_METAS = null, PREPOSTO_METAS = null, PREPOSTOS = null;
+let MES_METAS = null, PREPOSTO_METAS = null, PREPOSTOS = null, MARCA_METAS = "OLY", VER_VENDEDORES = false;
 // 12/10, ordem dele: a aba Metas para cada vendedor e para a CMS completa — um chip por preposto (nomes da tabela preposto;
-// TODOS = a CMS inteira). Abre no primeiro vendedor cadastrado; a escolha fica para a sessão.
+// TODOS = a CMS inteira), na ordem fixa por geografia (Metas.ORDEM_PREP). Visão do gestor: abre na CMS completa; "ver vendedores"
+// mostra uma barra por vendedor, lado a lado. OLYMPIKUS / UNDER ARMOUR na mesma página.
 async function listarPrepostos(){
   if (PREPOSTOS) return PREPOSTOS;
-  const { data } = await sb.from("preposto").select("preposto,nome").order("nome");
-  const todos = (data || []).filter(p => p.preposto === "TODOS"), resto = (data || []).filter(p => p.preposto !== "TODOS");
-  PREPOSTOS = todos.map(p => ({ preposto: p.preposto, nome: "CMS completa" })).concat(resto);
+  const { data } = await sb.from("preposto").select("preposto,nome,ordem").order("ordem");
+  PREPOSTOS = (data || []).map(p => ({ preposto: p.preposto, nome: p.preposto === "TODOS" ? "CMS completa" : p.nome, ordem: p.ordem }));
   return PREPOSTOS;
 }
 async function mostrarMetas(){
   const el = $("metas-painel"); el.innerHTML = `<div class="msg ok">buscando…</div>`;
   const ps = await listarPrepostos();
-  if (!PREPOSTO_METAS) PREPOSTO_METAS = (ps.find(p => p.preposto !== "TODOS") || ps[0] || {}).preposto || null;
-  $("chips-preposto").innerHTML = ps.map(p => `<button type="button" data-preposto="${p.preposto}" class="${p.preposto === PREPOSTO_METAS ? "ativa" : ""}">${esc(p.nome)}</button>`).join("");
-  for (const b of document.querySelectorAll("#chips-preposto button")) b.onclick = () => { PREPOSTO_METAS = b.dataset.preposto; mostrarMetas(); };
-  const d = await Metas.carregar(sb, MES_METAS, PREPOSTO_METAS);
+  if (!PREPOSTO_METAS) PREPOSTO_METAS = (ps[0] || {}).preposto || null;
+  $("chips-preposto").innerHTML = ps.map(p => `<button type="button" data-preposto="${p.preposto}" class="${!VER_VENDEDORES && p.preposto === PREPOSTO_METAS ? "ativa" : ""}">${esc(p.nome)}</button>`).join("") +
+    `<button type="button" id="ver-vendedores" class="${VER_VENDEDORES ? "ativa" : ""}">ver vendedores</button>` +
+    `<span style="flex-basis:100%"></span>` +
+    ["OLY", "UA"].map(m => `<button type="button" data-marca="${m}" class="${m === MARCA_METAS ? "ativa" : ""}">${m === "OLY" ? "OLYMPIKUS" : "UNDER ARMOUR"}</button>`).join("");
+  for (const b of document.querySelectorAll("#chips-preposto button[data-preposto]")) b.onclick = () => { PREPOSTO_METAS = b.dataset.preposto; VER_VENDEDORES = false; mostrarMetas(); };
+  for (const b of document.querySelectorAll("#chips-preposto button[data-marca]")) b.onclick = () => { MARCA_METAS = b.dataset.marca; mostrarMetas(); };
+  $("ver-vendedores").onclick = () => { VER_VENDEDORES = !VER_VENDEDORES; mostrarMetas(); };
+  if (VER_VENDEDORES) {
+    const ds = await Metas.carregarTodos(sb, MES_METAS, MARCA_METAS, ps);
+    const meses = (ds[0] && ds[0].meses) || [];
+    $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === ((ds[0] && ds[0].mes) || MES_METAS) ? "ativa" : ""}"><span class="longo">${MESES_LONGOS[+m.slice(5,7)-1]}</span><span class="cur">${MESES[+m.slice(5,7)-1].toUpperCase()}</span></button>`).join("");
+    for (const b of document.querySelectorAll("#chips-mes button")) b.onclick = () => { MES_METAS = b.dataset.mes; mostrarMetas(); };
+    Metas.desenharComparativo(el, ds);
+    return;
+  }
+  const d = await Metas.carregar(sb, MES_METAS, PREPOSTO_METAS, MARCA_METAS);
   const meses = d.meses || [];
   // SET · OUT · NOV · DEZ, abrindo no mês corrente (pedido dele, 29/09); à frente é carteira, não real
   $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}"><span class="longo">${MESES_LONGOS[+m.slice(5,7)-1]}</span><span class="cur">${MESES[+m.slice(5,7)-1].toUpperCase()}</span></button>`).join("");
