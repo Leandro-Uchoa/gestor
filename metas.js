@@ -79,6 +79,10 @@
   // ---------- leitura do banco, por mês do seletor (nunca um mês fixo no código)
   async function carregar(sb, mes, preposto, marca) {
     marca = marca || "OLY";
+    // 12/10, 14:5x, pedido dele: no seletor, além dos meses, "3º TRI 26" e "4º TRI 26" — o trimestre inteiro somado (meta e real por
+    // faixa, família e total), com a trava dos 15% do trimestre. O token é "AAAA-Tn".
+    const qm = /^(\d{4})-T([1-4])$/.exec(mes || "");
+    if (qm) return carregarTrimestre(sb, qm[1], +qm[2], preposto, marca);
     if (!preposto) {
       const { data: ps } = await sb.from("preposto").select("preposto,nome").neq("preposto", "TODOS").order("preposto").limit(1);
       if (!ps || !ps.length) return { erro: "o banco não tem preposto cadastrado" };
@@ -89,7 +93,10 @@
     const { data: mm } = await sb.from("meta_mensal").select("mes").eq("marca", marca).eq("preposto", preposto).order("mes").limit(1);
     const primeiro = (mm && mm[0] ? mm[0].mes.slice(0, 7) : hoje) < hoje ? (mm[0].mes.slice(0, 7)) : hoje;
     const ano = primeiro.slice(0, 4); const meses = [];
-    for (let m = +primeiro.slice(5, 7); m <= 12; m++) meses.push(ano + "-" + String(m).padStart(2, "0"));
+    for (let m = +primeiro.slice(5, 7); m <= 12; m++) {
+      meses.push(ano + "-" + String(m).padStart(2, "0"));
+      if (m % 3 === 0) meses.push(ano + "-T" + (m / 3));                    // depois de mar/jun/set/dez entra o botão do trimestre
+    }
     mes = mes && meses.includes(mes) ? mes : (meses.includes(hoje) ? hoje : meses[meses.length - 1]);
     const mes01 = mes + "-01", futuro = mes > hoje;
     // o trimestre do mês do seletor (regra 11): out → out, nov, dez
@@ -153,6 +160,30 @@
              base_c: (totRow && totRow.lido_c && totRow.lido_c.base) || ((cr.data.find(r => r.preposto === "TODOS") || {}).base) || null,
              base_v: (!futuro && totRow && totRow.lido_v && totRow.lido_v.base) || ((!futuro && (cr.data.find(r => r.preposto === preposto) || {}).base) || null),
              fam_lido_c: (familias.find(f => f.cms_lido) || {}).cms_lido, fam_lido_v: (familias.find(f => f.vend_lido) || {}).vend_lido };
+  }
+
+  // ---------- o trimestre somado (12/10): três meses lidos como de costume e somados faixa a faixa; a trava é a do trimestre
+  async function carregarTrimestre(sb, ano, q, preposto, marca) {
+    const mm = [q * 3 - 2, q * 3 - 1, q * 3].map(m => ano + "-" + String(m).padStart(2, "0"));
+    const ds = (await Promise.all(mm.map(m => carregar(sb, m, preposto, marca)))).filter(d => !d.erro);
+    if (!ds.length) return { erro: "sem leitura nos meses do " + q + "º trimestre" };
+    const hoje = mesAtual(), ult = ds[ds.length - 1];
+    const soma = (lista, k) => lista.some(x => x && x[k] != null) ? lista.reduce((s, x) => s + ((x && x[k]) || 0), 0) : null;
+    const juntar = (campo) => {
+      const ids = []; for (const d of ds) for (const f of d[campo]) if (!ids.includes(f.id)) ids.push(f.id);
+      return ids.map(id => { const fs = ds.map(d => d[campo].find(f => f.id === id)).filter(Boolean), base = fs[fs.length - 1];
+        return Object.assign({}, base, { meta_v: soma(fs, "meta_v"), real_v: soma(fs, "real_v"), meta_c: soma(fs, "meta_c"), real_c: soma(fs, "real_c"),
+                                          fat_v: soma(fs, "fat_v"), fat_c: soma(fs, "fat_c") }); });
+    };
+    const faixas = juntar("faixas"), familias = juntar("familias");
+    const tots = ds.map(d => d.total);
+    const total = { meta_v: soma(tots, "meta_v"), meta_c: soma(tots, "meta_c"), real_v: soma(tots, "real_v"), real_c: soma(tots, "real_c") };
+    const todosFaturados = k => ds.every(d => d[k] === "faturado");
+    const t15 = ult.trava15 ? Object.assign({}, ult.trava15, { mes: ult.trava15.tri, soTri: true }) : null;
+    return Object.assign({}, ult, { mes: ano + "-T" + q, trimestre: { ano, q, meses: mm, lidos: ds.map(d => d.mes) }, futuro: mm.every(m => m > hoje),
+      faixas, familias, total, semMeta: total.meta_v == null || total.meta_c == null, trava15: t15,
+      base_c: todosFaturados("base_c") ? "faturado" : "potencial", base_v: todosFaturados("base_v") ? "faturado" : "potencial",
+      avisos: ds.length < 3 ? ["trimestre com " + ds.length + " de 3 meses lidos"] : [] });
   }
 
   // ---------- as regras
@@ -286,7 +317,7 @@
     const trava = "";                                       // o bloco antigo no cartão do total saiu; a trava mora acima dos gráficos (regra 11)
     // ---- a TRAVA DOS 15% acima dos gráficos (regra 11): uma linha para o mês, uma para o trimestre; só a barra do vendedor,
     // marca nos 15%; à direita o % e o que falta (ou passou) em R$. A CMS não aparece (ele, 12/10).
-    const nomeMes = MESES[+d.mes.slice(5, 7) - 1];
+    const nomeMes = d.trimestre ? d.trimestre.q + "º trimestre" : MESES[+d.mes.slice(5, 7) - 1];     // "AAAA-Tn" é o trimestre somado
     const pctTxt = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
     const faltaTxt = l => l == null ? "sem meta de tênis" : (l.falta > 0 ? "faltam R$ " + kk(l.falta) : "R$ " + kk(-l.falta) + " acima");
     // a barra é a COMPOSIÇÃO (pedido dele, 12/10, 2ª rodada): o tênis Olympikus (a META, azul Olympikus) primeiro, e as famílias
@@ -309,7 +340,7 @@
     const regra15 = d.trava15 && d.trava15.mes && d.trava15.mes.v ? d.trava15.mes.v.regra : "meta";
     const legT15 = `<div class="lg"><span><i class="f-FTW"></i>TÊNIS OLYMPIKUS (${regra15 === "vendido" ? "VENDIDO" : "META"})</span>${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}${info15 ? "" : `<span><i class="mk"></i>15% DA META</span>`}</div>`;
     const t15 = d.trava15 ? `<div class="t15"><div class="rot">${info15 ? "COMPOSIÇÃO DO FATURAMENTO" : "TRAVA DOS 15%"} · outras famílias + UA sobre ${regra15 === "vendido" ? "o tênis Olympikus VENDIDO (regra até set/26)" : "a META de tênis"}</div>
-      ${linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}${legT15}</div>` : "";
+      ${d.trava15.soTri ? "" : linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}${legT15}</div>` : "";
     // rodapé: hora da leitura por fonte (regra 9)
     const fonteC = d.cms_lido ? `${medida} CMS lido ${dmh(d.cms_lido)}` : `${medida} CMS: sem leitura`;
     const fonteV = d.vend_lido ? `${medida} ${esc(d.nome)} lido ${dmh(d.vend_lido)}` : (d.base_em ? `${medida} ${esc(d.nome)} pela base de ${dm(d.base_em)}${d.calculado ? " (" + dmh(d.calculado).slice(-5) + ")" : ""}` : `${medida} ${esc(d.nome)}: sem base`);
@@ -373,7 +404,7 @@
     const acha = (d, lista, id) => (d[lista] || []).find(f => f.id === id) || {};
     const fxs = faixasIds.map(id => cartao("fx padrao", (acha(ref, "faixas", id).nome || id), d => { const f = acha(d, "faixas", id); return d.soCms ? { real: f.real_c, meta: f.meta_c } : { real: f.real_v, meta: f.meta_v }; }, GATILHO_FAIXA)).join("");
     const fms = famIds.map(id => cartao("fm", (acha(ref, "familias", id).nome || id), d => { const f = acha(d, "familias", id); return d.soCms ? { real: f.real_c, meta: f.meta_c } : { real: f.real_v, meta: f.meta_v }; }, GATILHO_FAMILIA)).join("");
-    const nomeMes = MESES[+ref.mes.slice(5, 7) - 1];
+    const nomeMes = ref.trimestre ? ref.trimestre.q + "º trimestre" : MESES[+ref.mes.slice(5, 7) - 1];
     el.innerHTML = `<div class="mt cmpv${ref.futuro ? " futuro" : ""}" style="--n:${faixasIds.length}">
       <div class="sec"><div class="rot">CALÇADOS · PARES${ref.futuro ? " EM CARTEIRA" : ""} · ${esc(nomeMes.toUpperCase())} · UMA BARRA POR VENDEDOR</div>
         <div class="rolo"><div class="fila">${tot}<div class="fxs">${fxs}</div></div></div></div>
