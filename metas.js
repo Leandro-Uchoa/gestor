@@ -132,7 +132,9 @@
                     real_v: (!futuro && totRow && totRow.lido_v) ? totRow.lido_v.real_pares : soma("real_v"), real_c: (totRow && totRow.lido_c) ? totRow.lido_c.real_pares : soma("real_c") };
     const semMeta = total.meta_v == null || total.meta_c == null;
     if (faixas.every(f => f.real_c == null)) avisos.push("CMS sem leitura para " + MESES[+mes.slice(5, 7) - 1]);
-    return { mes, meses, hoje, futuro, marca, preposto, nome: (pre.data && pre.data.nome) || preposto, faixas, familias, total, semMeta, avisos, trava15,
+    // 12/10: "CMS completa" = preposto TODOS no seletor — só o lado da CMS aparece (sem barra de vendedor, sem trava dos 15%)
+    const soCms = preposto === "TODOS";
+    return { mes, meses, hoje, futuro, marca, preposto, soCms, nome: soCms ? "CMS" : ((pre.data && pre.data.nome) || preposto), faixas, familias, total, semMeta, avisos, trava15: soCms ? null : trava15,
              base_em: (faixas.find(f => f.base_em) || {}).base_em, calculado: cg.data && cg.data[0] ? cg.data[0].carregado_em : null,
              carta: totRow ? totRow.carta : "", lido_em: totRow ? totRow.lido_em : null,
              vend_lido: (faixas.find(f => f.vend_lido) || {}).vend_lido, cms_lido: (totRow && totRow.lido_c && totRow.lido_c.lido_em) || (faixas.find(f => f.cms_lido) || {}).cms_lido,
@@ -202,6 +204,7 @@
   function desenhar(el, d) {
     if (d.erro) { el.innerHTML = `<div class="msg aviso">${esc(d.erro)}</div>`; return; }
     const tot = d.total, medida = d.futuro ? "carteira" : "real";
+    const V = !d.soCms;                                    // "CMS completa": o lado do vendedor não se desenha
     const escala = d.semMeta ? Math.max(1, ...d.faixas.flatMap(f => [f.real_v || 0, f.real_c || 0])) : null;
     const escTot = d.semMeta ? Math.max(1, tot.real_v || 0, tot.real_c || 0) : null;
     const cmsTot = !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
@@ -216,8 +219,8 @@
       cards += `<div class="fx ${esc(est)}">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", g.cms)}${ESTRELAS_VENDEDOR ? estrela("v", !!tomV, tomV) : ""}</div>
-        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${barra("v", f.real_v, f.meta_v, tomV === "ouro", i * .06 + .05, fe)}</div>
-        <div class="num">${celula("c", gapPares(f.real_c, f.meta_c), metaPares(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c))}${celula("v", gapPares(f.real_v, f.meta_v), metaPares(f.meta_v), bateu(f.real_v, f.meta_v), d.futuro ? "" : fatCart(f.fat_v, f.real_v))}</div>
+        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${V ? barra("v", f.real_v, f.meta_v, tomV === "ouro", i * .06 + .05, fe) : ""}</div>
+        <div class="num">${celula("c", gapPares(f.real_c, f.meta_c), metaPares(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c))}${V ? celula("v", gapPares(f.real_v, f.meta_v), metaPares(f.meta_v), bateu(f.real_v, f.meta_v), d.futuro ? "" : fatCart(f.fat_v, f.real_v)) : ""}</div>
       </div>`;
     });
     let fams = "";
@@ -230,8 +233,8 @@
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", ouroC)}</div>
-        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${barra("v", f.real_v, f.meta_v, false, i * .06 + .05)}</div>
-        <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true))}</div>
+        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, false, i * .06 + .05) : ""}</div>
+        <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${V ? celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true)) : ""}</div>
       </div>`;
     });
     const trava = "";                                       // o bloco antigo no cartão do total saiu; a trava mora acima dos gráficos (regra 11)
@@ -277,16 +280,16 @@
           <div class="tot">
             <div class="nm">TOTAL</div>
             <div class="st">${estrela("c", cmsTot)}${ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
-            <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot)}</div>
-            <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false)}</div>
+            <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot) : ""}</div>
+            <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${V ? celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false) : ""}</div>
             ${trava}
           </div>
           <div class="fxs">${cards}</div>
         </div></div>
       </div>
       ${d.familias.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$${d.futuro ? " EM CARTEIRA" : ""}</div><div class="fms">${fams}</div></div>` : ""}
-      <div class="leg"><span><i class="q c"></i>CMS</span><span><i class="q v"></i>${esc(d.nome)}</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%</span>` : ""}</div>
-      <p class="pe">${fonteC} · ${fonteV}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
+      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%</span>` : ""}</div>
+      <p class="pe">${fonteC}${V ? " · " + fonteV : ""}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
   }
   window.Metas = { carregar, desenhar, dourado, estrelaVendedor, altura, fmt, kk, contaTrava15 };

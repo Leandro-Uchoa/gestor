@@ -171,6 +171,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
     <button data-aba="metas">Metas</button>
   </div>
   <div id="tela-metas" class="oculto">
+    <div class="chips" id="chips-preposto" style="margin:0 0 12px"></div>
     <div class="segm" id="chips-mes"></div>
     <div id="metas-painel"></div>
   </div>
@@ -193,7 +194,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=28"></script>
+<script src="metas.js?v=29"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -252,10 +253,23 @@ const ABAS = {
               rodape: "Giro: venda e estoque do cliente por produto e mês, das análises de giro. A Casa Pio não entrega por cor. Célula vazia (—) = a AG não tem o dado; 0 = vendeu zero." },
   metas:    { subtitulo: "· metas", visao_cob: null, cob: [], rodape: "" },        // nenhum texto explicativo na tela (ATA 23/09)
 };
-let MES_METAS = null;
+let MES_METAS = null, PREPOSTO_METAS = null, PREPOSTOS = null;
+// 12/10, ordem dele: a aba Metas para cada vendedor e para a CMS completa — um chip por preposto (nomes da tabela preposto;
+// TODOS = a CMS inteira). Abre no primeiro vendedor cadastrado; a escolha fica para a sessão.
+async function listarPrepostos(){
+  if (PREPOSTOS) return PREPOSTOS;
+  const { data } = await sb.from("preposto").select("preposto,nome").order("nome");
+  const todos = (data || []).filter(p => p.preposto === "TODOS"), resto = (data || []).filter(p => p.preposto !== "TODOS");
+  PREPOSTOS = todos.map(p => ({ preposto: p.preposto, nome: "CMS completa" })).concat(resto);
+  return PREPOSTOS;
+}
 async function mostrarMetas(){
   const el = $("metas-painel"); el.innerHTML = `<div class="msg ok">buscando…</div>`;
-  const d = await Metas.carregar(sb, MES_METAS);
+  const ps = await listarPrepostos();
+  if (!PREPOSTO_METAS) PREPOSTO_METAS = (ps.find(p => p.preposto !== "TODOS") || ps[0] || {}).preposto || null;
+  $("chips-preposto").innerHTML = ps.map(p => `<button type="button" data-preposto="${p.preposto}" class="${p.preposto === PREPOSTO_METAS ? "ativa" : ""}">${esc(p.nome)}</button>`).join("");
+  for (const b of document.querySelectorAll("#chips-preposto button")) b.onclick = () => { PREPOSTO_METAS = b.dataset.preposto; mostrarMetas(); };
+  const d = await Metas.carregar(sb, MES_METAS, PREPOSTO_METAS);
   const meses = d.meses || [];
   // SET · OUT · NOV · DEZ, abrindo no mês corrente (pedido dele, 29/09); à frente é carteira, não real
   $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === (d.mes || MES_METAS) ? "ativa" : ""}"><span class="longo">${MESES_LONGOS[+m.slice(5,7)-1]}</span><span class="cur">${MESES[+m.slice(5,7)-1].toUpperCase()}</span></button>`).join("");
