@@ -182,7 +182,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.6</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.7</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -228,7 +228,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=48"></script>
+<script src="metas.js?v=49"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -366,18 +366,20 @@ async function tudo(consulta){
   }
 }
 // ---------- famílias (marca · família) e subfamílias: os códigos vêm de duas fontes com grafias diferentes; aqui vira UM nome
-const FAMILIAS = ["OLY FOOTWEAR", "OLY CHINELO", "OLY MEIAS", "OLY ACESSÓRIOS", "UA FOOTWEAR", "UA CHINELO", "UA MEIAS", "UA ACESSÓRIOS"];
+const FAMILIAS = ["OLY FOOTWEAR", "OLY CHINELO", "OLY MEIAS", "OLY ACESSÓRIOS", "OLY CONFECÇÃO", "UA FOOTWEAR", "UA CHINELO", "UA MEIAS", "UA ACESSÓRIOS", "UA CONFECÇÃO"];
 function familiaDe(marca){
   const t = String(marca || "").toUpperCase().replace(/[_\s]+/g, " ").trim();
   if (!t) return "";
-  if (t === "OLY" || /OLY FTW/.test(t)) return "OLY FOOTWEAR";
+  if (t === "OLY" || t === "FTW" || /OLY FTW/.test(t)) return "OLY FOOTWEAR";
   if (/CHOLY|OLY CHI/.test(t)) return "OLY CHINELO";
-  if (/MEOLY|OLY MEIA/.test(t)) return "OLY MEIAS";
-  if (/ACOLY|OLY ACC/.test(t)) return "OLY ACESSÓRIOS";
+  if (/MEOLY|OLY MEI/.test(t)) return "OLY MEIAS";
+  if (/ACOLY|OLY ACC|ACC OLY/.test(t)) return "OLY ACESSÓRIOS";
+  if (/CFOLY|OLY VEST|OLY APP|OLY CONF/.test(t)) return "OLY CONFECÇÃO";
   if (/UA TN|UA FTW/.test(t)) return "UA FOOTWEAR";
   if (/UA CH/.test(t)) return "UA CHINELO";
   if (/UA ME/.test(t)) return "UA MEIAS";
   if (/UA AC/.test(t)) return "UA ACESSÓRIOS";
+  if (/UA APP|UA CF|UA CONF/.test(t)) return "UA CONFECÇÃO";
   return t;
 }
 const SUBS = { "OLY FOOTWEAR": ["CLASSICOS", "CONF_FEM", "CONF_MASC", "CORRIDA/TREINO", "INFANTIL", "CORRE"], "UA FOOTWEAR": ["RUNNING", "TRAINING", "RUN INSPIRED", "BASKETBALL"] };
@@ -440,7 +442,7 @@ function periodo(){
 // ---------- CARTEIRA E GIRO numa tabela só (12/10, 2ª rodada dele): como na AG — por mês de giro VENDA · ESTOQUE · COBERTURA, e as
 // CARTEIRAS depois, mês a mês; linhas AGRUPADAS por referência (a linha-mãe soma as cores; o +/− abre as cores); o filtro de
 // cliente consolida o que estiver escolhido (sem coluna de cliente).
-const FAM_CURTA = { "OLY FOOTWEAR": "FTW", "OLY CHINELO": "CHINELO", "OLY MEIAS": "MEIAS", "OLY ACESSÓRIOS": "ACESS", "UA FOOTWEAR": "UA FTW", "UA CHINELO": "UA CHIN", "UA MEIAS": "UA MEIAS", "UA ACESSÓRIOS": "UA ACESS" };
+const FAM_CURTA = { "OLY FOOTWEAR": "FTW", "OLY CHINELO": "CHINELO", "OLY MEIAS": "MEIAS", "OLY ACESSÓRIOS": "ACESS", "UA FOOTWEAR": "UA FTW", "UA CHINELO": "UA CHIN", "UA MEIAS": "UA MEIAS", "UA ACESSÓRIOS": "UA ACESS", "OLY CONFECÇÃO": "CONF", "UA CONFECÇÃO": "UA CONF" };
 const SUB_CURTA = { "CLASSICOS": "CLÁSSICO", "CONF_FEM": "CONF FEM", "CONF_MASC": "CONF MASC", "CORRIDA/TREINO": "CORRIDA TREINO", "INFANTIL": "INFANTIL", "CORRE": "CORRE", "RUNNING": "RUNNING", "TRAINING": "TRAINING", "RUN INSPIRED": "RUN INSP", "BASKETBALL": "BASKET" };
 const famCurta = (fam, sub) => sub ? (SUB_CURTA[sub] || sub) : (FAM_CURTA[fam] || fam || "");
 let CONSULTA_N = 0, ABERTOS = new Set(), COLAPSADOS = new Set();   // COLAPSADOS: meses escondidos como no agrupar do Excel
