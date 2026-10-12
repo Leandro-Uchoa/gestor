@@ -68,6 +68,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .tot .nm{font-size:12px;font-weight:800;letter-spacing:.12em;color:#FFFF1A;min-height:0}
 .mt .tot .st{margin-top:6px;gap:14px}.mt .tot .st .s{width:18px;height:18px}
 .mt .tot .bars{height:200px;gap:8px;border-bottom-color:#4A4A4A}.mt .tot .l100{left:-2px;right:-2px;border-color:#9A9A9A}
+/* 12/10: no total, duas linhas — 90% tracejada (gatilho) e 100% contínua (a meta, a mesma das faixas); rótulo pequeno na ponta */
+.mt .l100.cheia{border-top-style:solid;border-color:#C8C8C8}.mt .l100 .lr{position:absolute;right:0;top:-12px;font-size:8px;color:var(--mut);font-weight:700}.mt .tot .l100 .lr{font-size:9px;color:#C8C8C8}
 .mt .tot .b{width:34px;border-radius:6px 6px 0 0}.mt .tot .b.c{background:var(--cf)}.mt .tot .b.v{background:var(--vf)}
 .mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#9DA8FF}.mt .tot .g.v{color:#FFFFFF}.mt .tot .m{color:#9A9A9A}
 .mt .trava{margin-top:12px;padding-top:10px;border-top:1px solid #4E43A8;display:flex;flex-direction:column;gap:6px}
@@ -199,7 +201,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=32"></script>
+<script src="metas.js?v=33"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);

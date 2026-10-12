@@ -208,6 +208,9 @@
   const celula = (quem, gap, meta, ok, fat) => `<div class="cel ${quem}"><b class="g ${quem}${ok ? " ok" : ""}">${gap}</b><span class="m">${meta}</span>${fat ? `<span class="m fat">${fat}</span>` : ""}</div>`;
   // a linha tracejada do gatilho: 100% fica a 2/3 da altura (CSS); 90% e 95% descem na proporção (regra 10)
   const linha = (g, dentro) => `<i class="l100"${g === 1 ? "" : ` style="bottom:${(g / TETO * 100).toFixed(2)}%"`}>${dentro || ""}</i>`;
+  // 12/10, 12:5x (ele, olhando outubro): no TOTAL de tênis são DUAS linhas — a dos 90% (gatilho, tracejada, com o rótulo) e a dos 100%
+  // (contínua, a mesma que atravessa as faixas). Uma barra acima dos 90% e abaixo dos 100% é "gatilho sim, meta não".
+  const linhasTotal = dentro => `<i class="l100 cheia"><span class="lr">100%</span></i>` + linha(GATILHO_TOTAL, `<span class="lr">${pct(GATILHO_TOTAL)}</span>${dentro || ""}`);
   const pct = g => Math.round(g * 100) + "%";
   // faturado separado do potencial, quando a leitura trouxe (regra 9): "fat N + cart M"
   // mês fechado lido como faturado tem fat == real: não há carteira a mostrar
@@ -293,7 +296,7 @@
           <div class="tot">
             <div class="nm">TOTAL</div>
             <div class="st">${estrela("c", cmsTot)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
-            <div class="bars">${linha(GATILHO_TOTAL, d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, cmsTot && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL), .05, escTot) : ""}</div>
+            <div class="bars">${linhasTotal(d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, cmsTot && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL), .05, escTot) : ""}</div>
             <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${V ? celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false) : ""}</div>
             ${trava}
           </div>
@@ -325,7 +328,7 @@
     const barras = (pega, g) => { const dc = ok.find(d => d.soCms), pc = dc ? pega(dc) : null, cmsOk = !!(pc && bateu(pc.real, pc.meta, g));
       return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, b = bateu(real, meta, g), ouro = cms ? b : (cmsOk && b);
         return `<div class="pb${cms ? " pc" : ""}"><i class="s v${b ? " on" : ""}">${ESTRELA}</i><div class="b ${cms ? "c" : "v"}${ouro ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta)}%;animation-delay:${i * .05}s"></div><span class="pn" title="${esc(d.nome)}">${esc(inicial(d))}</span><span class="pp">${pctTxt(real, meta)}</span></div>`; }).join(""); };
-    const cartao = (cls, nome, pega, g) => `<div class="${cls} cmp"><div class="nm">${esc(nome)}</div><div class="bars"><i class="l100" style="bottom:${(g / TETO * 100).toFixed(2)}%"></i>${barras(pega, g)}</div></div>`;
+    const cartao = (cls, nome, pega, g) => `<div class="${cls} cmp"><div class="nm">${esc(nome)}</div><div class="bars">${g === GATILHO_TOTAL ? linhasTotal("") : `<i class="l100" style="bottom:${(g / TETO * 100).toFixed(2)}%"></i>`}${barras(pega, g)}</div></div>`;
     const tot = cartao("tot", "TOTAL", d => d.soCms ? { real: d.total.real_c, meta: d.total.meta_c } : { real: d.total.real_v, meta: d.total.meta_v }, GATILHO_TOTAL);
     const faixasIds = ref.faixas.map(f => f.id), famIds = ref.familias.map(f => f.id);
     const acha = (d, lista, id) => (d[lista] || []).find(f => f.id === id) || {};
