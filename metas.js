@@ -199,14 +199,20 @@
   // O total do vendedor não é exigido (palavra dele, 17/09: "se a CMS fecha a meta e eu não, meu recebimento da faixa é 50%").
   // 12/10, palavra dele na reunião (via BOSS): "bateu tem estrela, não bateu fica sem. Vantagem dos 15%: com os 15%, 50% em toda
   // faixa ou família que a CMS bateu e o vendedor não. Única condição: os 15%; o total a 95% não é exigido."
-  // OURO = o vendedor bateu (faixa 100% / família 95% / total 90%). PRATA = ele não bateu, a CMS bateu a mesma faixa/família, e ele
-  // tem os 15% (ok15). Sem os 15%, não há prata. O total dele não entra na conta da faixa.
-  function estrelaVendedor(f, tot, ok15, g) {
+  // ⛔ 14:0x, correção dele (o Rafael com estrela em CLÁSSICOS em outubro): "nem ele nem a CMS bateram os 90% no geral; ele não bateu os
+  // 15% — não está com o trimestre batido. Não tem por que a estrelinha estar acesa. Ninguém bateu ainda." Então a PORTA da estrela do
+  // vendedor é tripla: a CMS bateu o total (90%), ELE bateu o total dele (90%) e ele tem os 15% do TRIMESTRE. Só com a porta aberta:
+  // OURO = ele bateu a faixa (100%) / família (95%); PRATA = ele não bateu e a CMS bateu a mesma faixa/família. Porta fechada = sem estrela.
+  function estrelaVendedor(f, tot, porta, g) {
     g = g == null ? GATILHO_FAIXA : g;
+    if (porta !== true) return null;
     if (bateu(f.real_v, f.meta_v, g)) return "ouro";
-    if (ok15 === true && bateu(f.real_c, f.meta_c, g)) return "prata";
+    if (bateu(f.real_c, f.meta_c, g)) return "prata";
     return null;
   }
+  // a porta: CMS total ≥ 90% · vendedor total ≥ 90% · 15% do trimestre batidos
+  const portaVendedor = (d, tot) => !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL)
+                                   && !!(d.trava15 && d.trava15.tri && d.trava15.tri.v && d.trava15.tri.v.ok);
   // altura em % da área: com meta, 100% da meta = 2/3 da altura (eixo até 150%); sem meta, escala pelo maior valor do bloco
   function altura(real, meta, escala) {
     if (real == null || real <= 0) return 0;
@@ -248,8 +254,8 @@
     const escTot = d.semMeta ? Math.max(1, tot.real_v || 0, tot.real_c || 0) : null;
     const cmsTot = !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
     const metaTot = m => m == null ? "sem meta" : pct(GATILHO_TOTAL) + " de " + fmtP(m);     // regra 10: o total bate com 90% da meta
-    const ok15 = !!(d.trava15 && d.trava15.mes && d.trava15.mes.v && d.trava15.mes.v.ok);
-    const totV = (ESTRELAS_VENDEDOR && !d.semMeta && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL)) ? "ouro" : null;   // no total só há ouro (bateu os 90%)
+    const ok15 = portaVendedor(d, tot);                    // a porta tripla (CMS total, total dele, 15% do trimestre) — regra dele de 12/10 14:0x
+    const totV = (ESTRELAS_VENDEDOR && ok15) ? "ouro" : null;   // no total a estrela dele acende só com a porta aberta
     let cards = "";
     d.faixas.forEach((f, i) => {
       const g = d.semMeta ? { cms: false, vend: false } : dourado(f, tot), est = f.estado === "sem_tratamento" ? "padrao" : f.estado;
@@ -330,7 +336,7 @@
         </div></div>
       </div>
       ${d.familias.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$${d.futuro ? " EM CARTEIRA" : ""}</div><div class="fms">${fams}</div></div>` : ""}
-      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${V && ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%: CMS bateu, ${esc(d.nome)} não, com os 15%</span>` : ""}</div>
+      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${V && ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%: CMS bateu a faixa e ${esc(d.nome)} não · estrela dele só com CMS e ele nos 90% do total e os 15% do trimestre</span>` : ""}</div>
       <p class="pe">${fonteC}${V ? " · " + fonteV : ""}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
     alinhar100(el);
@@ -353,7 +359,9 @@
     const inicial = d => d.soCms ? "CMS" : (d.nome || "?").trim().charAt(0).toUpperCase();
     // dourado (12/10, palavra dele): a CMS fica dourada quando bate; o vendedor só fica dourado se a CMS bateu E ele bateu
     const barras = (pega, g) => { const dc = ok.find(d => d.soCms), pc = dc ? pega(dc) : null, cmsOk = !!(pc && bateu(pc.real, pc.meta, g));
-      return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, b = bateu(real, meta, g), ouro = cms ? b : (cmsOk && b);
+      return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, bateuMesmo = bateu(real, meta, g), ouro = cms ? bateuMesmo : (cmsOk && bateuMesmo);
+        // estrela do vendedor só com a porta tripla aberta (CMS total, total dele, 15% do trimestre) — regra dele de 12/10 14:0x
+        const b = cms ? bateuMesmo : (bateuMesmo && portaVendedor(d, d.total));
         // 13:1x, bug visto por ele no celular (a Mari com 76% acima da linha dos 90%): os rótulos embaixo empurravam a barra para cima.
         // Agora a barra é absoluta no pé da coluna (altura em --h), a estrela senta no topo dela e os rótulos ficam FORA da área das barras.
         const h = altura(real, meta);
