@@ -209,7 +209,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=35"></script>
+<script src="metas.js?v=36"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -285,7 +285,7 @@ async function mostrarMetas(){
   // 12/10: o botão "ver vendedores" vive dentro da visão CMS — ao lado das colunas da CMS entram as barras pequenas de cada vendedor
   const naCms = PREPOSTO_METAS === "TODOS";
   $("chips-preposto").innerHTML = ps.map(p => `<button type="button" data-preposto="${p.preposto}" class="${p.preposto === PREPOSTO_METAS ? "ativa" : ""}">${esc(p.nome)}</button>`).join("") +
-    (naCms ? `<button type="button" id="ver-vendedores" class="${VER_VENDEDORES ? "ativa" : ""}" style="border-style:dashed">${VER_VENDEDORES ? "só a CMS" : "ver vendedores"}</button>` : "") +
+    (naCms ? `<button type="button" id="ver-vendedores" class="${VER_VENDEDORES ? "ativa" : ""}" style="border-style:dashed">${VER_VENDEDORES ? "esconder vendedores" : "ver vendedores"}</button>` : "") +
     `<span style="flex-basis:100%"></span>` +
     ["OLY", "UA"].map(m => `<button type="button" data-marca="${m}" class="${m === MARCA_METAS ? "ativa" : ""}">${m === "OLY" ? "OLYMPIKUS" : "UNDER ARMOUR"}</button>`).join("");
   for (const b of document.querySelectorAll("#chips-preposto button[data-preposto]")) b.onclick = () => { PREPOSTO_METAS = b.dataset.preposto; mostrarMetas(); };

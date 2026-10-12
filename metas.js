@@ -103,7 +103,7 @@
       sb.from("preposto").select("nome").eq("preposto", preposto).maybeSingle(),
       sb.from("carga").select("carregado_em").eq("fonte", "DETALHADA").eq("status", "ok").order("id", { ascending: false }).limit(1),
       // trava dos 15% (regra 11): as outras famílias OLY e a UA inteira (TT GERAL da UA), e a META de tênis OLY em R$, nos 3 meses do trimestre
-      tudo(sb.from("carta_real").select("preposto,mes,marca,faixa,real_rs,base,lido_em").in("marca", ["OLY", "UA"]).in("mes", tri01).eq("preposto", preposto).in("faixa", FAM_OLY.concat(["TT GERAL"]))),
+      tudo(sb.from("carta_real").select("preposto,mes,marca,faixa,real_rs,base,lido_em").in("marca", ["OLY", "UA"]).in("mes", tri01).eq("preposto", preposto).in("faixa", FAM_OLY.concat(["TT GERAL", "TT CALCADOS"]))),
       tudo(sb.from("meta_mensal").select("preposto,mes,valor_ref_rs").eq("marca", "OLY").eq("faixa", "TT CALCADOS").in("mes", tri01).eq("preposto", preposto)),
     ]);
     const trava15 = (t15r.error || t15m.error) ? null : contaTrava15(mes, triMeses, t15r.data, t15m.data, preposto);
@@ -142,7 +142,9 @@
     if (faixas.every(f => f.real_c == null)) avisos.push("CMS sem leitura para " + MESES[+mes.slice(5, 7) - 1]);
     // 12/10: "CMS completa" = preposto TODOS no seletor — só o lado da CMS aparece (sem barra de vendedor, sem trava dos 15%)
     const soCms = preposto === "TODOS";
-    return { mes, meses, hoje, futuro, marca, preposto, soCms, nome: soCms ? "CMS" : ((pre.data && pre.data.nome) || preposto), faixas, familias, total, semMeta, avisos, trava15: soCms ? null : trava15,
+    // 13:5x, ele repensou: na CMS a barra das famílias também aparece, mas NÃO é trava — só a composição do faturamento (sem marca dos 15%, sem "faltam")
+    if (trava15 && soCms) trava15.informativo = true;
+    return { mes, meses, hoje, futuro, marca, preposto, soCms, nome: soCms ? "CMS" : ((pre.data && pre.data.nome) || preposto), faixas, familias, total, semMeta, avisos, trava15,
              base_em: (faixas.find(f => f.base_em) || {}).base_em, calculado: cg.data && cg.data[0] ? cg.data[0].carregado_em : null,
              carta: totRow ? totRow.carta : "", lido_em: totRow ? totRow.lido_em : null,
              vend_lido: (faixas.find(f => f.vend_lido) || {}).vend_lido, cms_lido: (totRow && totRow.lido_c && totRow.lido_c.lido_em) || (faixas.find(f => f.cms_lido) || {}).cms_lido,
@@ -159,20 +161,28 @@
   // pct (num/meta), falta (15% da meta − num; negativo = passou), ok. Mês sem leitura entra com zero no numerador e sem meta no
   // denominador: o trimestre soma o que existe.
   function contaTrava15(mes, triMeses, leituras, metas, preposto) {
+    // O denominador muda de regra em OUTUBRO/2026 (martelo da reunião com o King, 12/10): do trimestre de outubro em diante é a META de
+    // tênis OLY em R$; até setembro é o tênis OLY VENDIDO em R$ (regra anterior). Cada mês entra pela regra do seu tempo.
+    const REGRA_NOVA_DESDE = "20" + "26-10";                                  // partido em dois: a guarda do publicador barra 4 dígitos seguidos no JS
     const lado = (quem, meses) => {
-      let num = 0, meta = 0, temMeta = false, base = null, lido = null;
-      const partes = {};                                                          // quanto cada família contribui (pedido dele, 12/10)
+      let num = 0, meta = 0, temMeta = false, base = null, lido = null, antigos = 0, novos = 0;
+      const partes = {}, tenisRs = {};                                            // quanto cada família contribui (pedido dele, 12/10)
       for (const r of leituras) {
         if (r.preposto !== quem || !meses.includes(r.mes.slice(0, 7))) continue;
+        if (r.marca === "OLY" && r.faixa === "TT CALCADOS") { tenisRs[r.mes.slice(0, 7)] = +r.real_rs || 0; continue; }
         const chave = (r.marca === "OLY" && FAM_OLY.includes(r.faixa)) ? r.faixa : ((r.marca === "UA" && r.faixa === "TT GERAL") ? "UA" : null);
         if (!chave) continue;
         const v = +r.real_rs || 0;
         num += v; partes[chave] = (partes[chave] || 0) + v; base = base || r.base; lido = lido || r.lido_em;
       }
-      for (const m of metas) if (m.preposto === quem && meses.includes(m.mes.slice(0, 7)) && m.valor_ref_rs != null) { meta += +m.valor_ref_rs; temMeta = true; }
+      for (const m of meses) {
+        if (m < REGRA_NOVA_DESDE) { if (tenisRs[m] != null) { meta += tenisRs[m]; temMeta = true; antigos++; } continue; }
+        const mm = metas.find(x => x.preposto === quem && x.mes.slice(0, 7) === m && x.valor_ref_rs != null);
+        if (mm) { meta += +mm.valor_ref_rs; temMeta = true; novos++; }
+      }
       if (!temMeta) return null;
       const alvo15 = meta * TRAVA_15;
-      return { num, meta, pct: meta ? num / meta : null, falta: alvo15 - num, ok: num >= alvo15, base, lido, partes };
+      return { num, meta, pct: meta ? num / meta : null, falta: alvo15 - num, ok: num >= alvo15, base, lido, partes, regra: antigos && !novos ? "vendido" : (novos && !antigos ? "meta" : "mista") };
     };
     const bloco = meses => ({ v: lado(preposto, meses) });
     const m = bloco([mes]), t = bloco(triMeses);
@@ -278,19 +288,21 @@
     // da meta (ou até o fim do que existe, se passou) — assim o vazio entre o fim da pilha e a linha É o que falta.
     // Embaixo da barra, o % de cada família sobre a meta de tênis ("de cabeça a gente faz a conta" — ele quer ver).
     const FAMS15 = [["MEOLY", "MEIAS"], ["CHOLY", "CHINELO"], ["ACOLY", "ACESSÓRIO"], ["CFOLY", "CONFECÇÃO"], ["UA", "UNDER ARMOUR"]];
+    const info15 = !!(d.trava15 && d.trava15.informativo);          // CMS: composição informativa, sem trava
     const linhaT15 = (rot, b) => {
       const l = b.v;
       if (!l) return `<div class="lin"><div class="nm">${esc(rot)}</div><div class="trk"><div class="tb v"></div></div><div class="val"><b>—</b><span>sem meta de tênis</span></div></div>`;
-      const ref = Math.max(l.meta + l.num, l.meta * (1 + TRAVA_15)), w = v => (v / ref * 100).toFixed(2);
+      const ref = info15 ? (l.meta + l.num) : Math.max(l.meta + l.num, l.meta * (1 + TRAVA_15)), w = v => (v / ref * 100).toFixed(2);
       const seg = `<i class="f-FTW" style="width:${w(l.meta)}%"></i>` + FAMS15.map(([k]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 ? `<i class="f-${k}" style="width:${w(p)}%"></i>` : ""; }).join("");
       const fp = FAMS15.map(([k, n]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 ? `<span><i class="f-${k}"></i>${n.toLowerCase()} ${pctTxt(p / l.meta)}</span>` : ""; }).join("");
       return `<div class="lin"><div class="nm">${esc(rot)}</div>
-        <div class="trk"><i class="mk${l.ok ? " ok" : ""}" style="left:${w(l.meta * (1 + TRAVA_15))}%"></i><div class="tb v">${seg}</div></div>
-        <div class="val"><b class="${l.ok ? "ok" : ""}">${pctTxt(l.pct)}</b><span>${faltaTxt(l)}</span></div>
-        <div class="fp"><span><i class="f-FTW"></i>tênis olympikus · meta R$ ${kk(l.meta)}</span>${fp}</div></div>`;
+        <div class="trk">${info15 ? "" : `<i class="mk${l.ok ? " ok" : ""}" style="left:${w(l.meta * (1 + TRAVA_15))}%"></i>`}<div class="tb v">${seg}</div></div>
+        <div class="val"><b class="${!info15 && l.ok ? "ok" : ""}">${pctTxt(l.pct)}</b><span>${info15 ? "das outras famílias sobre o tênis" : faltaTxt(l)}</span></div>
+        <div class="fp"><span><i class="f-FTW"></i>tênis olympikus · ${l.regra === "vendido" ? "vendido" : "meta"} R$ ${kk(l.meta)}</span>${fp}</div></div>`;
     };
-    const legT15 = `<div class="lg"><span><i class="f-FTW"></i>TÊNIS OLYMPIKUS (META)</span>${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}<span><i class="mk"></i>15% DA META</span></div>`;
-    const t15 = d.trava15 ? `<div class="t15"><div class="rot">TRAVA DOS 15% · outras famílias + UA sobre a META de tênis</div>
+    const regra15 = d.trava15 && d.trava15.mes && d.trava15.mes.v ? d.trava15.mes.v.regra : "meta";
+    const legT15 = `<div class="lg"><span><i class="f-FTW"></i>TÊNIS OLYMPIKUS (${regra15 === "vendido" ? "VENDIDO" : "META"})</span>${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}${info15 ? "" : `<span><i class="mk"></i>15% DA META</span>`}</div>`;
+    const t15 = d.trava15 ? `<div class="t15"><div class="rot">${info15 ? "COMPOSIÇÃO DO FATURAMENTO" : "TRAVA DOS 15%"} · outras famílias + UA sobre ${regra15 === "vendido" ? "o tênis Olympikus VENDIDO (regra até set/26)" : "a META de tênis"}</div>
       ${linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}${legT15}</div>` : "";
     // rodapé: hora da leitura por fonte (regra 9)
     const fonteC = d.cms_lido ? `${medida} CMS lido ${dmh(d.cms_lido)}` : `${medida} CMS: sem leitura`;
