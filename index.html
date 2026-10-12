@@ -203,7 +203,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
   <div class="card" id="filtros">
     <label>cliente</label>
     <div class="chips" id="chips-cliente"></div>
-    <label>marca · família</label>
+    <label>marca · família (toque para ligar mais de uma)</label>
     <div class="chips" id="chips-familia"></div>
     <div id="bloco-sub" class="oculto"><label>subfamília</label><div class="chips" id="chips-sub"></div></div>
     <label>meses (toque para ligar e desligar)</label>
@@ -218,7 +218,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=43"></script>
+<script src="metas.js?v=44"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -374,7 +374,7 @@ const SUBS = { "OLY FOOTWEAR": ["CLASSICOS", "CONF_FEM", "CONF_MASC", "CORRIDA/T
 const NOME_SUB = { "CLASSICOS": "CLÁSSICOS", "CONF_FEM": "CONF. FEMININO", "CONF_MASC": "CONF. MASCULINO", "CORRIDA/TREINO": "CORRIDA TREINO", "INFANTIL": "INFANTIL", "CORRE": "CORRE" };
 // nomes de exibição dos clientes (cadastro, como ele fala); o que não estiver aqui aparece como está no banco
 const NOME_CLI = { "BANBAN CALCADOS": "Ban Ban", "CASA PIO": "Casa Pio", "LOJAS NOROESTE": "Noroeste", "POLYELLE": "Polyélle", "SAPATARIA NOVA": "Sapataria Nova" };
-let CLIENTE_SEL = "", FAMILIA_SEL = "", SUB_SEL = "", CLIENTES = [], MESES_DISP = [], MESES_SEL = new Set();
+let CLIENTE_SEL = new Set(), FAMILIA_SEL = new Set(), SUB_SEL = new Set(), CLIENTES = [], MESES_DISP = [], MESES_SEL = new Set();   // conjuntos: múltipla escolha (12/10)
 async function prepararPergunta(){
   const nomes = new Set();
   for (const [k, visao] of [["carteira", "v_cobertura"], ["giro", "v_cobertura_giro"]]) {
@@ -391,19 +391,23 @@ async function prepararPergunta(){
   trocarAba(ABA);
 }
 // os botões de filtro (12/10): cliente, família e subfamília; um toque escolhe e a tabela já muda — sem botão "perguntar"
-function chips(id, lista, sel, rotulo){
-  $(id).innerHTML = lista.map(([v, r]) => `<button type="button" data-v="${esc(v)}" class="${v === sel ? "ativa" : ""}">${esc(r)}</button>`).join("");
+// caixinhas de múltipla escolha: toque liga, toque desliga; "todos/todas" (valor vazio) limpa o conjunto e fica aceso quando nada está escolhido
+function chips(id, lista, sel){
+  $(id).innerHTML = lista.map(([v, r]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(r)}</button>`).join("");
   return [...document.querySelectorAll("#" + id + " button")];
 }
+const liga = (sel, v) => { if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); };
 function montarChips(){
-  for (const b of chips("chips-cliente", [["", "todos"], ...CLIENTES.map(c => [c, NOME_CLI[c] || c])], CLIENTE_SEL)) b.onclick = () => { CLIENTE_SEL = b.dataset.v; montarChips(); consultar(); };
-  for (const b of chips("chips-familia", [["", "todas"], ...FAMILIAS.map(f => [f, f])], FAMILIA_SEL)) b.onclick = () => { FAMILIA_SEL = b.dataset.v; SUB_SEL = ""; montarChips(); consultar(); };
+  for (const b of chips("chips-cliente", [["", "todos"], ...CLIENTES.map(c => [c, NOME_CLI[c] || c])], CLIENTE_SEL)) b.onclick = () => { liga(CLIENTE_SEL, b.dataset.v); montarChips(); consultar(); };
+  for (const b of chips("chips-familia", [["", "todas"], ...FAMILIAS.map(f => [f, f])], FAMILIA_SEL)) b.onclick = () => { liga(FAMILIA_SEL, b.dataset.v); for (const x of [...SUB_SEL]) if (!subsDisponiveis().includes(x)) SUB_SEL.delete(x); montarChips(); consultar(); };
   $("chips-meses").innerHTML = MESES_DISP.map(m => `<button type="button" data-m="${m}" class="${MESES_SEL.has(m) ? "ativa" : ""}">${mesBR(m)}</button>`).join("");
   for (const b of document.querySelectorAll("#chips-meses button")) b.onclick = () => { const m = b.dataset.m; if (MESES_SEL.has(m)) MESES_SEL.delete(m); else MESES_SEL.add(m); montarChips(); consultar(); };
-  const subs = SUBS[FAMILIA_SEL] || [];
+  const subs = subsDisponiveis();
   $("bloco-sub").classList.toggle("oculto", !subs.length);
-  for (const b of chips("chips-sub", [["", "todas"], ...subs.map(x => [x, NOME_SUB[x] || x])], SUB_SEL)) b.onclick = () => { SUB_SEL = b.dataset.v; montarChips(); consultar(); };
+  for (const b of chips("chips-sub", [["", "todas"], ...subs.map(x => [x, NOME_SUB[x] || x])], SUB_SEL)) b.onclick = () => { liga(SUB_SEL, b.dataset.v); montarChips(); consultar(); };
 }
+// as subfamílias aparecem quando algum FOOTWEAR está escolhido (como no BI): as de cada marca escolhida
+const subsDisponiveis = () => [...FAMILIA_SEL].flatMap(f => SUBS[f] || []);
 function mesesEntre(de, ate){
   const out = []; let [a,m] = de.split("-").map(Number); const [a2,m2] = ate.split("-").map(Number);
   while (a < a2 || (a === a2 && m <= m2)) { out.push(a + "-" + String(m).padStart(2,"0")); m++; if (m > 12) { m = 1; a++; } }
@@ -430,7 +434,7 @@ async function consultar(){
   msg("msg-pergunta", "buscando…", "ok");
   let qv = sb.from("v_venda_produto_mes").select("mes,cliente,referencia,cor,descricao,marca,faixa,pares_fat,pares_cart,base_em").gte("mes", de + "-01").lte("mes", ate + "-01");
   let qg = sb.from("v_giro_produto_mes").select("mes,cliente,referencia,cor,descricao,marca,venda,estoque,base_em").gte("mes", de + "-01").lte("mes", ate + "-01");
-  if (CLIENTE_SEL) { qv = qv.eq("cliente", CLIENTE_SEL); qg = qg.eq("cliente", CLIENTE_SEL); }
+  if (CLIENTE_SEL.size) { qv = qv.in("cliente", [...CLIENTE_SEL]); qg = qg.in("cliente", [...CLIENTE_SEL]); }
   const [rv, rg] = await Promise.all([tudo(qv), tudo(qg)]);
   if (n !== CONSULTA_N) return;                                   // outro toque veio depois: este resultado já envelheceu
   if (rv.error || rg.error) { msg("msg-pergunta", "O banco recusou: " + esc((rv.error || rg.error).message), "erro"); return; }
@@ -445,10 +449,10 @@ async function consultar(){
   for (const r of rv.data) { const a = mae(r), f = filha(a, r.cor), m = r.mes.slice(0, 7); for (const x of [a, f]) { soma(x, m, "fat", r.pares_fat); soma(x, m, "cart", r.pares_cart); } bases.add("base " + dmy(r.base_em)); }
   for (const r of rg.data) { const a = mae(r), f = filha(a, r.cor), m = r.mes.slice(0, 7); for (const x of [a, f]) { soma(x, m, "venda", r.venda); soma(x, m, "estoque", r.estoque); } bases.add("AG " + dmy(r.base_em)); }
   let linhas = [...maes.values()];
-  if (FAMILIA_SEL) linhas = linhas.filter(a => a.fam === FAMILIA_SEL);
-  if (SUB_SEL) linhas = linhas.filter(a => a.sub === SUB_SEL);
+  if (FAMILIA_SEL.size) linhas = linhas.filter(a => FAMILIA_SEL.has(a.fam));
+  if (SUB_SEL.size) linhas = linhas.filter(a => SUB_SEL.has(a.sub));
   linhas.sort((x, y) => (y.venda || 0) - (x.venda || 0) || ((y.cart || 0) + (y.fat || 0) - (x.cart || 0) - (x.fat || 0)));
-  if (!linhas.length) { msg("msg-pergunta", `Nenhum produto para ${esc(NOME_CLI[CLIENTE_SEL] || CLIENTE_SEL || "todos")} · ${esc(FAMILIA_SEL || "todas as famílias")}${SUB_SEL ? " · " + esc(SUB_CURTA[SUB_SEL] || SUB_SEL) : ""} em ${pedidos.map(mesBR).join(", ")}.`, "aviso"); return; }
+  if (!linhas.length) { msg("msg-pergunta", `Nenhum produto para ${esc([...CLIENTE_SEL].map(c => NOME_CLI[c] || c).join(", ") || "todos")} · ${esc([...FAMILIA_SEL].join(", ") || "todas as famílias")}${SUB_SEL.size ? " · " + esc([...SUB_SEL].map(x => SUB_CURTA[x] || x).join(", ")) : ""} em ${pedidos.map(mesBR).join(", ")}.`, "aviso"); return; }
   desenharCG(linhas, pedidos, [...bases].sort());
 }
 function desenharCG(linhas, pedidos, bases){
@@ -462,19 +466,19 @@ function desenharCG(linhas, pedidos, bases){
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
   let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:#245c3d"></i>venda <i style="background:#1f3d5c"></i>estoque · cob = estoque ÷ venda do mês <i style="background:#0f3a24"></i>carteira <i style="background:#245c3d"></i>faturado</div></div>`;
-  html += `<div class="card cg"><table><thead><tr><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th><th>fam.</th>`;
+  html += `<div class="card cg"><table><thead><tr><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   for (const m of mesesGiro) html += `<th class="mes" colspan="3">${mesBR(m)}</th>`;
   if (mesesCart.length) html += `<th class="mes" colspan="${mesesCart.length}">CARTEIRA</th>`;
-  html += `</tr><tr><th class="fixa ref"></th><th class="fixa nome"></th><th class="fixa cor"></th><th></th>`;
+  html += `</tr><tr><th class="fixa ref"></th><th class="fixa nome"></th><th class="fixa cor"></th>`;
   for (const m of mesesGiro) html += `<th class="n ini">venda</th><th class="n">estoque</th><th class="n">cob</th>`;
   mesesCart.forEach((m, i) => { html += `<th class="n${i === 0 ? " ini" : ""}">${mesBR(m)}</th>`; });
   html += `</tr></thead><tbody>`;
   for (const a of linhas) {
     const aberto = ABERTOS.has(a.referencia), varias = a.cores.size > 1 || (a.cores.size === 1 && a.cores.keys().next().value !== "");
-    html += `<tr class="mae"><td class="fixa ref mu">${varias ? `<button type="button" class="mm" data-ref="${esc(a.referencia)}">${aberto ? "−" : "+"}</button>` : ""}${esc(a.referencia)}</td><td class="fixa nome">${esc(a.descricao)}</td><td class="fixa cor mu">${a.cores.size > 1 ? "todas" : esc(a.cores.keys().next().value || "")}</td><td class="mu">${esc(famCurta(a.fam, a.sub))}</td>${celulas(a)}</tr>`;
-    if (aberto) for (const f of [...a.cores.values()].sort((x, y) => (y.venda || 0) - (x.venda || 0))) html += `<tr class="filha"><td class="fixa ref"></td><td class="fixa nome mu"></td><td class="fixa cor">${esc(f.cor) || "<span class='mu'>sem cor</span>"}</td><td></td>${celulas(f)}</tr>`;
+    html += `<tr class="mae"><td class="fixa ref mu">${varias ? `<button type="button" class="mm" data-ref="${esc(a.referencia)}">${aberto ? "−" : "+"}</button>` : ""}${esc(a.referencia)}</td><td class="fixa nome">${esc(a.descricao)}</td><td class="fixa cor mu">${a.cores.size > 1 ? "todas" : esc(a.cores.keys().next().value || "")}</td>${celulas(a)}</tr>`;
+    if (aberto) for (const f of [...a.cores.values()].sort((x, y) => (y.venda || 0) - (x.venda || 0))) html += `<tr class="filha"><td class="fixa ref"></td><td class="fixa nome mu"></td><td class="fixa cor">${esc(f.cor) || "<span class='mu'>sem cor</span>"}</td>${celulas(f)}</tr>`;
   }
-  html += `<tr class="tot"><td class="fixa ref">total</td><td class="fixa nome"></td><td class="fixa cor"></td><td></td>${celulas(tot)}</tr></tbody></table></div>`;
+  html += `<tr class="tot"><td class="fixa ref">total</td><td class="fixa nome"></td><td class="fixa cor"></td>${celulas(tot)}</tr></tbody></table></div>`;
   $("resultado").innerHTML = html;
   for (const b of document.querySelectorAll("#resultado button.mm")) b.onclick = () => { const r = b.dataset.ref; if (ABERTOS.has(r)) ABERTOS.delete(r); else ABERTOS.add(r); desenharCG(linhas, pedidos, bases); };
   // as colunas travadas precisam saber a largura das vizinhas (ref → nome → cor)
