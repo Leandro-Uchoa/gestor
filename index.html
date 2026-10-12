@@ -182,7 +182,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.8</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.9</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -210,6 +210,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
     <div id="metas-painel"></div>
   </div>
   <div class="card" id="filtros">
+    <label>produto</label>
+    <input type="search" id="busca-prod" placeholder="digite parte da referência, do nome ou da cor — ex.: smart · tripack média" autocomplete="off" style="padding:10px 12px">
     <label>cliente</label>
     <div class="lista-sel"><button type="button" id="abre-clientes" class="sec" style="width:auto;margin:0;padding:9px 14px;border-radius:10px">todos ▾</button>
       <div class="painel oculto" id="chips-cliente"></div></div>
@@ -228,7 +230,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=50"></script>
+<script src="metas.js?v=51"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -446,14 +448,28 @@ function periodo(){
 const FAM_CURTA = { "OLY FOOTWEAR": "FTW", "OLY CHINELO": "CHINELO", "OLY MEIAS": "MEIAS", "OLY ACESSÓRIOS": "ACESS", "UA FOOTWEAR": "UA FTW", "UA CHINELO": "UA CHIN", "UA MEIAS": "UA MEIAS", "UA ACESSÓRIOS": "UA ACESS", "OLY CONFECÇÃO": "CONF", "UA CONFECÇÃO": "UA CONF" };
 const SUB_CURTA = { "CLASSICOS": "CLÁSSICO", "CONF_FEM": "CONF FEM", "CONF_MASC": "CONF MASC", "CORRIDA/TREINO": "CORRIDA TREINO", "INFANTIL": "INFANTIL", "CORRE": "CORRE", "RUNNING": "RUNNING", "TRAINING": "TRAINING", "RUN INSPIRED": "RUN INSP", "BASKETBALL": "BASKET" };
 const famCurta = (fam, sub) => sub ? (SUB_CURTA[sub] || sub) : (FAM_CURTA[fam] || fam || "");
-let CONSULTA_N = 0, ABERTOS = new Set(), COLAPSADOS = new Set();   // COLAPSADOS: meses escondidos como no agrupar do Excel
+let CONSULTA_N = 0, ABERTOS = new Set(), COLAPSADOS = new Set(), ULTIMO = null;   // ULTIMO: o que veio do banco, para a busca filtrar sem nova consulta
+const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+// busca por texto: todas as palavras digitadas precisam aparecer na referência, no nome ou numa cor (sem acento, sem maiúscula)
+function filtraTexto(linhas){
+  const termos = semAcento($("busca-prod").value).split(/\s+/).filter(Boolean);
+  if (!termos.length) return linhas;
+  return linhas.filter(a => { const alvo = semAcento(a.referencia + " " + a.descricao + " " + [...a.cores.keys()].join(" ")); return termos.every(t => alvo.includes(t)); });
+}
+document.addEventListener("DOMContentLoaded", () => { let tm; $("busca-prod").oninput = () => { clearTimeout(tm); tm = setTimeout(redesenhar, 150); }; });
+function redesenhar(){
+  if (!ULTIMO) { if (ABA === "cg") consultar(); return; }
+  const l = filtraTexto(ULTIMO.linhas);
+  if (!l.length) { $("resultado").innerHTML = ""; msg("msg-pergunta", `Nenhum produto com "${esc($("busca-prod").value.trim())}" entre os ${ULTIMO.linhas.length} desta escolha.`, "aviso"); return; }
+  msg("msg-pergunta", ""); desenharCG(l, ULTIMO.pedidos, ULTIMO.bases);
+}   // COLAPSADOS: meses escondidos como no agrupar do Excel
 async function consultar(){
   if (ABA !== "cg") return;
   msg("msg-pergunta", ""); $("resultado").innerHTML = "";
   const p = periodo(); if (!p) return;
   const { de, ate, pedidos } = p, n = ++CONSULTA_N;
   if (!TODOS_CLI && !CLIENTE_SEL.size) { msg("msg-pergunta", "Escolha o cliente na caixinha (um, vários ou todos). A página abre vazia de propósito: assim ela abre na hora.", "aviso"); return; }
-  msg("msg-pergunta", "buscando…", "ok");
+  msg("msg-pergunta", "buscando…", "ok"); ULTIMO = null;
   const t0 = performance.now();
   // UMA chamada (12/10, "está mais lento que o BI"): a função cg_consulta devolve já por referência+cor, meses dentro — antes eram
   // dezenas de páginas de 1.000 linhas e cada página refazia a soma inteira no banco
@@ -476,8 +492,9 @@ async function consultar(){
   if (FAMILIA_SEL.size) linhas = linhas.filter(a => FAMILIA_SEL.has(a.fam));
   if (SUB_SEL.size) linhas = linhas.filter(a => SUB_SEL.has(a.sub));
   linhas.sort((x, y) => (y.venda || 0) - (x.venda || 0) || ((y.cart || 0) + (y.fat || 0) - (x.cart || 0) - (x.fat || 0)));
+  ULTIMO = { linhas, pedidos, bases: [...bases].sort() };
   if (!linhas.length) { msg("msg-pergunta", `Nenhum produto para ${esc([...CLIENTE_SEL].map(c => NOME_CLI[c] || c).join(", ") || "todos")} · ${esc([...FAMILIA_SEL].join(", ") || "todas as famílias")}${SUB_SEL.size ? " · " + esc([...SUB_SEL].map(x => SUB_CURTA[x] || x).join(", ")) : ""} em ${pedidos.map(mesBR).join(", ")}.`, "aviso"); return; }
-  desenharCG(linhas, pedidos, [...bases].sort());
+  redesenhar();
 }
 function desenharCG(linhas, pedidos, bases){
   const mesesGiro = pedidos.filter(m => COB.giro.includes(m)), mesesCart = pedidos.filter(m => COB.carteira.includes(m));
