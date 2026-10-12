@@ -58,7 +58,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .chips button.ativa{background:var(--acc);color:#151515;border-color:var(--acc)}
 /* ---- METAS: o visual aprovado por ele em 30/09 (BOSS; canvas "Revisão · celular" e "Revisão · computador"). Cores e medidas
    são as do desenho; o que é regra está no cabeçalho de metas.js. Painel escuro, fonte Sora. ---- */
-.mt{--cf:#5B6BFF;--cp:#3A45B0;--vf:#F2F2F2;--vp:#9A9A9A;--ouro:#F2B632;--prata:#C9D1DC;--txt:#F2F2F2;--mut:#9A9A9A;--eixo:#3A3A3A;--l100:#7A7A7A;--mm:#8A8A8A;--rot:#9A9A9A;
+.mt{--cf:#4C8DFF;--cp:#3A67B0;--vf:#3EE6A0;--vp:#2B9C7A;--ouro:#F2B632;--prata:#C9D1DC;--txt:#F2F2F2;--mut:#9A9A9A;--eixo:#3A3A3A;--l100:#7A7A7A;--mm:#8A8A8A;--rot:#9A9A9A;
     background:#151515;color:var(--txt);font-family:'Sora',system-ui,sans-serif;margin:0 -16px;padding:4px 0 8px 16px;display:flex;flex-direction:column;gap:24px}
 .mt .rot{font-size:12px;letter-spacing:.14em;color:var(--rot);font-weight:600;margin-bottom:12px}
 .mt .sec{display:flex;flex-direction:column}.mt .sec.fam,.mt .leg,.mt .pe{padding-right:16px}
@@ -73,7 +73,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 /* a travessia dos 100%: uma linha tracejada só, do total até a última faixa (posicionada por alinhar100 na altura da linha do total) */
 .mt .fila{position:relative}.mt .fila .atravessa{position:absolute;left:0;right:0;border-top:1.5px dashed #C8C8C8;pointer-events:none;z-index:1}.mt .fx .l100{opacity:0}
 .mt .tot .b{width:34px;border-radius:6px 6px 0 0}.mt .tot .b.c{background:var(--cf)}.mt .tot .b.v{background:var(--vf)}
-.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#9DA8FF}.mt .tot .g.v{color:#FFFFFF}.mt .tot .m{color:#9A9A9A}
+.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#B9C9FF}.mt .tot .g.v{color:#8FF5CF}.mt .tot .m{color:#9A9A9A}
 .mt .trava{margin-top:12px;padding-top:10px;border-top:1px solid #4E43A8;display:flex;flex-direction:column;gap:6px}
 .mt .trava .tl{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;letter-spacing:.08em;color:#D9D3FF}.mt .trava .tl b{font-size:15px;font-weight:800;color:#fff}
 .mt .trava .tb{position:relative;height:6px;border-radius:3px;background:#3A3175}.mt .trava .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#7BF0C4}
@@ -96,7 +96,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt.cmpv .pb .b{position:absolute;bottom:0;left:0;right:0;margin:0 auto}
 .mt.cmpv .pb .s{position:absolute;left:0;right:0;margin:0 auto;bottom:calc(var(--h) + 3px)}
 .mt.cmpv .pb .pn{position:absolute;top:100%;left:0;right:0;text-align:center;margin-top:5px}.mt.cmpv .pb .pp{position:absolute;top:100%;left:0;right:0;text-align:center;margin-top:18px}
-.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#9DA8FF}
+.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#B9C9FF}
 .mt.cmpv .pb .pp{font-size:9px;font-weight:700;color:var(--txt)}.mt.cmpv .fx{width:200px}.mt.cmpv .tot{width:230px}.mt.cmpv .fms{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:900px){.mt.cmpv .fx{width:auto}.mt.cmpv .tot{width:300px}.mt.cmpv .pb .pn{font-size:9px}.mt.cmpv .fms{grid-template-columns:repeat(var(--n),minmax(0,1fr))}}
 .mt .t15 .fp{grid-column:2;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--mut);margin-top:-4px}.mt .t15 .fp span{display:flex;align-items:center;gap:4px;white-space:nowrap}
@@ -118,14 +118,14 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .b{width:24px;border-radius:5px 5px 0 0;transform-origin:bottom;animation:sobe 1.3s cubic-bezier(.2,.8,.2,1) both}
 @keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .mt .fx .b.c{background:var(--cp)}.mt .fx .b.v{background:var(--vp)}.mt .fx.foco .b.c{background:var(--cf)}.mt .fx.foco .b.v{background:var(--vf)}
-.mt .fx.abandonado .b{opacity:.55}
+.mt .fx.abandonado .b{background:#9A9A9A!important;opacity:.7}   /* abandonada = cinza (ele, 12/10 14:3x) */
 .mt .b.ouro{background:var(--ouro)!important}
 .mt .b.vazia{border-top:2px dotted var(--mut);height:0}
 .mt .num{display:flex;flex-direction:column;min-width:0}.mt .cel{display:flex;flex-direction:column;min-width:0}
 .mt .g{font-size:16px;font-weight:700;margin-top:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.mt .cel.v .g{margin-top:6px}
 .mt .m{font-size:11px;color:var(--mm);white-space:nowrap}.mt .m.fat{font-size:10px}
-.mt .fx .g.c{color:#8A96E0}.mt .fx.foco .g.c{color:#9DA8FF}.mt .fx.abandonado .g.c{color:var(--mut)}
-.mt .fx .g.v{color:#D0D0D0}.mt .fx.foco .g.v{color:#FFFFFF}.mt .fx.abandonado .g.v{color:var(--mut)}
+.mt .fx .g.c{color:#8FA9D6}.mt .fx.foco .g.c{color:#7FAEFF}.mt .fx.abandonado .g.c{color:var(--mut)}
+.mt .fx .g.v{color:#7CC9AE}.mt .fx.foco .g.v{color:#5CF0B4}.mt .fx.abandonado .g.v{color:var(--mut)}
 .mt .fx .g.ok{color:var(--ouro)}
 /* outras famílias em R$: bloco próprio, tons padrão */
 .mt .fms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -134,7 +134,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .fm .bars{height:130px;margin-top:8px;gap:5px}.mt .fm .l100{left:-2px;right:-2px}
 .mt .fm .b{width:18px;border-radius:4px 4px 0 0}.mt .fm .b.c{background:var(--cp)}.mt .fm .b.v{background:var(--vp)}
 .mt .fm .g{font-size:13px;margin-top:8px}.mt .fm .cel.v .g{margin-top:4px}.mt .fm .m{font-size:10px}
-.mt .fm .g.c{color:#8A96E0}.mt .fm .g.v{color:#D0D0D0}.mt .fm .g.ok{color:var(--ouro)}
+.mt .fm .g.c{color:#8FA9D6}.mt .fm .g.v{color:#4ADE9C}.mt .fm .g.ok{color:var(--ouro)}
 .mt .leg{display:flex;flex-wrap:wrap;gap:12px 16px;font-size:11px;color:var(--rot)}.mt .leg span{display:flex;align-items:center;gap:6px}
 .mt .leg .q{width:10px;height:10px;border-radius:3px;display:inline-block}.mt .leg .q.c{background:var(--cf)}.mt .leg .q.v{background:var(--vf)}.mt .leg .s{width:13px;height:13px}
 .mt .pe{color:var(--rot);font-size:11px;margin:0}
@@ -209,7 +209,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=37"></script>
+<script src="metas.js?v=38"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);

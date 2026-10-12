@@ -203,12 +203,12 @@
   // 15% — não está com o trimestre batido. Não tem por que a estrelinha estar acesa. Ninguém bateu ainda." Então a PORTA da estrela do
   // vendedor é tripla: a CMS bateu o total (90%), ELE bateu o total dele (90%) e ele tem os 15% do TRIMESTRE. Só com a porta aberta:
   // OURO = ele bateu a faixa (100%) / família (95%); PRATA = ele não bateu e a CMS bateu a mesma faixa/família. Porta fechada = sem estrela.
+  // E o casamento (regra 4 de sempre + 12:3x): a faixa/família só vale quando a CMS a bateu — CMS não bateu, ninguém doura, mesmo
+  // com a porta aberta e ele acima da meta.
   function estrelaVendedor(f, tot, porta, g) {
     g = g == null ? GATILHO_FAIXA : g;
-    if (porta !== true) return null;
-    if (bateu(f.real_v, f.meta_v, g)) return "ouro";
-    if (bateu(f.real_c, f.meta_c, g)) return "prata";
-    return null;
+    if (porta !== true || !bateu(f.real_c, f.meta_c, g)) return null;
+    return bateu(f.real_v, f.meta_v, g) ? "ouro" : "prata";
   }
   // a porta: CMS total ≥ 90% · vendedor total ≥ 90% · 15% do trimestre batidos
   const portaVendedor = (d, tot) => !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL)
@@ -264,7 +264,7 @@
       cards += `<div class="fx ${esc(est)}">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", g.cms)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!tomV, tomV) : ""}</div>
-        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${V ? barra("v", f.real_v, f.meta_v, g.cms && bateu(f.real_v, f.meta_v, GATILHO_FAIXA), i * .06 + .05, fe) : ""}</div>
+        <div class="bars"><i class="l100"></i>${barra("c", f.real_c, f.meta_c, g.cms, i * .06, fe)}${V ? barra("v", f.real_v, f.meta_v, tomV === "ouro", i * .06 + .05, fe) : ""}</div>
         <div class="num">${celula("c", gapPares(f.real_c, f.meta_c), metaPares(f.meta_c), bateu(f.real_c, f.meta_c), fatCart(f.fat_c, f.real_c))}${V ? celula("v", gapPares(f.real_v, f.meta_v), metaPares(f.meta_v), bateu(f.real_v, f.meta_v), d.futuro ? "" : fatCart(f.fat_v, f.real_v)) : ""}</div>
       </div>`;
     });
@@ -279,7 +279,7 @@
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
         <div class="st">${estrela("c", ouroC)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!tomF, tomF) : ""}</div>
-        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, ouroC && bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), i * .06 + .05) : ""}</div>
+        <div class="bars">${linha(GATILHO_FAMILIA)}${barra("c", f.real_c, f.meta_c, ouroC, i * .06)}${V ? barra("v", f.real_v, f.meta_v, tomF === "ouro", i * .06 + .05) : ""}</div>
         <div class="num">${celula("c", gapReais(f.real_c, ac), metaFam(f.meta_c), ouroC, fatCart(f.fat_c, f.real_c, true))}${V ? celula("v", gapReais(f.real_v, av), metaFam(f.meta_v), bateu(f.real_v, f.meta_v, GATILHO_FAMILIA), fatCart(f.fat_v, f.real_v, true)) : ""}</div>
       </div>`;
     });
@@ -328,7 +328,7 @@
           <div class="tot">
             <div class="nm">TOTAL</div>
             <div class="st">${estrela("c", cmsTot)}${V && ESTRELAS_VENDEDOR ? estrela("v", !!totV, totV) : ""}</div>
-            <div class="bars">${linhasTotal(d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, cmsTot && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL), .05, escTot) : ""}</div>
+            <div class="bars">${linhasTotal(d.semMeta ? '<span class="rot100">meta não cadastrada</span>' : "")}${barra("c", tot.real_c, tot.meta_c, cmsTot, 0, escTot)}${V ? barra("v", tot.real_v, tot.meta_v, totV === "ouro", .05, escTot) : ""}</div>
             <div class="num">${celula("c", gapPares(tot.real_c, alvo(tot.meta_c, GATILHO_TOTAL)), metaTot(tot.meta_c), false)}${V ? celula("v", gapPares(tot.real_v, alvo(tot.meta_v, GATILHO_TOTAL)), metaTot(tot.meta_v), false) : ""}</div>
             ${trava}
           </div>
@@ -359,9 +359,10 @@
     const inicial = d => d.soCms ? "CMS" : (d.nome || "?").trim().charAt(0).toUpperCase();
     // dourado (12/10, palavra dele): a CMS fica dourada quando bate; o vendedor só fica dourado se a CMS bateu E ele bateu
     const barras = (pega, g) => { const dc = ok.find(d => d.soCms), pc = dc ? pega(dc) : null, cmsOk = !!(pc && bateu(pc.real, pc.meta, g));
-      return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, bateuMesmo = bateu(real, meta, g), ouro = cms ? bateuMesmo : (cmsOk && bateuMesmo);
-        // estrela do vendedor só com a porta tripla aberta (CMS total, total dele, 15% do trimestre) — regra dele de 12/10 14:0x
-        const b = cms ? bateuMesmo : (bateuMesmo && portaVendedor(d, d.total));
+      return ok.map((d, i) => { const { real, meta } = pega(d); const cms = d.soCms, bateuMesmo = bateu(real, meta, g);
+        // estrela E barra dourada do vendedor só com a porta tripla aberta (CMS total, total dele, 15% do trimestre) — regra dele de
+        // 12/10 14:0x e 14:3x ("a barra do Jorge também dourou, e não é para dourar: é para ficar na cor")
+        const b = cms ? bateuMesmo : (bateuMesmo && portaVendedor(d, d.total)), ouro = cms ? bateuMesmo : (cmsOk && b);
         // 13:1x, bug visto por ele no celular (a Mari com 76% acima da linha dos 90%): os rótulos embaixo empurravam a barra para cima.
         // Agora a barra é absoluta no pé da coluna (altura em --h), a estrela senta no topo dela e os rótulos ficam FORA da área das barras.
         const h = altura(real, meta);
