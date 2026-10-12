@@ -162,29 +162,59 @@
              fam_lido_c: (familias.find(f => f.cms_lido) || {}).cms_lido, fam_lido_v: (familias.find(f => f.vend_lido) || {}).vend_lido };
   }
 
-  // ---------- o trimestre somado (12/10): três meses lidos como de costume e somados faixa a faixa; a trava é a do trimestre
+  // ---------- o trimestre (12/10, 15:1x, correção dele: "NÃO pode consolidar — cada mês tem a sua meta"): os três meses lidos como de
+  // costume e mostrados LADO A LADO em cada cartão (três barrinhas da CMS, três do vendedor, a inicial do mês embaixo), cada um pela
+  // sua regra; a trava dos 15% do trimestre é a única leitura trimestral. Nada se soma.
   async function carregarTrimestre(sb, ano, q, preposto, marca) {
     const mm = [q * 3 - 2, q * 3 - 1, q * 3].map(m => ano + "-" + String(m).padStart(2, "0"));
     const ds = (await Promise.all(mm.map(m => carregar(sb, m, preposto, marca)))).filter(d => !d.erro);
     if (!ds.length) return { erro: "sem leitura nos meses do " + q + "º trimestre" };
-    const hoje = mesAtual(), ult = ds[ds.length - 1];
-    const soma = (lista, k) => lista.some(x => x && x[k] != null) ? lista.reduce((s, x) => s + ((x && x[k]) || 0), 0) : null;
-    const juntar = (campo) => {
-      const ids = []; for (const d of ds) for (const f of d[campo]) if (!ids.includes(f.id)) ids.push(f.id);
-      return ids.map(id => { const fs = ds.map(d => d[campo].find(f => f.id === id)).filter(Boolean), base = fs[fs.length - 1];
-        return Object.assign({}, base, { meta_v: soma(fs, "meta_v"), real_v: soma(fs, "real_v"), meta_c: soma(fs, "meta_c"), real_c: soma(fs, "real_c"),
-                                          fat_v: soma(fs, "fat_v"), fat_c: soma(fs, "fat_c") }); });
-    };
-    const faixas = juntar("faixas"), familias = juntar("familias");
-    const tots = ds.map(d => d.total);
-    const total = { meta_v: soma(tots, "meta_v"), meta_c: soma(tots, "meta_c"), real_v: soma(tots, "real_v"), real_c: soma(tots, "real_c") };
-    const todosFaturados = k => ds.every(d => d[k] === "faturado");
-    const t15 = ult.trava15 ? Object.assign({}, ult.trava15, { mes: ult.trava15.tri, soTri: true }) : null;
-    return Object.assign({}, ult, { mes: ano + "-T" + q, trimestre: { ano, q, meses: mm, lidos: ds.map(d => d.mes) }, futuro: mm.every(m => m > hoje),
-      faixas, familias, total, semMeta: total.meta_v == null || total.meta_c == null, trava15: t15,
-      base_c: todosFaturados("base_c") ? "faturado" : "potencial", base_v: todosFaturados("base_v") ? "faturado" : "potencial",
-      avisos: ds.length < 3 ? ["trimestre com " + ds.length + " de 3 meses lidos"] : [] });
+    const ult = ds[ds.length - 1];
+    return Object.assign({}, ult, { mes: ano + "-T" + q, porMes: true, trimestre: { ano, q, meses: mm, lidos: ds.map(d => d.mes) }, ds,
+      futuro: mm.every(m => m > mesAtual()), avisos: ds.length < 3 ? ["trimestre com " + ds.length + " de 3 meses lidos"] : [] });
   }
+  function desenharTrimestre(el, d) {
+    const ds = d.ds, ini = m => MESES[+m.slice(5, 7) - 1].charAt(0).toUpperCase(), V = !d.soCms;
+    const pctTxt = (r, m) => (r == null || !m) ? "—" : Math.round(r / m * 100) + "%";
+    // uma coluna por mês: estrela (quando é de verdade), barra (dourada só quando vale), inicial do mês e o %
+    const col = (dm, quem, real, meta, ouro, tom, i) => `<div class="pb${quem === "c" ? " pc" : ""}${i === 0 && quem === "v" ? " sep" : ""}" style="--h:${altura(real, meta)}%"><i class="s ${quem}${tom ? " on " + tom : (ouro ? " on" : "")}">${ESTRELA}</i><div class="b ${quem}${ouro ? " ouro" : ""}${real == null ? " vazia" : ""}" style="height:${altura(real, meta)}%;animation-delay:${i * .05}s"></div><span class="pn">${ini(dm.mes)}</span><span class="pp">${pctTxt(real, meta)}</span></div>`;
+    const cartao = (cls, nome, g, pega) => {
+      let cols = "";
+      ds.forEach((dm, i) => { const x = pega(dm); if (!x) return; cols += col(dm, "c", x.real_c, x.meta_c, x.ouroC, null, i); });
+      if (V) ds.forEach((dm, i) => { const x = pega(dm); if (!x) return; cols += col(dm, "v", x.real_v, x.meta_v, x.tomV === "ouro", x.tomV, i); });
+      return `<div class="${cls} cmp"><div class="nm">${esc(nome)}</div><div class="bars">${g === GATILHO_TOTAL ? linhasTotal("") : `<i class="l100" style="bottom:${(g / TETO * 100).toFixed(2)}%"></i>`}${cols}</div></div>`;
+    };
+    // as regras de cada mês, iguais às da visão mensal
+    const regrasMes = dm => { const tot = dm.total, porta = portaVendedor(dm, tot), cmsTot = !dm.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL);
+      return { porta, cmsTot, totV: (ESTRELAS_VENDEDOR && porta) ? "ouro" : null }; };
+    const R = ds.map(regrasMes);
+    const tot = cartao("tot", "TOTAL", GATILHO_TOTAL, dm => { const i = ds.indexOf(dm); return { real_c: dm.total.real_c, meta_c: dm.total.meta_c, ouroC: R[i].cmsTot, real_v: dm.total.real_v, meta_v: dm.total.meta_v, tomV: R[i].totV }; });
+    const ids = (campo) => { const out = []; for (const dm of ds) for (const f of dm[campo]) if (!out.includes(f.id)) out.push(f.id); return out; };
+    const nomeDe = (campo, id) => { for (const dm of ds) { const f = dm[campo].find(f => f.id === id); if (f) return f.nome; } return id; };
+    const fxs = ids("faixas").map(id => cartao("fx padrao", nomeDe("faixas", id), GATILHO_FAIXA, dm => { const f = dm.faixas.find(f => f.id === id); if (!f) return null; const i = ds.indexOf(dm), g = dm.semMeta ? { cms: false } : dourado(f, dm.total);
+      return { real_c: f.real_c, meta_c: f.meta_c, ouroC: g.cms, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && !dm.semMeta) ? estrelaVendedor(f, dm.total, R[i].porta, GATILHO_FAIXA) : null }; })).join("");
+    const fms = ids("familias").map(id => cartao("fm", nomeDe("familias", id), GATILHO_FAMILIA, dm => { const f = dm.familias.find(f => f.id === id); if (!f) return null; const i = ds.indexOf(dm), ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA);
+      return { real_c: f.real_c, meta_c: f.meta_c, ouroC, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && V) ? estrelaVendedor(f, dm.total, R[i].porta, GATILHO_FAMILIA) : null }; })).join("");
+    // a trava dos 15%: a linha de cada mês e a do trimestre (a única leitura trimestral)
+    let t15 = "";
+    if (d.trava15 && !d.soCms) {
+      const pct15 = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
+      const lin = (rot, l) => `<div class="lin"><div class="nm">${esc(rot)}</div><div class="trk"><div class="tb v"><i class="f-FTW" style="width:${l ? (l.meta / (l.meta + l.num) * 100).toFixed(1) : 0}%"></i>${l ? FAMS15x(l) : ""}</div></div><div class="val"><b class="${l && l.ok ? "ok" : ""}">${pct15(l && l.pct)}</b><span>${l ? (l.falta > 0 ? "faltam R$ " + kk(l.falta) : "R$ " + kk(-l.falta) + " acima") : "sem meta"}</span></div></div>`;
+      t15 = `<div class="t15"><div class="rot">TRAVA DOS 15% · por mês e no trimestre</div>${ds.map(dm => lin(MESES[+dm.mes.slice(5, 7) - 1].toUpperCase(), dm.trava15 && dm.trava15.mes && dm.trava15.mes.v)).join("")}${lin("TRIMESTRE", d.trava15.tri && d.trava15.tri.v)}</div>`;
+    }
+    const nomeTri = d.trimestre.q + "º TRIMESTRE " + d.trimestre.ano.slice(2);
+    el.innerHTML = `<div class="mt cmpv tri${d.futuro ? " futuro" : ""}" style="--n:${ids("faixas").length}">
+      ${t15}
+      <div class="sec"><div class="rot">CALÇADOS · PARES · ${esc(nomeTri)} · MÊS A MÊS (${esc(ds.map(dm => ini(dm.mes)).join(" "))})</div>
+        <div class="rolo"><div class="fila">${tot}<div class="fxs">${fxs}</div></div></div></div>
+      ${ids("familias").length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$ · MÊS A MÊS</div><div class="fms">${fms}</div></div>` : ""}
+      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="q" style="background:var(--ouro)"></i>dourado = bateu naquele mês</span><span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span></div>
+      <p class="pe">cada mês pela sua meta e pela sua leitura · ${ds.map(dm => MESES[+dm.mes.slice(5, 7) - 1] + (dm.base_c === "faturado" ? " faturado" : " potencial")).join(" · ")}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
+    </div>`;
+    alinhar100(el);
+  }
+  // os segmentos das famílias na barra dos 15% (compartilhado com a visão mensal)
+  const FAMS15x = l => [["MEOLY"], ["CHOLY"], ["ACOLY"], ["CFOLY"], ["UA"]].map(([k]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 ? `<i class="f-${k}" style="width:${(p / (l.meta + l.num) * 100).toFixed(2)}%"></i>` : ""; }).join("");
 
   // ---------- as regras
   // trava dos 15% (regra 11): por mês e no trimestre, SÓ do vendedor (v) — a CMS não entra: "não é relevante" (ele, 12/10).
@@ -279,6 +309,7 @@
 
   function desenhar(el, d) {
     if (d.erro) { el.innerHTML = `<div class="msg aviso">${esc(d.erro)}</div>`; return; }
+    if (d.porMes) return desenharTrimestre(el, d);        // "AAAA-Tn": os três meses lado a lado, sem consolidar
     const tot = d.total, medida = d.futuro ? "carteira" : "real";
     const V = !d.soCms;                                    // "CMS completa": o lado do vendedor não se desenha
     const escala = d.semMeta ? Math.max(1, ...d.faixas.flatMap(f => [f.real_v || 0, f.real_c || 0])) : null;

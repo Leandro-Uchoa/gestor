@@ -96,7 +96,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt.cmpv .pb .b{position:absolute;bottom:0;left:0;right:0;margin:0 auto}
 .mt.cmpv .pb .s{position:absolute;left:0;right:0;margin:0 auto;bottom:calc(var(--h) + 3px)}
 .mt.cmpv .pb .pn{position:absolute;top:100%;left:0;right:0;text-align:center;margin-top:5px}.mt.cmpv .pb .pp{position:absolute;top:100%;left:0;right:0;text-align:center;margin-top:18px}
-.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#B9C9FF}
+.mt.cmpv .pb .b{width:100%;max-width:14px;min-width:6px}.mt.cmpv.tri .pb{flex:1}.mt.cmpv.tri .pb.pc{flex:1}.mt.cmpv.tri .pb.pc .b{max-width:18px}.mt.cmpv.tri .pb.sep{margin-left:10px}.mt.cmpv.tri .pb .s.prata svg path{fill:var(--prata)}.mt.cmpv .pb.pc{flex:1.6}.mt.cmpv .pb.pc .b{max-width:30px}.mt.cmpv .pb .s{width:10px;height:10px}.mt.cmpv .pb .pn{font-size:9px;font-weight:700;color:var(--mut);overflow:hidden;white-space:nowrap}.mt.cmpv .pb.pc .pn{color:#B9C9FF}
 .mt.cmpv .pb .pp{font-size:9px;font-weight:700;color:var(--txt)}.mt.cmpv .fx{width:200px}.mt.cmpv .tot{width:230px}.mt.cmpv .fms{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:900px){.mt.cmpv .fx{width:auto}.mt.cmpv .tot{width:300px}.mt.cmpv .pb .pn{font-size:9px}.mt.cmpv .fms{grid-template-columns:repeat(var(--n),minmax(0,1fr))}}
 .mt .t15 .fp{grid-column:2;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:10px;color:var(--mut);margin-top:-4px}.mt .t15 .fp span{display:flex;align-items:center;gap:4px;white-space:nowrap}
@@ -209,7 +209,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=39"></script>
+<script src="metas.js?v=40"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -294,6 +294,17 @@ async function mostrarMetas(){
   for (const b of document.querySelectorAll("#chips-preposto button[data-marca]")) b.onclick = () => { MARCA_METAS = b.dataset.marca; mostrarMetas(); };
   if (naCms) $("ver-vendedores").onclick = () => { VER_VENDEDORES = !VER_VENDEDORES; mostrarMetas(); };
   if (naCms && VER_VENDEDORES) {
+    const tq = /^(\d{4})-T(\d)$/.exec(MES_METAS || "");
+    if (tq) {                                              // trimestre no comparativo: um bloco por mês, cada um pela sua meta (nada se soma)
+      const mm = [1, 2, 3].map(i => tq[1] + "-" + String((+tq[2]) * 3 - 3 + i).padStart(2, "0"));
+      const blocos = await Promise.all(mm.map(m => Metas.carregarTodos(sb, m, MARCA_METAS, ps)));
+      const meses = (blocos[0][0] && blocos[0][0].meses) || [];
+      $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === MES_METAS ? "ativa" : ""}"><span class="longo">${rotMes(m, true)}</span><span class="cur">${rotMes(m, false)}</span></button>`).join("");
+      for (const b of document.querySelectorAll("#chips-mes button")) b.onclick = () => { MES_METAS = b.dataset.mes; mostrarMetas(); };
+      el.innerHTML = mm.map((m, i) => `<div id="cmp-${i}"></div>`).join("");
+      blocos.forEach((b, i) => Metas.desenharComparativo($("cmp-" + i), b));
+      return;
+    }
     const ds = await Metas.carregarTodos(sb, MES_METAS, MARCA_METAS, ps);
     const meses = (ds[0] && ds[0].meses) || [];
     $("chips-mes").innerHTML = meses.map(m => `<button type="button" data-mes="${m}" class="${m === ((ds[0] && ds[0].mes) || MES_METAS) ? "ativa" : ""}"><span class="longo">${rotMes(m, true)}</span><span class="cur">${rotMes(m, false)}</span></button>`).join("");
