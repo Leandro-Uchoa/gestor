@@ -218,7 +218,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=44"></script>
+<script src="metas.js?v=45"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -462,16 +462,16 @@ function desenharCG(linhas, pedidos, bases){
   // cobertura do mês = estoque ÷ venda do mês (em meses); sem venda, não há cobertura
   const cob = (c) => (c.estoque == null || !c.venda) ? semDado : `<td class="n mu">${(c.estoque / c.venda).toFixed(1).replace(".", ",")}</td>`;
   const celC = c => { const fat = c.fat || 0, cart = c.cart || 0, v = fat + cart; if (!v) return `<td class="n mu">0</td>`; return `<td class="n ${fat && cart ? "mix" : (fat ? "fat" : "cart")}">${fmt(v)}</td>`; };
-  const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ' + (m === mesesCart[0] ? "ini " : "")); } return h; };
+  const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
   let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:#245c3d"></i>venda <i style="background:#1f3d5c"></i>estoque · cob = estoque ÷ venda do mês <i style="background:#0f3a24"></i>carteira <i style="background:#245c3d"></i>faturado</div></div>`;
   html += `<div class="card cg"><table><thead><tr><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   for (const m of mesesGiro) html += `<th class="mes" colspan="3">${mesBR(m)}</th>`;
-  if (mesesCart.length) html += `<th class="mes" colspan="${mesesCart.length}">CARTEIRA</th>`;
+  for (const m of mesesCart) html += `<th class="mes">${mesBR(m)}</th>`;
   html += `</tr><tr><th class="fixa ref"></th><th class="fixa nome"></th><th class="fixa cor"></th>`;
   for (const m of mesesGiro) html += `<th class="n ini">venda</th><th class="n">estoque</th><th class="n">cob</th>`;
-  mesesCart.forEach((m, i) => { html += `<th class="n${i === 0 ? " ini" : ""}">${mesBR(m)}</th>`; });
+  for (const m of mesesCart) html += `<th class="n ini">cart</th>`;
   html += `</tr></thead><tbody>`;
   for (const a of linhas) {
     const aberto = ABERTOS.has(a.referencia), varias = a.cores.size > 1 || (a.cores.size === 1 && a.cores.keys().next().value !== "");
