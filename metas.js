@@ -29,7 +29,10 @@
       denominador = a META de tênis Olympikus em R$ (valor_ref_rs do total de tênis na Carta), NÃO o tênis vendido — correção
       dele de 12/10, valendo do trimestre que começou em outubro. Trimestre = soma dos três meses nos dois lados; mês à frente
       entra com a carteira (potencial). É individual (cada vendedor sozinho) e SÓ O VENDEDOR aparece — palavra dele, 12/10:
-      "no caso dos 15% a CMS não é relevante (…) o da CMS não precisa aparecer, só o do vendedor". */
+      "no caso dos 15% a CMS não é relevante (…) o da CMS não precisa aparecer, só o do vendedor".
+  12. AS CORES DA CMS (ordem dele via BOSS, 12/10): amarelo Olympikus #FFFF1A e preto #151515 (as mesmas vão para o CMS PASS 2.0).
+      CMS = barra amarela; vendedor = barra branca; FOCO = borda amarela; "bateu" = VERDE na barra e no número (o dourado fica só
+      na estrela, com contorno, para não se confundir com o amarelo da marca). As cores moram no CSS do index.html. */
 (function () {
   const ESTRELAS_VENDEDOR = false;     // ordem dele, 30/09: fora até segunda ordem (a regra ouro/prata está em estrelaVendedor)
   const TRAVA_15 = 0.15;               // regra 11: outras famílias + UA ≥ 15% da META de tênis OLY (R$)
@@ -148,16 +151,18 @@
   function contaTrava15(mes, triMeses, leituras, metas, preposto) {
     const lado = (quem, meses) => {
       let num = 0, meta = 0, temMeta = false, base = null, lido = null;
+      const partes = {};                                                          // quanto cada família contribui (pedido dele, 12/10)
       for (const r of leituras) {
         if (r.preposto !== quem || !meses.includes(r.mes.slice(0, 7))) continue;
-        const familia = (r.marca === "OLY" && FAM_OLY.includes(r.faixa)) || (r.marca === "UA" && r.faixa === "TT GERAL");
-        if (!familia) continue;
-        num += +r.real_rs || 0; base = base || r.base; lido = lido || r.lido_em;
+        const chave = (r.marca === "OLY" && FAM_OLY.includes(r.faixa)) ? r.faixa : ((r.marca === "UA" && r.faixa === "TT GERAL") ? "UA" : null);
+        if (!chave) continue;
+        const v = +r.real_rs || 0;
+        num += v; partes[chave] = (partes[chave] || 0) + v; base = base || r.base; lido = lido || r.lido_em;
       }
       for (const m of metas) if (m.preposto === quem && meses.includes(m.mes.slice(0, 7)) && m.valor_ref_rs != null) { meta += +m.valor_ref_rs; temMeta = true; }
       if (!temMeta) return null;
       const alvo15 = meta * TRAVA_15;
-      return { num, meta, pct: meta ? num / meta : null, falta: alvo15 - num, ok: num >= alvo15, base, lido };
+      return { num, meta, pct: meta ? num / meta : null, falta: alvo15 - num, ok: num >= alvo15, base, lido, partes };
     };
     const bloco = meses => ({ v: lado(preposto, meses) });
     const m = bloco([mes]), t = bloco(triMeses);
@@ -235,16 +240,18 @@
     const nomeMes = MESES[+d.mes.slice(5, 7) - 1];
     const pctTxt = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
     const faltaTxt = l => l == null ? "sem meta de tênis" : (l.falta > 0 ? "faltam R$ " + kk(l.falta) : "R$ " + kk(-l.falta) + " acima");
+    // a barra é EMPILHADA por família (pedido dele, 12/10): cada tom é uma família; a ordem é fixa para o olho comparar mês e trimestre
+    const FAMS15 = [["MEOLY", "MEIAS"], ["CHOLY", "CHINELO"], ["ACOLY", "ACESSÓRIO"], ["CFOLY", "CONFECÇÃO"], ["UA", "UNDER ARMOUR"]];
     const linhaT15 = (rot, b) => {
-      const esc15 = Math.max(TRAVA_15 * 2, (b.v && b.v.pct) || 0);                               // a régua vai até o dobro dos 15% (ou até o %)
-      const w = l => l && l.pct != null ? Math.min(100, l.pct / esc15 * 100).toFixed(1) : 0;
+      const l = b.v, esc15 = Math.max(TRAVA_15 * 2, (l && l.pct) || 0);                       // a régua vai até o dobro dos 15% (ou até o %)
+      const seg = l ? FAMS15.map(([k]) => { const p = (l.partes && l.partes[k]) || 0; return p > 0 && l.meta ? `<i class="f-${k}" style="width:${(p / l.meta / esc15 * 100).toFixed(2)}%"></i>` : ""; }).join("") : "";
       return `<div class="lin"><div class="nm">${esc(rot)}</div>
-        <div class="trk"><i class="mk" style="left:${(TRAVA_15 / esc15 * 100).toFixed(1)}%"></i>
-          <div class="tb v"><i class="${b.v && b.v.ok ? "ok" : ""}" style="width:${w(b.v)}%"></i></div></div>
-        <div class="val"><b class="${b.v && b.v.ok ? "ok" : ""}">${pctTxt(b.v && b.v.pct)}</b><span>${faltaTxt(b.v)}</span></div></div>`;
+        <div class="trk"><i class="mk${l && l.ok ? " ok" : ""}" style="left:${(TRAVA_15 / esc15 * 100).toFixed(1)}%"></i><div class="tb v">${seg}</div></div>
+        <div class="val"><b class="${l && l.ok ? "ok" : ""}">${pctTxt(l && l.pct)}</b><span>${faltaTxt(l)}</span></div></div>`;
     };
+    const legT15 = `<div class="lg">${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}<span><i class="mk"></i>15%</span></div>`;
     const t15 = d.trava15 ? `<div class="t15"><div class="rot">TRAVA DOS 15% · outras famílias + UA sobre a META de tênis</div>
-      ${linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}</div>` : "";
+      ${linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}${legT15}</div>` : "";
     // rodapé: hora da leitura por fonte (regra 9)
     const fonteC = d.cms_lido ? `${medida} CMS lido ${dmh(d.cms_lido)}` : `${medida} CMS: sem leitura`;
     const fonteV = d.vend_lido ? `${medida} ${esc(d.nome)} lido ${dmh(d.vend_lido)}` : (d.base_em ? `${medida} ${esc(d.nome)} pela base de ${dm(d.base_em)}${d.calculado ? " (" + dmh(d.calculado).slice(-5) + ")" : ""}` : `${medida} ${esc(d.nome)}: sem base`);
