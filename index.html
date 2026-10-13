@@ -40,7 +40,7 @@ tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
 .pe{color:var(--mu);font-size:.75rem;margin-top:16px}
 /* ordem dele (26/09, no celular): um número por célula, uma linha só; a COR diz o que é — verde claro = faturado, verde escuro = carteira */
 td.fat{background:#2E3EFC;color:#F6F5F0;font-weight:700}
-td.cart{background:rgba(255,255,26,.75);color:#000000}
+td.cart{color:#FFFF1A;box-shadow:inset 3px 0 0 #FFFF1A}
 td.mix{background:linear-gradient(90deg,#2E3EFC 50%,#FFFF1A 50%);color:#F6F5F0;font-weight:700}
 /* giro: venda em verde claro (é venda), estoque em azul — cores diferentes para o olho não confundir com a carteira */
 td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
@@ -60,8 +60,8 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .cg td.fixa.ref{left:0}.cg td.fixa.nome{left:var(--l1)}.cg td.fixa.cor{left:var(--l2)}.cg th.fixa.ref{left:0}.cg th.fixa.nome{left:var(--l1)}.cg th.fixa.cor{left:var(--l2)}
 .cg td.fixa.cor,.cg th.fixa.cor{border-right:2px solid #787B86}
 .cg th.mes{text-align:center;border-left:2px solid #787B86;cursor:pointer;user-select:none}.cg td.ini{border-left:2px solid #787B86}
-.cg thead th.g{background:rgba(46,62,252,.3);color:#F6F5F0}.cg thead th.c{background:rgba(255,255,26,.3);color:#FFFF1A}.cg thead tr:nth-child(2) th.g{color:#ADAEB3}.cg thead tr:nth-child(2) th.c{color:#FFFF1A}
-.cg td.ct{background:rgba(255,255,26,.75);color:#000000}.cg td.ctf{background:#FFFF1A;color:#000000;font-weight:700}
+.cg thead th.g{background:transparent;color:#F6F5F0;box-shadow:inset 0 -2px 0 #2E3EFC}.cg thead th.c{background:transparent;color:#FFFF1A;box-shadow:inset 0 -2px 0 #FFFF1A}.cg thead tr:nth-child(2) th.g{color:#ADAEB3}.cg thead tr:nth-child(2) th.c{color:#FFFF1A}
+.cg td.ct{color:#FFFF1A;box-shadow:inset 3px 0 0 #FFFF1A}.cg td.ctf{background:#FFFF1A;color:#000000;font-weight:700}
 /* coluna agrupada como no Excel: toca no mês, ele some e fica o símbolo; toca no símbolo, ele volta */
 .cg th.col,.cg td.col{width:18px;min-width:18px;max-width:18px;padding:4px 2px!important;text-align:center;background:rgba(120,123,134,.26)}.cg thead th.col{color:#FFFF1A;font-weight:900;font-size:.95rem}.cg thead tr:nth-child(2) th.col{font-size:.55rem;color:var(--mu);writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0!important}
 .cg tr.tot td{position:sticky;bottom:0;background:rgba(120,123,134,.22)}
@@ -202,7 +202,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.3</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.4</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -533,7 +533,7 @@ function desenharCG(linhas, pedidos, bases){
   const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
-  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:#2E3EFC"></i>venda (giro) <i style="background:rgba(173,174,179,.28)"></i>estoque · cob = estoque ÷ venda do mês <i style="background:rgba(255,255,26,.75)"></i>carteira <i style="background:#FFFF1A"></i>carteira com faturado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
+  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:#2E3EFC"></i>venda (giro) <i style="background:rgba(173,174,179,.28)"></i>estoque · cob = estoque ÷ venda do mês <i style="background:transparent;box-shadow:inset 3px 0 0 #FFFF1A"></i>carteira (texto amarelo) <i style="background:#FFFF1A"></i>carteira com faturado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
   html += `<div class="card cg"><table><thead><tr><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   const cabMes = (m, cls, span) => COLAPSADOS.has(cls + m) ? `<th class="mes col ${cls}" data-m="${cls + m}" title="mostrar ${mesBR(m)}">+</th>` : `<th class="mes ${cls}" data-m="${cls + m}" colspan="${span}" title="esconder ${mesBR(m)}">${mesBR(m)}</th>`;
   for (const m of mesesGiro) html += cabMes(m, "g", 3);
