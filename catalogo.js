@@ -2,10 +2,11 @@
 // banco (tabela produto, função catalogo_consulta — base CLAUDE + complemento do catálogo público da CMS), numa chamada só.
 // O que vem do CMS PASS: cartões com foto e ângulos, selos (lançamento / cor nova), filtros, busca, favoritos (ficam no aparelho),
 // exportar Excel (CSV) e PDF (impressão). O que NÃO vem (decisão do BOSS): sacola, pedidos, Worker da CMS, token, preço por prazo.
-// FOTOS: lidas da página pública da CMS (só leitura; nada copiado). A pasta própria do Gestor espera o OK dele — basta trocar IMG.
+// FOTOS (13/10, decisão dele: "pode copiar as miniaturas"): as miniaturas do catálogo da CMS moram na pasta img/mini/ do próprio
+// Gestor ({ref}_{cor sem barra}.jpg, ângulos __02..__04); as fotos grandes ficaram de fora — o zoom amplia a miniatura.
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto, preço e código moram no banco.
 (function(){
-const IMG = "https://cms-representacoes.github.io/apps-oly/Catalogo/";
+const IMG = "img/mini/";
 const CHAVE_FAV = "gestor.catalogo.favoritos";
 const GRUPOS = { OLY: [["CALCADOS", "Calçados"], ["VESTUARIO", "Vestuário"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CHINELOS", "Chinelos"]],
                  UA:  [["FTW_UA", "Calçados"], ["APP_UA", "Vestuário"], ["MEIAS_UA", "Meias"], ["ACC_UA", "Acessórios"], ["CHI_UA", "Chinelos"]] };
@@ -101,11 +102,11 @@ function desenhar(){
 
 function fotoHtml(it, cls){
   const i = it.i || "";
-  return `<div class="foto ${cls || ""}" data-img="${esc(i)}"><img loading="lazy" src="${IMG}mini/${esc(i)}.jpg" alt="" data-passo="mini" onerror="Catalogo.fotoFalhou(this)"><div class="sem oculto">${esc((it.n || "?").slice(0, 2))}</div></div>`;
+  return `<div class="foto ${cls || ""}" data-img="${esc(i)}"><img loading="lazy" src="${IMG}${esc(i)}.jpg" alt="" data-passo="jpg" onerror="Catalogo.fotoFalhou(this)"><div class="sem oculto">${esc((it.n || "?").slice(0, 2))}</div></div>`;
 }
 function fotoFalhou(img){
   const i = img.parentElement.dataset.img;
-  if (img.dataset.passo === "mini") { img.dataset.passo = "cheia"; img.src = IMG + i + ".jpg"; return; }
+  if (img.dataset.passo === "jpg") { img.dataset.passo = "png"; img.src = IMG + i + ".png"; return; }     // umas poucas miniaturas são png
   img.classList.add("oculto"); img.parentElement.querySelector(".sem").classList.remove("oculto");
 }
 
@@ -157,7 +158,7 @@ function abrirLuz(img, k){
     <div class="tx"><b>${esc(it.n)}</b><div class="mu">${esc(it.r)} · ${esc(it.c)}${it.cd ? " · " + esc(titulo(it.cd)) : ""}</div><div class="preco">${dinheiro(it.p)}${selos(it)}</div></div></div>`;
   luz.classList.remove("oculto");
 }
-function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createElement("div"), { className: "mu", textContent: "sem foto na página da CMS" })); }
+function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createElement("div"), { className: "mu", textContent: "sem foto no catálogo" })); }
 function fecharLuz(){ EL.querySelector("#cat-luz").classList.add("oculto"); }
 
 function exportarCsv(){
