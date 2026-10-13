@@ -179,10 +179,30 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 /* computador: no TOTAL a CMS e o vendedor ficam lado a lado (cabe); nas faixas e famílias ficam empilhados (medido 30/09: lado a lado não cabe) */
 @media (min-width:900px){.mt .tot .num{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.mt .tot .g,.mt .tot .cel.v .g{margin-top:0}}
 @media (prefers-reduced-motion:reduce){.mt .b{animation:none}}
+/* ---- CATÁLOGO (13/10): cartões como no CMS PASS, nas cores da CMS ---- */
+.cat .linha-topo{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.cat .linha-topo input{flex:1;min-width:180px;padding:10px 12px}
+.cat .chips small{opacity:.6;font-weight:500;margin-left:2px}.cat .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cat .acoes button{width:auto;margin:0;padding:8px 12px;border-radius:999px;font-size:.85rem}.cat .acoes button.ativa{background:var(--acc);color:#151515;border-color:var(--acc)}
+.cat .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.cat .item{position:relative;background:var(--card);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.cat .foto{aspect-ratio:1/1;background:#202020;display:flex;align-items:center;justify-content:center;cursor:zoom-in}.cat .foto img{width:100%;height:100%;object-fit:contain}
+.cat .foto .sem{font-size:2rem;font-weight:800;color:#3A3A3A}
+.cat .tx{padding:10px 12px 12px}.cat .nome{font-weight:700;font-size:.92rem;line-height:1.2;margin-bottom:4px}.cat .tx .mu{font-size:.74rem}
+.cat .preco{margin-top:6px;font-weight:800;color:var(--acc);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cat .selo{font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.02em}.cat .selo.lanc{background:#2E3EFC;color:#fff}.cat .selo.nova{background:#F2B632;color:#151515}
+.cat .fav{position:absolute;top:8px;right:8px;width:34px;height:34px;margin:0;padding:0;border-radius:50%;background:rgba(21,21,21,.7);color:#777;border:0;font-size:1.1rem}.cat .fav.on{color:#E3001B}
+.cat .cores{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.cat .cor{font-size:.62rem;padding:2px 6px;border-radius:6px;background:#2C2C2C;color:var(--mu);cursor:pointer}.cat .cor.esta{background:var(--acc);color:#151515;font-weight:700}
+.cat .luz{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}.cat .luz.oculto{display:none}
+.cat .quadro{position:relative;background:var(--card);border-radius:16px;max-width:900px;width:100%;max-height:92vh;overflow:auto;padding:16px}
+.cat .quadro .fecha{position:absolute;top:8px;right:8px;width:36px;height:36px;margin:0;padding:0;border-radius:50%;background:#2C2C2C;color:var(--ink);border:0;font-size:1.2rem}
+.cat .angulos{display:flex;gap:8px;overflow-x:auto}.cat .angulos img{height:min(60vh,520px);max-width:100%;object-fit:contain;background:#202020;border-radius:10px}
+@media (max-width:480px){.cat .grade{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media print{body{background:#fff;color:#000;padding:0}.abas,#filtros,#resultado,.cat .filtros,.cat .fav,#rodape,#bt-sair,h1,#tela-metas{display:none!important}
+  .cat .grade{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.cat .item{background:#fff;border:1px solid #ddd;break-inside:avoid}.cat .foto{background:#fff}.cat .preco{color:#000}.cat .tx .mu{color:#444}}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v3.9</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.0</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -203,7 +223,9 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
   <div class="abas">
     <button data-aba="cg" class="ativa">Carteira e giro</button>
     <button data-aba="metas">Metas</button>
+    <button data-aba="catalogo">Catálogo</button>
   </div>
+  <div id="tela-catalogo" class="oculto"></div>
   <div id="tela-metas" class="oculto">
     <div class="chips" id="chips-preposto" style="margin:0 0 12px"></div>
     <div class="segm" id="chips-mes"></div>
@@ -230,7 +252,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="gestor_lib.js?v=1"></script>
-<script src="metas.js?v=51"></script>
+<script src="metas.js?v=52"></script>
+<script src="catalogo.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -284,7 +307,8 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 // Cada aba tem a sua fonte, a sua cobertura de meses e o seu rodapé. Os filtros são os mesmos.
 const ABAS = {
   cg:    { subtitulo: "· carteira e giro", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em laranja (laranja claro = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
-  metas: { subtitulo: "· metas", rodape: "" },        // nenhum texto explicativo na tela (ATA 23/09)
+  metas: { subtitulo: "· metas", rodape: "" },
+  catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
 const COB = { carteira: [], giro: [], erro: null };
@@ -346,8 +370,10 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas";
-  $("tela-metas").classList.toggle("oculto", !metas); $("filtros").classList.toggle("oculto", metas); $("resultado").classList.toggle("oculto", metas);
+  const metas = nova === "metas", cat = nova === "catalogo";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat);
+  $("filtros").classList.toggle("oculto", metas || cat); $("resultado").classList.toggle("oculto", metas || cat);
+  if (cat) { Catalogo.abrir(sb, $("tela-catalogo")); return; }
   if (metas) { mostrarMetas(); return; }
   mostrarCobertura(); consultar();
 }
