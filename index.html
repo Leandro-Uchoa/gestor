@@ -31,7 +31,7 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--bd);back
 button{width:100%;padding:14px;border:0;border-radius:10px;background:var(--acc);color:#000000;font-weight:800;margin-top:14px}
 button.sec{background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:600}
 .msg{padding:12px;border-radius:10px;margin-top:12px;font-size:.95rem}
-.msg.aviso{background:rgba(120,123,134,.2);color:#F6F5F0}.msg.erro{background:rgba(120,123,134,.2);color:#FFFF1A;border:1px solid #FFFF1A}.msg.ok{background:rgba(120,123,134,.14);color:#FFFF1A}  /* 12/10: a mensagem de passagem ('buscando…') no amarelo da casa, não no verde */
+.msg.aviso{background:transparent;color:#ADAEB3;border:1px solid #787B86}.msg.erro{background:#FFFF1A;color:#000000;font-weight:700}.msg.erro::before{content:"⚠ "}.msg.ok{background:rgba(120,123,134,.14);color:#FFFF1A}  /* 12/10: a mensagem de passagem ('buscando…') no amarelo da casa, não no verde */
 table{width:100%;border-collapse:collapse;margin-top:4px;font-size:.82rem}
 th,td{text-align:left;padding:6px 5px;border-bottom:1px solid var(--bd);vertical-align:top;white-space:nowrap}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -39,11 +39,11 @@ tr.tot td{font-weight:800;border-top:2px solid var(--acc)}
 .mu{color:var(--mu);font-size:.8rem}
 .pe{color:var(--mu);font-size:.75rem;margin-top:16px}
 /* ordem dele (26/09, no celular): um número por célula, uma linha só; a COR diz o que é — verde claro = faturado, verde escuro = carteira */
-td.fat{background:#245c3d;color:#dff5e7;font-weight:700}
-td.cart{background:#0f3a24;color:#9be7b8}
-td.mix{background:linear-gradient(90deg,#245c3d 50%,#0f3a24 50%);color:#dff5e7;font-weight:700}
+td.fat{background:#2E3EFC;color:#F6F5F0;font-weight:700}
+td.cart{background:rgba(255,255,26,.75);color:#000000}
+td.mix{background:linear-gradient(90deg,#2E3EFC 50%,#FFFF1A 50%);color:#F6F5F0;font-weight:700}
 /* giro: venda em verde claro (é venda), estoque em azul — cores diferentes para o olho não confundir com a carteira */
-td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
+td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .legenda{font-size:.75rem;color:var(--mu);margin:6px 0 0}
 .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px}
 .oculto{display:none}
@@ -60,8 +60,8 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .cg td.fixa.ref{left:0}.cg td.fixa.nome{left:var(--l1)}.cg td.fixa.cor{left:var(--l2)}.cg th.fixa.ref{left:0}.cg th.fixa.nome{left:var(--l1)}.cg th.fixa.cor{left:var(--l2)}
 .cg td.fixa.cor,.cg th.fixa.cor{border-right:2px solid #787B86}
 .cg th.mes{text-align:center;border-left:2px solid #787B86;cursor:pointer;user-select:none}.cg td.ini{border-left:2px solid #787B86}
-.cg thead th.g{background:#1E2A24;color:#9be7b8}.cg thead th.c{background:#2E2214;color:#FFC98A}.cg thead tr:nth-child(2) th.g{color:#7fbf9a}.cg thead tr:nth-child(2) th.c{color:#d9a46a}
-.cg td.ct{background:#4A2E12;color:#FFD9B0}.cg td.ctf{background:#7A4A1A;color:#FFE8CF;font-weight:700}
+.cg thead th.g{background:rgba(46,62,252,.3);color:#F6F5F0}.cg thead th.c{background:rgba(255,255,26,.3);color:#FFFF1A}.cg thead tr:nth-child(2) th.g{color:#ADAEB3}.cg thead tr:nth-child(2) th.c{color:#FFFF1A}
+.cg td.ct{background:rgba(255,255,26,.75);color:#000000}.cg td.ctf{background:#FFFF1A;color:#000000;font-weight:700}
 /* coluna agrupada como no Excel: toca no mês, ele some e fica o símbolo; toca no símbolo, ele volta */
 .cg th.col,.cg td.col{width:18px;min-width:18px;max-width:18px;padding:4px 2px!important;text-align:center;background:rgba(120,123,134,.26)}.cg thead th.col{color:#FFFF1A;font-weight:900;font-size:.95rem}.cg thead tr:nth-child(2) th.col{font-size:.55rem;color:var(--mu);writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0!important}
 .cg tr.tot td{position:sticky;bottom:0;background:rgba(120,123,134,.22)}
@@ -78,7 +78,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .chips button.ativa{background:var(--acc);color:#000000;border-color:var(--acc)}
 /* ---- METAS: o visual aprovado por ele em 30/09 (BOSS; canvas "Revisão · celular" e "Revisão · computador"). Cores e medidas
    são as do desenho; o que é regra está no cabeçalho de metas.js. Painel escuro, fonte Sora. ---- */
-.mt{--cf:#2E3EFC;--cp:rgba(46,62,252,.55);--vf:#3EE6A0;--vp:#2B9C7A;--ouro:#F2B632;--prata:#ADAEB3;--txt:#F6F5F0;--mut:#ADAEB3;--eixo:#787B86;--l100:#787B86;--mm:#ADAEB3;--rot:#ADAEB3;
+.mt{--cf:#2E3EFC;--cp:rgba(46,62,252,.4);--vf:#F6F5F0;--vp:rgba(246,245,240,.35);--ouro:#FFFF1A;--prata:#ADAEB3;--txt:#F6F5F0;--mut:#ADAEB3;--eixo:#787B86;--l100:#787B86;--mm:#ADAEB3;--rot:#ADAEB3;
     background:#000000;color:var(--txt);font-family:'Sora',system-ui,sans-serif;margin:0 -16px;padding:4px 0 8px 16px;display:flex;flex-direction:column;gap:24px}
 .mt .rot{font-size:12px;letter-spacing:.14em;color:var(--rot);font-weight:600;margin-bottom:12px}
 .mt .sec{display:flex;flex-direction:column}.mt .sec.fam,.mt .leg,.mt .pe{padding-right:16px}
@@ -93,10 +93,10 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 /* a travessia dos 100%: uma linha tracejada só, do total até a última faixa (posicionada por alinhar100 na altura da linha do total) */
 .mt .fila{position:relative}.mt .fila .atravessa{position:absolute;left:0;right:0;border-top:1.5px dashed #ADAEB3;pointer-events:none;z-index:1}.mt .fx .l100{opacity:0}
 .mt .tot .b{width:34px;border-radius:6px 6px 0 0}.mt .tot .b.c{background:var(--cf)}.mt .tot .b.v{background:var(--vf)}
-.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#F6F5F0}.mt .tot .g.v{color:#8FF5CF}.mt .tot .m{color:#ADAEB3}
+.mt .tot .g{font-size:22px;font-weight:800}.mt .tot .g.c{color:#F6F5F0}.mt .tot .g.v{color:#F6F5F0}.mt .tot .m{color:#ADAEB3}
 .mt .trava{margin-top:12px;padding-top:10px;border-top:1px solid #787B86;display:flex;flex-direction:column;gap:6px}
 .mt .trava .tl{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700;letter-spacing:.08em;color:#ADAEB3}.mt .trava .tl b{font-size:15px;font-weight:800;color:#F6F5F0}
-.mt .trava .tb{position:relative;height:6px;border-radius:3px;background:rgba(120,123,134,.3)}.mt .trava .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#7BF0C4}
+.mt .trava .tb{position:relative;height:6px;border-radius:3px;background:rgba(120,123,134,.3)}.mt .trava .tb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#F6F5F0}
 .mt .t15{display:flex;flex-direction:column;gap:12px;padding:14px 14px 12px;margin-right:16px;border-radius:16px;background:rgba(120,123,134,.14);border:1px solid rgba(120,123,134,.3)}
 .mt .t15 .rot{margin-bottom:0}
 .mt .t15 .lin{display:grid;grid-template-columns:86px 1fr 112px;gap:6px 10px;align-items:center}
@@ -107,7 +107,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 @keyframes cresce{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 /* a barra dos 15% é a COMPOSIÇÃO (12/10, 2ª rodada dele: "as cores ficaram muito próximas"): tênis Olympikus = azul Olympikus #2E3EFC
    (a META, a referência), Under Armour = vermelho da marca, e cada família numa cor fácil de distinguir */
-.mt .f-FTW{background:#2E3EFC}.mt .f-MEOLY{background:#FFFF1A}.mt .f-CHOLY{background:#FF8A00}.mt .f-ACOLY{background:#B06CFF}.mt .f-CFOLY{background:#2EC4E6}.mt .f-UA{background:#E3001B}
+.mt .f-FTW{background:#2E3EFC}.mt .f-MEOLY{background:#FFFF1A}.mt .f-CHOLY{background:#ADAEB3}.mt .f-ACOLY{background:#787B86}.mt .f-CFOLY{background:#F6F5F0}.mt .f-UA{background:#E3001B}   /* UA: vermelho da marca, única exceção à paleta (ele, 13/10) */
 /* visão do gestor (12/10): uma barra por vendedor, lado a lado, em cada cartão; nome e % embaixo de cada barra */
 .mt.cmpv .tot{width:auto;min-width:0}.mt.cmpv .bars{gap:4px;align-items:flex-end;margin-bottom:36px}
 /* 13:1x: a coluna de cada vendedor é uma área de altura cheia; a barra é absoluta no pé (altura --h), a estrela no topo dela, os rótulos FORA (abaixo da área) —
@@ -131,7 +131,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .fx.foco{background:rgba(120,123,134,.2);border-color:#FFFF1A}
 .mt .nm{font-size:12px;line-height:1.3;min-height:32px;font-weight:400}.mt .fx.foco .nm{font-weight:800}.mt .fx.abandonado .nm{color:var(--mut)}
 .mt .st{height:18px;display:flex;justify-content:center;gap:12px}
-.mt .s{display:inline-block;width:16px;height:16px;opacity:0}.mt .s svg{width:100%;height:100%;display:block}.mt .s.on{opacity:1}.mt .s svg path{fill:var(--ouro);stroke:#7A4E00;stroke-width:1.2}.mt .s.prata svg path{fill:var(--prata);stroke:#787B86}
+.mt .s{display:inline-block;width:16px;height:16px;opacity:0}.mt .s svg{width:100%;height:100%;display:block}.mt .s.on{opacity:1}.mt .s svg path{fill:var(--ouro);stroke:#000000;stroke-width:1.2}.mt .s.prata svg path{fill:var(--prata);stroke:#F6F5F0;stroke-width:1}
 .mt .bars{position:relative;height:186px;display:flex;align-items:flex-end;justify-content:center;gap:6px;border-bottom:1px solid var(--eixo)}
 .mt .l100{position:absolute;left:-4px;right:-4px;bottom:66.67%;border-top:1.5px dashed var(--l100)}
 .mt .rot100{position:absolute;right:0;top:-14px;font-size:9px;color:#FFFF1A;font-weight:700;white-space:nowrap}
@@ -139,13 +139,13 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 @keyframes sobe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .mt .fx .b.c{background:var(--cp)}.mt .fx .b.v{background:var(--vp)}.mt .fx.foco .b.c{background:var(--cf)}.mt .fx.foco .b.v{background:var(--vf)}
 .mt .fx.abandonado .b{background:#ADAEB3!important;opacity:.7}   /* abandonada = cinza (ele, 12/10 14:3x) */
-.mt .b.ouro{background:var(--ouro)!important}
+.mt .b.ouro{background:var(--ouro)!important;opacity:1!important;color:#000000}.mt .b.ouro *{color:#000000}
 .mt .b.vazia{border-top:2px dotted var(--mut);height:0}
 .mt .num{display:flex;flex-direction:column;min-width:0}.mt .cel{display:flex;flex-direction:column;min-width:0}
 .mt .g{font-size:16px;font-weight:700;margin-top:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.mt .cel.v .g{margin-top:6px}
 .mt .m{font-size:11px;color:var(--mm);white-space:nowrap}.mt .m.fat{font-size:10px}
 .mt .fx .g.c{color:#ADAEB3}.mt .fx.foco .g.c{color:#F6F5F0}.mt .fx.abandonado .g.c{color:var(--mut)}
-.mt .fx .g.v{color:#7CC9AE}.mt .fx.foco .g.v{color:#5CF0B4}.mt .fx.abandonado .g.v{color:var(--mut)}
+.mt .fx .g.v{color:#ADAEB3}.mt .fx.foco .g.v{color:#F6F5F0}.mt .fx.abandonado .g.v{color:var(--mut)}
 .mt .fx .g.ok{color:var(--ouro)}
 /* outras famílias em R$: bloco próprio, tons padrão */
 .mt .fms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -154,7 +154,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 .mt .fm .bars{height:130px;margin-top:8px;gap:5px}.mt .fm .l100{left:-2px;right:-2px}
 .mt .fm .b{width:18px;border-radius:4px 4px 0 0}.mt .fm .b.c{background:var(--cp)}.mt .fm .b.v{background:var(--vp)}
 .mt .fm .g{font-size:13px;margin-top:8px}.mt .fm .cel.v .g{margin-top:4px}.mt .fm .m{font-size:10px}
-.mt .fm .g.c{color:#ADAEB3}.mt .fm .g.v{color:#4ADE9C}.mt .fm .g.ok{color:var(--ouro)}
+.mt .fm .g.c{color:#ADAEB3}.mt .fm .g.v{color:#F6F5F0}.mt .fm .g.ok{color:var(--ouro)}
 .mt .leg{display:flex;flex-wrap:wrap;gap:12px 16px;font-size:11px;color:var(--rot)}.mt .leg span{display:flex;align-items:center;gap:6px}
 .mt .leg .q{width:10px;height:10px;border-radius:3px;display:inline-block}.mt .leg .q.c{background:var(--cf)}.mt .leg .q.v{background:var(--vf)}.mt .leg .s{width:13px;height:13px}
 .mt .pe{color:var(--rot);font-size:11px;margin:0}
@@ -202,7 +202,7 @@ td.est{background:#1f3d5c;color:#d6e8ff;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.2</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.3</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -306,7 +306,7 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 // ---------- as abas
 // Cada aba tem a sua fonte, a sua cobertura de meses e o seu rodapé. Os filtros são os mesmos.
 const ABAS = {
-  cg:    { subtitulo: "· carteira e giro", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em laranja (laranja claro = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
+  cg:    { subtitulo: "· carteira e giro", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em amarelo (amarelo cheio = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
   metas: { subtitulo: "· metas", rodape: "" },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
 };
@@ -533,7 +533,7 @@ function desenharCG(linhas, pedidos, bases){
   const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
-  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:#245c3d"></i>venda (giro) <i style="background:#1f3d5c"></i>estoque · cob = estoque ÷ venda do mês <i style="background:#4A2E12"></i>carteira <i style="background:#7A4A1A"></i>carteira com faturado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
+  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:#2E3EFC"></i>venda (giro) <i style="background:rgba(173,174,179,.28)"></i>estoque · cob = estoque ÷ venda do mês <i style="background:rgba(255,255,26,.75)"></i>carteira <i style="background:#FFFF1A"></i>carteira com faturado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
   html += `<div class="card cg"><table><thead><tr><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   const cabMes = (m, cls, span) => COLAPSADOS.has(cls + m) ? `<th class="mes col ${cls}" data-m="${cls + m}" title="mostrar ${mesBR(m)}">+</th>` : `<th class="mes ${cls}" data-m="${cls + m}" colspan="${span}" title="esconder ${mesBR(m)}">${mesBR(m)}</th>`;
   for (const m of mesesGiro) html += cabMes(m, "g", 3);
