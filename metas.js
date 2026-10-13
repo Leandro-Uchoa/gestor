@@ -194,7 +194,7 @@
     const fxs = ids("faixas").map(id => cartao("fx padrao", nomeDe("faixas", id), GATILHO_FAIXA, dm => { const f = dm.faixas.find(f => f.id === id); if (!f) return null; const i = ds.indexOf(dm), g = dm.semMeta ? { cms: false } : dourado(f, dm.total);
       return { real_c: f.real_c, meta_c: f.meta_c, ouroC: g.cms, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && !dm.semMeta) ? estrelaVendedor(f, dm.total, R[i].porta, GATILHO_FAIXA) : null }; })).join("");
     const fms = ids("familias").map(id => cartao("fm", nomeDe("familias", id), GATILHO_FAMILIA, dm => { const f = dm.familias.find(f => f.id === id); if (!f) return null; const i = ds.indexOf(dm), ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA);
-      return { real_c: f.real_c, meta_c: f.meta_c, ouroC, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f, dm.total, R[i].porta) : null }; })).join("");
+      return { real_c: f.real_c, meta_c: f.meta_c, ouroC, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f, tem15(dm)) : null }; })).join("");
     // a trava dos 15%: a linha de cada mês e a do trimestre (a única leitura trimestral)
     let t15 = "";
     if (d.trava15 && !d.soCms) {
@@ -274,13 +274,17 @@
   // 13/10 ≈15h50, palavra dele olhando Metas (CMS com o Léo): "em acessórios o Léo está batido e não dourou; em chinelo a mesma coisa.
   // A regra do dourado e da estrelinha vale para todas as famílias. Quando bate, pum, acende." Nas FAMÍLIAS (R$: meias, chinelo,
   // acessório, confecção) o vendedor doura e ganha a estrela de ouro ao bater os 95% — sem porta tripla e sem esperar a CMS bater a
-  // família (em outubro a CMS estava a 89,7% do total e a porta fechava tudo). A prata continua como era: porta aberta, a CMS bateu a
-  // família e ele não. As FAIXAS de tênis seguem com a porta tripla (caso do Rafael, 12/10).
-  function estrelaFamilia(f, tot, porta) {
+  // família (em outubro a CMS estava a 89,7% do total e a porta fechava tudo). 16:5x, correção dele: "as regras são separadas:
+  // calçados — tênis, o total e as faixas — um é coligado ao outro; as outras famílias são INDEPENDENTES: se bate os 95%, doura;
+  // não depende dos tênis". Então a família não olha o total de tênis de ninguém: OURO = ele bateu os 95%; PRATA (os 50%) = a CMS
+  // bateu a família, ele não, e ele tem os 15% do trimestre (a única condição da carta para os 50%). As FAIXAS de tênis seguem com
+  // a porta tripla (caso do Rafael, 12/10).
+  function estrelaFamilia(f, tem15) {
     if (bateu(f.real_v, f.meta_v, GATILHO_FAMILIA)) return "ouro";
-    if (porta === true && bateu(f.real_c, f.meta_c, GATILHO_FAMILIA)) return "prata";
+    if (tem15 === true && bateu(f.real_c, f.meta_c, GATILHO_FAMILIA)) return "prata";
     return null;
   }
+  const tem15 = d => !!(d && d.trava15 && d.trava15.tri && d.trava15.tri.v && d.trava15.tri.v.ok);
   // a porta: CMS total ≥ 90% · vendedor total ≥ 90% · 15% do trimestre batidos
   const portaVendedor = (d, tot) => !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL)
                                    && !!(d.trava15 && d.trava15.tri && d.trava15.tri.v && d.trava15.tri.v.ok);
@@ -346,7 +350,7 @@
       // tênis (Léo via BOSS, 30/09). O ouro do vendedor na família segue desligado com as outras estrelas dele.
       // regra 10: a família bate com 95% da meta em valor; a falta/excedente é contra esses 95%, e a linha desce para lá
       const ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA), ac = alvo(f.meta_c, GATILHO_FAMILIA), av = alvo(f.meta_v, GATILHO_FAMILIA);
-      const tomF = (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f, tot, ok15) : null;     // 13/10: família bate → acende (sem porta); prata só com porta e CMS batendo
+      const tomF = (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f, tem15(d)) : null;     // 13/10: família é independente dos tênis — bate → acende; prata = CMS bateu, ele não, com os 15%
       const metaFam = m => m == null ? "sem meta" : pct(GATILHO_FAMILIA) + " de R$ " + kk(m);
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
