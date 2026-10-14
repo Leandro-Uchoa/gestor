@@ -129,7 +129,10 @@ function desenharPagina(){
     const doTipo = lista.filter(it => it.t === tv);
     if (!doTipo.length) continue;
     let bloco = null, cols = "", porModelo = new Map();
-    const fecha = () => { if (bloco == null) return; html += `<div class="bloco"><div class="sec-tit">${esc(NOME_TIPO[tv])}${bloco ? " · " + esc(bloco) : ""} <small>${porModelo.size} modelo(s)</small></div><div class="colunas">${[...porModelo.values()].map(coluna).join("")}</div></div>`; modelos += porModelo.size; porModelo = new Map(); };
+    // faixa de preço no título do bloco (ordem dele via PICASSO, 14/10): menor e maior PDV dos modelos VISÍVEIS (já filtrados); PDV nulo
+    // fica fora; todos iguais → um preço só; nenhum com preço → sem faixa
+    const faixa = () => { const ps = [...porModelo.values()].flat().map(it => it.p).filter(p => p != null); if (!ps.length) return ""; const a = Math.min(...ps), b = Math.max(...ps); return " · " + esc(a === b ? dinheiro(a) : dinheiro(a) + " a " + dinheiro(b)); };
+    const fecha = () => { if (bloco == null) return; html += `<div class="bloco"><div class="sec-tit">${esc(NOME_TIPO[tv])}${bloco ? " · " + esc(bloco) : ""} <small>${porModelo.size} modelo(s)${faixa()}</small></div><div class="colunas">${[...porModelo.values()].map(coluna).join("")}</div></div>`; modelos += porModelo.size; porModelo = new Map(); };
     for (const it of doTipo) {
       if ((it.g || "") !== (bloco == null ? null : bloco)) { fecha(); bloco = it.g || ""; }
       const k = chaveModelo(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it);
