@@ -206,13 +206,18 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .cat .quadro{position:relative;background:var(--card);border-radius:16px;max-width:900px;width:100%;max-height:92vh;overflow:auto;padding:16px}
 .cat .quadro .fecha{position:absolute;top:8px;right:8px;width:36px;height:36px;margin:0;padding:0;border-radius:50%;background:rgba(120,123,134,.3);color:var(--ink);border:0;font-size:1.2rem}
 .cat .angulos{display:flex;gap:8px;overflow-x:auto}.cat .angulos img{height:min(60vh,520px);max-width:100%;object-fit:contain;background:rgba(120,123,134,.22);border-radius:10px}
+/* ---- COLEÇÃO (14/10): o mesmo cartão, em seções na ordem da apresentação; referência copiável ---- */
+.cat .sec-tit{grid-column:1/-1;font-weight:800;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#ADAEB3;margin:14px 0 0;padding:2px 0 2px 10px;border-left:3px solid #FFFF1A}
+.cat .sec-tit:first-child{margin-top:0}
+.cat .ref{display:inline-block;width:auto;margin:0;padding:1px 7px;border:0;border-radius:6px;background:rgba(120,123,134,.3);color:var(--ink);font-size:.74rem;font-weight:700;cursor:copy;font-family:inherit}
+.cat .ref.copiado{background:#FFFF1A;color:#000000}
 @media (max-width:480px){.cat .grade{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media print{body{background:#fff;color:#000;padding:0}.abas,#filtros,#resultado,.cat .filtros,.cat .fav,#rodape,#bt-sair,h1,#tela-metas{display:none!important}
   .cat .grade{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.cat .item{background:#fff;border:1px solid #ddd;break-inside:avoid}.cat .foto{background:#fff}.cat .preco{color:#000}.cat .tx .mu{color:#444}}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.8</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.9</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -234,9 +239,11 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
     <button data-aba="cg" class="ativa">Carteira e giro</button>
     <button data-aba="metas">Metas</button>
     <button data-aba="catalogo">Catálogo</button>
+    <button data-aba="colecao">Coleção</button>
     <button data-aba="atas">Atas</button>
   </div>
   <div id="tela-catalogo" class="oculto"></div>
+  <div id="tela-colecao" class="oculto"></div>
   <div id="tela-atas" class="oculto"></div>
   <div id="tela-metas" class="oculto">
     <div class="chips" id="chips-preposto" style="margin:0 0 12px"></div>
@@ -266,6 +273,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
+<script src="colecao.js?v=1"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
@@ -323,6 +331,7 @@ const ABAS = {
   metas: { subtitulo: "· metas", rodape: "" },
   atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
+  colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
 const COB = { carteira: [], giro: [], erro: null };
@@ -384,10 +393,11 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas";
-  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas);
-  $("filtros").classList.toggle("oculto", metas || cat || atas); $("resultado").classList.toggle("oculto", metas || cat || atas);
+  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col);
+  $("filtros").classList.toggle("oculto", metas || cat || atas || col); $("resultado").classList.toggle("oculto", metas || cat || atas || col);
   if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
+  if (col) { Colecao.abrir(sb, $("tela-colecao")); return; }
   if (cat) { Catalogo.abrir(sb, $("tela-catalogo")); return; }
   if (metas) { mostrarMetas(); return; }
   mostrarCobertura(); consultar();
