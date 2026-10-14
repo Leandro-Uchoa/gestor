@@ -35,7 +35,15 @@
       amarelas, porque ela só vai ficar DOURADA quando a CMS bater". Barras: CMS = azul (#5B6BFF), vendedor = branca; DOURADO = bateu:
       a CMS dourada quando bate; o vendedor só fica dourado se a CMS bateu E ele bateu; CMS não bateu → ninguém dourado, mesmo que
       ele tenha batido. A estrela do vendedor segue a regra 13 (ele bateu = estrela), separada da cor da barra. CSS no index.html.
-  13. ESTRELAS DO VENDEDOR (reunião 12/10, via BOSS): ouro = ele bateu; prata = CMS bateu, ele não, e ele tem os 15%; sem os 15%, nenhuma. */
+  13. ESTRELAS DO VENDEDOR (reunião 12/10, via BOSS): ouro = ele bateu; prata = CMS bateu, ele não, e ele tem os 15%; sem os 15%, nenhuma.
+  14. A REGRA DO VENDEDOR REESCRITA POR ELE (14/10, via BOSS) — vale acima de tudo, inclusive da porta tripla de 12/10:
+      · tênis OLYMPIKUS: 90% do total dele destrava as faixas; cada faixa paga a 100%. A TRAVA DOS 15% (faturamento no trimestre)
+        vale SÓ AQUI. A prata (50%) exige 90% do total + os 15% do trimestre, com a faixa batida pela CMS e não por ele.
+      · tênis UNDER ARMOUR: régua da Vulcabras, 90% do total e 100% nas faixas. SEM trava dos 15%.
+      · tudo que não é tênis (meias, chinelo, acessório, confecção, OLY e UA): 95% em VALOR é a destrava; ganha o que bater.
+        SEM trava dos 15%. Continua: se a CMS não destrava, ninguém recebe.
+      No desenho: a porta do vendedor nos tênis só pede os 15% na marca OLY (portaVendedor olha d.marca); a prata das famílias
+      não olha os 15%; a barra dos 15% continua e diz que vale só para o tênis Olympikus. */
 (function () {
   const ESTRELAS_VENDEDOR = true;      // 12/10 (reunião, via BOSS): "ligar as estrelas: bateu tem estrela, não bateu fica sem" — regra em estrelaVendedor
   const TRAVA_15 = 0.15;               // regra 11: outras famílias + UA ≥ 15% da META de tênis OLY (R$)
@@ -194,13 +202,13 @@
     const fxs = ids("faixas").map(id => cartao("fx padrao", nomeDe("faixas", id), GATILHO_FAIXA, dm => { const f = dm.faixas.find(f => f.id === id); if (!f) return null; const i = ds.indexOf(dm), g = dm.semMeta ? { cms: false } : dourado(f, dm.total);
       return { real_c: f.real_c, meta_c: f.meta_c, ouroC: g.cms, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && !dm.semMeta) ? estrelaVendedor(f, dm.total, R[i].porta, GATILHO_FAIXA) : null }; })).join("");
     const fms = ids("familias").map(id => cartao("fm", nomeDe("familias", id), GATILHO_FAMILIA, dm => { const f = dm.familias.find(f => f.id === id); if (!f) return null; const i = ds.indexOf(dm), ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA);
-      return { real_c: f.real_c, meta_c: f.meta_c, ouroC, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f, tem15(dm)) : null }; })).join("");
+      return { real_c: f.real_c, meta_c: f.meta_c, ouroC, real_v: f.real_v, meta_v: f.meta_v, tomV: (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f) : null }; })).join("");
     // a trava dos 15%: a linha de cada mês e a do trimestre (a única leitura trimestral)
     let t15 = "";
     if (d.trava15 && !d.soCms) {
       const pct15 = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
       const lin = (rot, l) => `<div class="lin"><div class="nm">${esc(rot)}</div><div class="trk"><div class="tb v"><i class="f-FTW" style="width:${l ? (l.meta / (l.meta + l.num) * 100).toFixed(1) : 0}%"></i>${l ? FAMS15x(l) : ""}</div></div><div class="val"><b class="${l && l.ok ? "ok" : ""}">${pct15(l && l.pct)}</b><span>${l ? (l.falta > 0 ? "faltam R$ " + kk(l.falta) : "R$ " + kk(-l.falta) + " acima") : "sem meta"}</span></div></div>`;
-      t15 = `<div class="t15"><div class="rot">TRAVA DOS 15% · por mês e no trimestre</div>${ds.map(dm => lin(MESES[+dm.mes.slice(5, 7) - 1].toUpperCase(), dm.trava15 && dm.trava15.mes && dm.trava15.mes.v)).join("")}${lin("TRIMESTRE", d.trava15.tri && d.trava15.tri.v)}</div>`;
+      t15 = `<div class="t15"><div class="rot">TRAVA DOS 15% · vale só para o tênis Olympikus · por mês e no trimestre</div>${ds.map(dm => lin(MESES[+dm.mes.slice(5, 7) - 1].toUpperCase(), dm.trava15 && dm.trava15.mes && dm.trava15.mes.v)).join("")}${lin("TRIMESTRE", d.trava15.tri && d.trava15.tri.v)}</div>`;
     }
     const nomeTri = d.trimestre.q + "º TRIMESTRE " + d.trimestre.ano.slice(2);
     el.innerHTML = `<div class="mt cmpv tri${d.futuro ? " futuro" : ""}" style="--n:${ids("faixas").length}">
@@ -277,17 +285,16 @@
   // família (em outubro a CMS estava a 89,7% do total e a porta fechava tudo). 16:5x, correção dele: "as regras são separadas:
   // calçados — tênis, o total e as faixas — um é coligado ao outro; as outras famílias são INDEPENDENTES: se bate os 95%, doura;
   // não depende dos tênis". Então a família não olha o total de tênis de ninguém: OURO = ele bateu os 95%; PRATA (os 50%) = a CMS
-  // bateu a família, ele não, e ele tem os 15% do trimestre (a única condição da carta para os 50%). As FAIXAS de tênis seguem com
-  // a porta tripla (caso do Rafael, 12/10).
-  function estrelaFamilia(f, tem15) {
+  // bateu a família, ele não. 14/10 (regra 14, reescrita por ele): a família NÃO olha os 15% — a trava dos 15% é só do tênis Olympikus.
+  function estrelaFamilia(f) {
     if (bateu(f.real_v, f.meta_v, GATILHO_FAMILIA)) return "ouro";
-    if (tem15 === true && bateu(f.real_c, f.meta_c, GATILHO_FAMILIA)) return "prata";
+    if (bateu(f.real_c, f.meta_c, GATILHO_FAMILIA)) return "prata";
     return null;
   }
   const tem15 = d => !!(d && d.trava15 && d.trava15.tri && d.trava15.tri.v && d.trava15.tri.v.ok);
-  // a porta: CMS total ≥ 90% · vendedor total ≥ 90% · 15% do trimestre batidos
+  // a porta do vendedor nos tênis: CMS total ≥ 90% · vendedor total ≥ 90% · e, SÓ NA OLYMPIKUS (regra 14), os 15% do trimestre batidos
   const portaVendedor = (d, tot) => !d.semMeta && bateu(tot.real_c, tot.meta_c, GATILHO_TOTAL) && bateu(tot.real_v, tot.meta_v, GATILHO_TOTAL)
-                                   && !!(d.trava15 && d.trava15.tri && d.trava15.tri.v && d.trava15.tri.v.ok);
+                                   && (d.marca !== "OLY" || tem15(d));
   // altura em % da área: com meta, 100% da meta = 2/3 da altura (eixo até 150%); sem meta, escala pelo maior valor do bloco
   function altura(real, meta, escala) {
     if (real == null || real <= 0) return 0;
@@ -350,7 +357,7 @@
       // tênis (Léo via BOSS, 30/09). O ouro do vendedor na família segue desligado com as outras estrelas dele.
       // regra 10: a família bate com 95% da meta em valor; a falta/excedente é contra esses 95%, e a linha desce para lá
       const ouroC = bateu(f.real_c, f.meta_c, GATILHO_FAMILIA), ac = alvo(f.meta_c, GATILHO_FAMILIA), av = alvo(f.meta_v, GATILHO_FAMILIA);
-      const tomF = (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f, tem15(d)) : null;     // 13/10: família é independente dos tênis — bate → acende; prata = CMS bateu, ele não, com os 15%
+      const tomF = (ESTRELAS_VENDEDOR && V) ? estrelaFamilia(f) : null;     // 13/10: família é independente dos tênis — bate → acende; prata = CMS bateu, ele não (14/10: sem os 15%)
       const metaFam = m => m == null ? "sem meta" : pct(GATILHO_FAMILIA) + " de R$ " + kk(m);
       fams += `<div class="fm">
         <div class="nm">${esc(f.nome)}</div>
@@ -384,7 +391,7 @@
     };
     const regra15 = d.trava15 && d.trava15.mes && d.trava15.mes.v ? d.trava15.mes.v.regra : "meta";
     const legT15 = `<div class="lg"><span><i class="f-FTW"></i>TÊNIS OLYMPIKUS (${regra15 === "vendido" ? "VENDIDO" : "META"})</span>${FAMS15.map(([k, n]) => `<span><i class="f-${k}"></i>${n}</span>`).join("")}${info15 ? "" : `<span><i class="mk"></i>15% DA META</span>`}</div>`;
-    const t15 = d.trava15 ? `<div class="t15"><div class="rot">${info15 ? "COMPOSIÇÃO DO FATURAMENTO" : "TRAVA DOS 15%"} · outras famílias + UA sobre ${regra15 === "vendido" ? "o tênis Olympikus VENDIDO (regra até set/26)" : "a META de tênis"}</div>
+    const t15 = d.trava15 ? `<div class="t15"><div class="rot">${info15 ? "COMPOSIÇÃO DO FATURAMENTO" : "TRAVA DOS 15% · vale só para o tênis Olympikus"} · outras famílias + UA sobre ${regra15 === "vendido" ? "o tênis Olympikus VENDIDO (regra até set/26)" : "a META de tênis"}</div>
       ${d.trava15.soTri ? "" : linhaT15(nomeMes.toUpperCase(), d.trava15.mes)}${linhaT15("TRIMESTRE " + d.trava15.triMeses.map(m => MESES[+m.slice(5, 7) - 1].slice(0, 3).toUpperCase()).join("–"), d.trava15.tri)}${legT15}</div>` : "";
     // rodapé: hora da leitura por fonte (regra 9)
     const fonteC = d.cms_lido ? `${medida} CMS lido ${dmh(d.cms_lido)}` : `${medida} CMS: sem leitura`;
@@ -412,7 +419,7 @@
         </div></div>
       </div>
       ${d.familias.length ? `<div class="sec fam"><div class="rot">OUTRAS FAMÍLIAS · R$${d.futuro ? " EM CARTEIRA" : ""}</div><div class="fms">${fams}</div></div>` : ""}
-      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${V && ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%: CMS bateu a faixa e ${esc(d.nome)} não · estrela dele só com CMS e ele nos 90% do total e os 15% do trimestre</span>` : ""}</div>
+      <div class="leg"><span><i class="q c"></i>CMS</span>${V ? `<span><i class="q v"></i>${esc(d.nome)}</span>` : ""}<span><i class="s on">${ESTRELA}</i>total ${pct(GATILHO_TOTAL)} · faixa ${pct(GATILHO_FAIXA)} · família ${pct(GATILHO_FAMILIA)}</span>${V && ESTRELAS_VENDEDOR ? `<span><i class="s on prata">${ESTRELA}</i>50%: CMS bateu a faixa e ${esc(d.nome)} não · estrela dele nos tênis só com CMS e ele nos 90% do total${d.marca === "OLY" ? " e os 15% do trimestre (só no tênis Olympikus)" : " (UA: sem trava dos 15%)"} · família: bateu os 95% acende</span>` : ""}</div>
       <p class="pe">${fonteC}${V ? " · " + fonteV : ""}${baseTxt} · ${fonteM}${fonteF}${d.avisos.length ? " · " + esc(d.avisos.join(" · ")) : ""}</p>
     </div>`;
     alinhar100(el);
