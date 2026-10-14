@@ -179,6 +179,16 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 /* computador: no TOTAL a CMS e o vendedor ficam lado a lado (cabe); nas faixas e famílias ficam empilhados (medido 30/09: lado a lado não cabe) */
 @media (min-width:900px){.mt .tot .num{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.mt .tot .g,.mt .tot .cel.v .g{margin-top:0}}
 @media (prefers-reduced-motion:reduce){.mt .b{animation:none}}
+/* ---- ATAS (14/10): uma linha por reunião; toque abre a ata inteira ---- */
+.atas .lista{display:flex;flex-direction:column;gap:8px}.atas .ata{background:var(--card);border-radius:12px;padding:10px 14px;cursor:pointer}.atas .ata:hover{background:rgba(120,123,134,.22)}
+.atas .cab{display:flex;gap:10px;align-items:baseline;font-size:.78rem}.atas .data{font-weight:800;color:var(--acc)}.atas .pasta{font-weight:700;color:#F6F5F0}.atas .fmt{font-size:.7rem}
+.atas .titulo{font-weight:700;margin:2px 0}.atas .part{font-size:.76rem}.atas .dec{font-size:.8rem;color:#ADAEB3;margin-top:4px}
+.atas .luz{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}.atas .luz.oculto{display:none}
+.atas .quadro{position:relative;background:var(--card);border-radius:16px;max-width:900px;width:100%;padding:18px 20px;margin:0 auto}
+.atas .quadro .fecha{position:sticky;top:0;float:right;width:36px;height:36px;margin:0;padding:0;border-radius:50%;background:rgba(120,123,134,.3);color:var(--ink);border:0;font-size:1.2rem}
+.atas .quadro h2{font-size:1.1rem;margin:6px 0 10px}.atas .texto{font-size:.9rem;line-height:1.5}.atas .texto h2,.atas .texto h3,.atas .texto h4,.atas .texto h5{margin:16px 0 6px;color:var(--acc);font-size:.95rem}
+.atas .texto table{border-collapse:collapse;margin:8px 0;font-size:.82rem;display:block;overflow-x:auto}.atas .texto th,.atas .texto td{border:1px solid rgba(120,123,134,.4);padding:4px 8px;text-align:left;vertical-align:top}.atas .texto th{color:var(--acc)}
+.atas .texto blockquote{border-left:3px solid var(--acc);margin:8px 0;padding:4px 10px;color:#ADAEB3}.atas .texto pre{white-space:pre-wrap;font:inherit}.atas .texto code{background:rgba(120,123,134,.3);padding:0 4px;border-radius:4px}.atas .texto hr{border:0;border-top:1px solid rgba(120,123,134,.4)}
 /* ---- CATÁLOGO (13/10): cartões como no CMS PASS, nas cores da CMS ---- */
 .cat .linha-topo{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.cat .linha-topo input{flex:1;min-width:180px;padding:10px 12px}
 .cat .chips small{opacity:.6;font-weight:500;margin-left:2px}.cat .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -202,7 +212,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.6</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v4.7</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -224,8 +234,10 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
     <button data-aba="cg" class="ativa">Carteira e giro</button>
     <button data-aba="metas">Metas</button>
     <button data-aba="catalogo">Catálogo</button>
+    <button data-aba="atas">Atas</button>
   </div>
   <div id="tela-catalogo" class="oculto"></div>
+  <div id="tela-atas" class="oculto"></div>
   <div id="tela-metas" class="oculto">
     <div class="chips" id="chips-preposto" style="margin:0 0 12px"></div>
     <div class="segm" id="chips-mes"></div>
@@ -254,6 +266,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=54"></script>
 <script src="catalogo.js?v=2"></script>
+<script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -308,6 +321,7 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 const ABAS = {
   cg:    { subtitulo: "· carteira e giro", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em amarelo (amarelo cheio = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
   metas: { subtitulo: "· metas", rodape: "" },
+  atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
@@ -370,9 +384,10 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas", cat = nova === "catalogo";
-  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat);
-  $("filtros").classList.toggle("oculto", metas || cat); $("resultado").classList.toggle("oculto", metas || cat);
+  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas);
+  $("filtros").classList.toggle("oculto", metas || cat || atas); $("resultado").classList.toggle("oculto", metas || cat || atas);
+  if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
   if (cat) { Catalogo.abrir(sb, $("tela-catalogo")); return; }
   if (metas) { mostrarMetas(); return; }
   mostrarCobertura(); consultar();
