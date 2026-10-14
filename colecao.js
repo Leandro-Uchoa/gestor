@@ -6,8 +6,10 @@
 // com as suas cores juntas).
 // VISUAL APROVADO POR ELE (LEIA-ME do PICASSO, 14/10): página cinza claro, foto ORIGINAL sem recorte num cartão branco; uma
 // COLUNA por modelo com cabeçalho de altura fixa (nome exato do cadastro, referência em azul copiável, PDV, selo LANÇAMENTO) e as
-// cores embaixo (foto + código + descrição; COR NOVA = triângulo azul no canto da foto); nenhuma palavra sozinha na quebra do nome;
-// fonte Arial; silhueta (Turbo 2, Trilha 4, Vento 4) com o selo CONVENÇÃO. Paleta só a oficial Olympikus.
+// cores embaixo (foto + código + descrição EXATAMENTE como no cadastro, sem mudar caixa; COR NOVA = triângulo azul no canto da
+// foto); nenhuma palavra sozinha na quebra do nome; fonte Arial; silhueta (Turbo 2, Trilha 4, Vento 4) com o selo CONVENÇÃO.
+// Conferência do PICASSO (v5.1): a coluna fica sobre o cinza e cada FOTO é o cartão branco com sombra; nome com três linhas.
+// Paleta só a oficial Olympikus.
 // Foto: miniatura local (img/mini/) quando existe; senão a URL pública do pacote; o zoom usa a URL (original) quando há.
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto e preço moram no banco.
 (function(){
@@ -112,9 +114,9 @@ function coluna(cores){
     <div class="cab">
       <div class="nome">${esc(semViuva(m.n))}</div>
       <div class="linha"><button type="button" class="ref" data-ref="${esc(m.r)}" title="toque para copiar a referência">${esc(m.r)}</button><span class="pdv">${esc(dinheiro(m.p))}</span></div>
-      <div class="selos">${lanc ? `<span class="selo lanc">lançamento</span>` : ""}${sl ? `<span class="selo conv">convenção</span>` : ""}${m.nu ? `<span class="mu">${esc(m.ge ? titulo(m.ge) + " · " : "")}${esc(m.nu)}</span>` : (m.ge ? `<span class="mu">${esc(titulo(m.ge))}</span>` : "")}</div>
+      <div class="selos">${lanc ? `<span class="selo lanc">lançamento</span>` : ""}${sl ? `<span class="selo conv">convenção</span>` : ""}${m.nu ? `<span class="mu">${esc(m.ge ? m.ge + " · " : "")}${esc(m.nu)}</span>` : (m.ge ? `<span class="mu">${esc(m.ge)}</span>` : "")}</div>
     </div>
-    <div class="cores">${cores.map(it => `<div class="cor">${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(titulo(it.cd))}</div>` : ""}</div>`).join("")}</div>
+    <div class="cores">${cores.map(it => `<div class="cor">${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(it.cd)}</div>` : ""}</div>`).join("")}</div>
   </div>`;
 }
 
@@ -156,7 +158,7 @@ function abrirLuz(k){
   const luz = EL.querySelector("#col-luz");
   luz.innerHTML = `<div class="quadro"><button type="button" class="fecha">×</button>
     <div class="angulos">${grande ? `<img src="${esc(grande)}" alt="" onerror="Colecao.fotoFalhouGrande(this)">` : `<div class="mu">sem foto</div>`}</div>
-    <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(titulo(it.cd)) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;
+    <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(it.cd) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;
   for (const b of luz.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   luz.classList.remove("oculto");
 }

@@ -213,16 +213,18 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .colecao .bloco{margin-bottom:18px}.colecao .bloco:last-child{margin-bottom:0}
 .colecao .sec-tit{font-weight:800;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#000000;margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid #2E3EFC}.colecao .sec-tit small{color:#787B86;font-weight:600;letter-spacing:0;text-transform:none}
 .colecao .colunas{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:start}
-.colecao .modelo{background:#FFFFFF;border-radius:7px;box-shadow:0 1px 3px rgba(0,0,0,.12);overflow:hidden}
-.colecao .cab{height:98px;padding:8px 9px 6px;border-bottom:1px solid #E6E7E8;display:flex;flex-direction:column;gap:3px}
-.colecao .nome{flex:none;font-weight:700;font-size:.8rem;line-height:1.15;text-wrap:balance;min-height:2.3em;max-height:2.3em;overflow:hidden;margin:0}
+/* 14/10, conferência do PICASSO: a coluna fica SOBRE o cinza e cada FOTO é o cartão branco com sombra — produto branco (viseira, Eros 2
+   Branco) não some no branco; o nome tem três linhas (nome cortado ele reprovou no PDF) */
+.colecao .modelo{background:transparent;padding:0 8px 0 0;border-right:1px solid rgba(120,123,134,.35)}.colecao .modelo:last-child{border-right:0}
+.colecao .cab{height:112px;padding:4px 2px 6px;border-bottom:1px solid rgba(120,123,134,.35);display:flex;flex-direction:column;gap:3px}
+.colecao .nome{flex:none;font-weight:700;font-size:.8rem;line-height:1.15;text-wrap:balance;min-height:3.45em;max-height:3.45em;overflow:hidden;margin:0}
 .colecao .linha{flex:none;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}.colecao .pdv{font-weight:800;font-size:.78rem;color:#000000}
 .colecao .selos{flex:none;display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:auto;overflow:hidden;max-height:1.6em}.colecao .selos .mu{color:#787B86;font-size:.66rem;white-space:nowrap}
 .colecao .ref{display:inline-block;width:auto;margin:0;padding:1px 6px;border:0;border-radius:5px;background:transparent;color:#2E3EFC;font-size:.76rem;font-weight:800;cursor:copy;font-family:inherit;letter-spacing:.01em;user-select:all}
 .colecao .ref.copiado{background:#FFFF1A;color:#000000}
 .colecao .selo{font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}.colecao .selo.lanc{background:#FFFF1A;color:#000000}.colecao .selo.conv{background:#ADAEB3;color:#000000}.colecao .selo.nova{background:#2E3EFC;color:#F6F5F0}
-.colecao .cores{padding:6px}.colecao .cor{padding:4px 2px 8px}
-.colecao .foto{position:relative;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:zoom-in;overflow:hidden}
+.colecao .cores{padding:6px 0 0}.colecao .cor{padding:4px 0 8px}
+.colecao .foto{position:relative;background:#FFFFFF;border-radius:7px;box-shadow:0 1px 3px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;cursor:zoom-in;overflow:hidden}
 .colecao .foto.deitada{aspect-ratio:4/3}.colecao .foto.empe{aspect-ratio:3/4}
 .colecao .foto img{width:100%;height:100%;object-fit:contain;display:block}.colecao .foto img.oculto{display:none}.colecao .foto .sem{color:#787B86;font-size:.7rem}.colecao .foto .sem.oculto{display:none}
 .colecao .foto .tri{position:absolute;top:0;right:0;width:0;height:0;border-top:22px solid #2E3EFC;border-left:22px solid transparent}
@@ -236,7 +238,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.0</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.1</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -292,7 +294,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=2"></script>
+<script src="colecao.js?v=3"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
