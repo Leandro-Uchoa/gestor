@@ -1,18 +1,26 @@
-// COLEÇÃO — a VISÃO GERAL da coleção (1S27…) como aba do Gestor (ordem dele via BOSS, 14/10/2026), com o material do PICASSO DAS
-// GALÁXIAS. Só desenho: os itens vêm do banco (tabela colecao, função colecao_consulta), numa chamada só, atrás do login.
+// COLEÇÃO — a VISÃO GERAL da coleção (1S27…) como aba do Gestor (ordem dele via BOSS, 14/10/2026), com o pacote do PICASSO DAS
+// GALÁXIAS (visao_geral_1s27.json: blocos, ordem, URL da foto, silhueta). Só desenho: os itens vêm do banco (tabela colecao, função
+// colecao_consulta), numa chamada só, atrás do login.
 // Filtros em botão, como ele pediu: marca (Olympikus · Under Armour) · tipo (abre em "Geral"; Footwear · Meias · Acessórios ·
-// Confecção) · dentro do tipo, os grupos do PICASSO (faixas e Família Corre no tênis; feminino e masculino na confecção; Caps ·
-// Bags · Mochilas nos acessórios). A ordem é a da planilha dele. Visual: o mesmo cartão do Catálogo (classe .cat), foto original
-// sem recorte, nome do produto igual ao do cadastro, referência copiável (toque copia). Fotos: miniaturas em img/mini/.
+// Confecção) · dentro do tipo, os blocos do PICASSO. A ordem é a do pacote (bloco; dentro do bloco PDV crescente e nome; cada modelo
+// com as suas cores juntas).
+// VISUAL APROVADO POR ELE (LEIA-ME do PICASSO, 14/10): página cinza claro, foto ORIGINAL sem recorte num cartão branco; uma
+// COLUNA por modelo com cabeçalho de altura fixa (nome exato do cadastro, referência em azul copiável, PDV, selo LANÇAMENTO) e as
+// cores embaixo (foto + código + descrição; COR NOVA = triângulo azul no canto da foto); nenhuma palavra sozinha na quebra do nome;
+// fonte Arial; silhueta (Turbo 2, Trilha 4, Vento 4) com o selo CONVENÇÃO. Paleta só a oficial Olympikus.
+// Foto: miniatura local (img/mini/) quando existe; senão a URL pública do pacote; o zoom usa a URL (original) quando há.
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto e preço moram no banco.
 (function(){
 const IMG = "img/mini/";
 const TIPOS = [["", "Geral"], ["TENIS", "Footwear"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
 const NOME_TIPO = Object.fromEntries(TIPOS.filter(([v]) => v));
+const NBSP = String.fromCharCode(160);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
-const dinheiro = v => v == null ? "" : "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dinheiro = v => v == null ? "PDV a confirmar" : "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const titulo = s => String(s || "").toLowerCase().replace(/(^|\s|\/)\S/g, c => c.toUpperCase());
+// nenhuma palavra sozinha na linha de baixo (regra dele): um fim curto (F, M, 3, 33/38, 2.0) fica preso à palavra anterior
+const semViuva = n => { const p = String(n || "").trim().split(/\s+/); if (p.length < 2) return p.join(" "); const u = p[p.length - 1]; if (u.length <= 5) { p[p.length - 2] += NBSP + u; p.pop(); } return p.join(" "); };
 
 let DADOS = null, EL = null, SB = null;
 const S = { marca: "OLY", tipo: "", grupo: new Set(), selo: new Set(), busca: "" };
@@ -29,13 +37,14 @@ async function abrir(sb, el){
   desenhar();
 }
 
-const selo = it => (it.s || "").toLowerCase();
+const sit = it => (it.s || "").toLowerCase();
+const ehLanc = it => sit(it).startsWith("lan"), ehNova = it => sit(it).startsWith("cor");
 function itensFiltrados(){
   const t = semAcento(S.busca).split(/\s+/).filter(Boolean);
   return DADOS.itens.filter(it => it.m === S.marca
     && (!S.tipo || it.t === S.tipo)
     && (!S.grupo.size || S.grupo.has(it.g || ""))
-    && (!S.selo.size || (S.selo.has("l") && selo(it).startsWith("lan")) || (S.selo.has("cn") && selo(it).startsWith("cor")))
+    && (!S.selo.size || (S.selo.has("l") && ehLanc(it)) || (S.selo.has("cn") && ehNova(it)))
     && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, it.g, it.ge, it.nu].join(" ")).includes(x))));
 }
 
@@ -51,17 +60,17 @@ function desenhar(){
     el.innerHTML = `<div class="cat colecao">
       <div class="card filtros">
         <div class="linha-topo"><div class="chips marcas" id="col-marca"></div>
-          <input type="search" id="col-busca" placeholder="buscar: produto, referência, cor, grupo…" autocomplete="off" value="${esc(S.busca)}"></div>
+          <input type="search" id="col-busca" placeholder="buscar: produto, referência, cor, bloco…" autocomplete="off" value="${esc(S.busca)}"></div>
         <label>tipo</label><div class="chips" id="col-tipo"></div>
-        <div id="col-bloco-grupo"><label>grupo</label><div class="chips" id="col-grupo"></div></div>
+        <div id="col-bloco-grupo"><label>bloco</label><div class="chips" id="col-grupo"></div></div>
         <div class="chips" id="col-selo" style="margin-top:6px"></div>
         <div class="acoes"><button type="button" id="col-pdf" class="sec">exportar PDF</button></div>
         <div class="mu" id="col-conta"></div>
       </div>
-      <div class="grade" id="col-grade"></div>
+      <div class="pagina" id="col-pagina"></div>
       <div class="luz oculto" id="col-luz"></div>
     </div>`;
-    el.querySelector("#col-busca").oninput = (ev) => { S.busca = ev.target.value; clearTimeout(desenhar._t); desenhar._t = setTimeout(desenharGrade, 120); };
+    el.querySelector("#col-busca").oninput = (ev) => { S.busca = ev.target.value; clearTimeout(desenhar._t); desenhar._t = setTimeout(desenharPagina, 120); };
     el.querySelector("#col-pdf").onclick = () => window.print();
     el.querySelector("#col-luz").onclick = (ev) => { if (ev.target.id === "col-luz" || ev.target.classList.contains("fecha")) fecharLuz(); };
   }
@@ -69,59 +78,66 @@ function desenhar(){
   chips("col-marca", [["OLY", "Olympikus"], ["UA", "Under Armour"]], new Set([S.marca]), v => { S.marca = v; S.tipo = ""; S.grupo.clear(); desenhar(); });
   const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
   chips("col-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(S.tipo ? [S.tipo] : []), v => { S.tipo = v; S.grupo.clear(); desenhar(); });
-  // os grupos: dentro do tipo escolhido (no Geral, as seções já mostram tipo e grupo — o chip ficaria redundante)
   const doTipo = S.tipo ? daMarca.filter(it => it.t === S.tipo) : [];
   const cg = new Map(); for (const it of doTipo) if (it.g) cg.set(it.g, (cg.get(it.g) || 0) + 1);
   el.querySelector("#col-bloco-grupo").classList.toggle("oculto", !S.tipo || cg.size < 2);
   chips("col-grupo", [["", "todos"], ...[...cg.entries()].map(([v, n]) => [v, titulo(v), n])], S.grupo, v => { if (v === "") S.grupo.clear(); else if (S.grupo.has(v)) S.grupo.delete(v); else S.grupo.add(v); desenhar(); });
   const base = S.tipo ? doTipo : daMarca;
-  const nl = base.filter(it => selo(it).startsWith("lan")).length, nn = base.filter(it => selo(it).startsWith("cor")).length;
-  chips("col-selo", [["", "sem selo"], ["l", "lançamento", nl], ["cn", "cor nova", nn]], S.selo, v => { if (v === "") S.selo.clear(); else if (S.selo.has(v)) S.selo.delete(v); else S.selo.add(v); desenhar(); });
-  desenharGrade();
+  chips("col-selo", [["", "sem selo"], ["l", "lançamento", base.filter(ehLanc).length], ["cn", "cor nova", base.filter(ehNova).length]], S.selo, v => { if (v === "") S.selo.clear(); else if (S.selo.has(v)) S.selo.delete(v); else S.selo.add(v); desenhar(); });
+  desenharPagina();
 }
 
+// a foto: miniatura local → URL pública → "sem foto"
+const srcFoto = it => it.i ? IMG + it.i + ".jpg" : (it.u || "");
 function fotoHtml(it){
-  const i = it.i || "";
-  if (!i) return `<div class="foto" data-img=""><div class="sem">${esc((it.n || "?").slice(0, 2))}</div></div>`;
-  return `<div class="foto" data-img="${esc(i)}"><img loading="lazy" src="${IMG}${esc(i)}.jpg" alt="" data-passo="jpg" onerror="Colecao.fotoFalhou(this)"><div class="sem oculto">${esc((it.n || "?").slice(0, 2))}</div></div>`;
+  const src = srcFoto(it);
+  const tri = ehNova(it) ? `<i class="tri" title="cor nova"></i>` : "";
+  if (!src) return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><div class="sem">sem foto</div>${tri}</div>`;
+  return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">${tri}<div class="sem oculto">sem foto</div></div>`;
 }
 function fotoFalhou(img){
-  const i = img.parentElement.dataset.img;
-  if (img.dataset.passo === "jpg") { img.dataset.passo = "png"; img.src = IMG + i + ".png"; return; }
+  // miniatura jpg → png → a URL pública → "sem foto"
+  const passo = img.dataset.passo;
+  if (passo === "jpg") { img.dataset.passo = "png"; img.src = img.src.replace(/\.jpg$/, ".png"); return; }
+  if (passo === "png" && img.dataset.url) { img.dataset.passo = "url"; img.src = img.dataset.url; return; }
   img.classList.add("oculto"); img.parentElement.querySelector(".sem").classList.remove("oculto");
 }
-function selos(it){
-  const s = selo(it);
-  return s.startsWith("lan") ? `<span class="selo lanc">lançamento</span>` : (s.startsWith("cor") ? `<span class="selo nova">cor nova</span>` : "");
-}
 const chave = it => it.m + "|" + it.t + "|" + it.o;
+const chaveModelo = it => it.m + "|" + it.t + "|" + (it.g || "") + "|" + (it.n || "") + "|" + (it.r || "");
 
-function cartao(it){
-  return `<div class="item" data-k="${esc(chave(it))}">
-    ${fotoHtml(it)}
-    <div class="tx"><div class="nome">${esc(it.n)}</div>
-      <div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}" title="toque para copiar a referência">${esc(it.r)}</button> · ${esc(it.c)}${it.cd && it.cd !== it.c ? " · " + esc(titulo(it.cd)) : ""}</div>
-      <div class="mu">${esc(titulo(it.ge))}${it.nu ? " · " + esc(it.nu) : ""}</div>
-      <div class="preco">${dinheiro(it.p)}${selos(it)}</div></div>
+// uma coluna por modelo: cabeçalho fixo (nome, referência copiável, PDV, selo) e as cores embaixo
+function coluna(cores){
+  const m = cores[0], lanc = cores.some(ehLanc), sl = cores.some(it => it.sl);
+  return `<div class="modelo">
+    <div class="cab">
+      <div class="nome">${esc(semViuva(m.n))}</div>
+      <div class="linha"><button type="button" class="ref" data-ref="${esc(m.r)}" title="toque para copiar a referência">${esc(m.r)}</button><span class="pdv">${esc(dinheiro(m.p))}</span></div>
+      <div class="selos">${lanc ? `<span class="selo lanc">lançamento</span>` : ""}${sl ? `<span class="selo conv">convenção</span>` : ""}${m.nu ? `<span class="mu">${esc(m.ge ? titulo(m.ge) + " · " : "")}${esc(m.nu)}</span>` : (m.ge ? `<span class="mu">${esc(titulo(m.ge))}</span>` : "")}</div>
+    </div>
+    <div class="cores">${cores.map(it => `<div class="cor">${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(titulo(it.cd))}</div>` : ""}</div>`).join("")}</div>
   </div>`;
 }
 
-function desenharGrade(){
+function desenharPagina(){
   const lista = itensFiltrados();
-  const g = EL.querySelector("#col-grade");
-  // seções na ordem da planilha: tipo → grupo (no Geral, todos os tipos; no tipo, os grupos dele)
-  let html = "", ultimo = null;
-  for (const [tv] of TIPOS.filter(([v]) => v)) for (const it of lista) {
-    if (it.t !== tv) continue;
-    const sec = tv + "|" + (it.g || "");
-    if (sec !== ultimo) { ultimo = sec; html += `<div class="sec-tit">${esc(NOME_TIPO[tv])}${it.g ? " · " + esc(it.g) : ""}</div>`; }
-    html += cartao(it);
+  const pg = EL.querySelector("#col-pagina");
+  // seções na ordem do pacote: tipo → bloco; dentro, uma coluna por modelo com as cores juntas
+  let html = "", modelos = 0;
+  for (const [tv] of TIPOS.filter(([v]) => v)) {
+    const doTipo = lista.filter(it => it.t === tv);
+    if (!doTipo.length) continue;
+    let bloco = null, cols = "", porModelo = new Map();
+    const fecha = () => { if (bloco == null) return; html += `<div class="bloco"><div class="sec-tit">${esc(NOME_TIPO[tv])}${bloco ? " · " + esc(bloco) : ""} <small>${porModelo.size} modelo(s)</small></div><div class="colunas">${[...porModelo.values()].map(coluna).join("")}</div></div>`; modelos += porModelo.size; porModelo = new Map(); };
+    for (const it of doTipo) {
+      if ((it.g || "") !== (bloco == null ? null : bloco)) { fecha(); bloco = it.g || ""; }
+      const k = chaveModelo(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it);
+    }
+    fecha();
   }
-  g.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
-  const refs = new Set(lista.map(it => it.r));
-  EL.querySelector("#col-conta").textContent = `${refs.size} referência(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · planilha de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}`;
-  for (const b of g.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
-  for (const f of g.querySelectorAll(".foto")) f.onclick = () => { if (f.dataset.img) abrirLuz(f.dataset.img, f.closest(".item").dataset.k); };
+  pg.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
+  EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}`;
+  for (const b of pg.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
+  for (const f of pg.querySelectorAll(".foto")) f.onclick = () => abrirLuz(f.dataset.k);
 }
 
 async function copiar(b){
@@ -133,16 +149,18 @@ async function copiar(b){
   setTimeout(() => { b.classList.remove("copiado"); b.textContent = ref; }, 900);
 }
 
-function abrirLuz(img, k){
-  const it = DADOS.itens.find(x => chave(x) === k) || {};
+function abrirLuz(k){
+  const it = DADOS.itens.find(x => chave(x) === k);
+  if (!it) return;
+  const grande = it.u || srcFoto(it);
   const luz = EL.querySelector("#col-luz");
   luz.innerHTML = `<div class="quadro"><button type="button" class="fecha">×</button>
-    <div class="angulos">${["", "__02", "__03", "__04"].map((a, i) => `<img src="${IMG}${esc(img)}${a}.jpg" alt="" ${i ? 'onerror="this.remove()"' : 'onerror="Colecao.fotoFalhouGrande(this)"'}>`).join("")}</div>
-    <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(titulo(it.cd)) : ""}</div><div class="preco">${dinheiro(it.p)}${selos(it)}</div></div></div>`;
+    <div class="angulos">${grande ? `<img src="${esc(grande)}" alt="" onerror="Colecao.fotoFalhouGrande(this)">` : `<div class="mu">sem foto</div>`}</div>
+    <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(titulo(it.cd)) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;
   for (const b of luz.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   luz.classList.remove("oculto");
 }
-function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createElement("div"), { className: "mu", textContent: "sem foto na pasta" })); }
+function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createElement("div"), { className: "mu", textContent: "sem foto" })); }
 function fecharLuz(){ EL.querySelector("#col-luz").classList.add("oculto"); }
 
 window.Colecao = { abrir, fotoFalhou, fotoFalhouGrande };
