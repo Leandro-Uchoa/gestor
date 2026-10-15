@@ -239,6 +239,9 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .colecao .vit-conta{font-weight:800;font-size:1rem;color:var(--ink)}
 /* a coleção ATUAL (15/10): situação em cinza; "retirar" = foto a 40%, cor riscada, etiqueta cinza; o botão com texto (retirar / voltar) */
 .colecao .st{font-size:.6rem;color:#787B86;margin-top:2px}
+/* circular OLY (15/10): início de faturamento = selo preto sobre cinza claro; fora da circular = linha cinza */
+.colecao .selo.inicio{display:inline-block;background:#ADAEB3;color:#000000;margin-top:4px;text-transform:none;letter-spacing:0;font-size:.6rem}
+.colecao .circ{font-size:.6rem;color:#787B86;font-weight:700;margin-top:2px}
 .colecao .mais.txt{width:auto;height:auto;border-radius:999px;padding:4px 9px;font-size:.64rem;letter-spacing:.02em;text-transform:uppercase}
 .colecao .cor.retirada .foto img{opacity:.4}.colecao .cor.retirada .cod{text-decoration:line-through;color:#787B86}.colecao .cor.retirada .desc{text-decoration:line-through}
 @media print{.colecao .mais{display:none}.colecao .bloco{break-before:page}.colecao .bloco:first-child{break-before:auto}.colecao .cor.retirada .foto img{opacity:.4}.colecao .cor.retirada .cod,.colecao .cor.retirada .desc{text-decoration:line-through}}
@@ -251,7 +254,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.5</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.6</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -309,7 +312,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=6"></script>
+<script src="colecao.js?v=7"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
