@@ -229,6 +229,15 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .colecao .foto img{width:100%;height:100%;object-fit:contain;display:block}.colecao .foto img.oculto{display:none}.colecao .foto .sem{color:#787B86;font-size:.7rem}.colecao .foto .sem.oculto{display:none}
 .colecao .foto .tri{position:absolute;top:0;right:0;width:0;height:0;border-top:22px solid #2E3EFC;border-left:22px solid transparent}
 .colecao .cod{font-weight:800;font-size:.72rem;margin-top:4px;color:#000000}.colecao .desc{font-size:.64rem;color:#787B86;line-height:1.15}
+/* VITRINE (15/10): o "+" no canto do cartão da cor; escolhida = contorno azul e "✓"; fora da vitrine = foto a 40% e a linha em cinza */
+.colecao .cor{position:relative}
+.colecao .mais{position:absolute;top:8px;left:4px;z-index:2;width:28px;height:28px;margin:0;padding:0;border-radius:50%;border:2px solid #2E3EFC;background:#FFFFFF;color:#2E3EFC;font-size:1.05rem;font-weight:800;line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.colecao .mais.on{background:#2E3EFC;color:#F6F5F0}.colecao .mais.tira{border-color:#787B86;color:#000000}
+.colecao .cor.sel .foto{outline:2px solid #2E3EFC;outline-offset:-2px}
+.colecao .cor.fora .foto img{opacity:.4}.colecao .fora-txt{font-size:.62rem;color:#787B86;margin-top:3px;font-weight:700}
+.colecao .vit-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px}.colecao .vit-topo .acoes{margin-top:0}
+.colecao .vit-conta{font-weight:800;font-size:1rem;color:var(--ink)}
+@media print{.colecao .mais{display:none}}
 .colecao .quadro{background:#FFFFFF;color:#000000;font-family:Arial,Helvetica,sans-serif}.colecao .quadro .fecha{color:#000000}.colecao .quadro .mu{color:#787B86}
 .colecao .angulos img{background:#FFFFFF}.colecao .quadro .preco{color:#000000;margin-top:6px;font-weight:800}
 @media print{.colecao .pagina{background:#E6E7E8;-webkit-print-color-adjust:exact;print-color-adjust:exact}.colecao .colunas{grid-template-columns:repeat(4,minmax(0,1fr))}.colecao .modelo{break-inside:avoid}}
@@ -238,7 +247,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.3</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.4</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -261,10 +270,12 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
     <button data-aba="metas">Metas</button>
     <button data-aba="catalogo">Catálogo</button>
     <button data-aba="colecao">Coleção</button>
+    <button data-aba="vitrine">Vitrine</button>
     <button data-aba="atas">Atas</button>
   </div>
   <div id="tela-catalogo" class="oculto"></div>
   <div id="tela-colecao" class="oculto"></div>
+  <div id="tela-vitrine" class="oculto"></div>
   <div id="tela-atas" class="oculto"></div>
   <div id="tela-metas" class="oculto">
     <div class="chips" id="chips-preposto" style="margin:0 0 12px"></div>
@@ -294,7 +305,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=4"></script>
+<script src="colecao.js?v=5"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
@@ -352,7 +363,8 @@ const ABAS = {
   metas: { subtitulo: "· metas", rodape: "" },
   atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
-  colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
+  colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar; toque no + para pôr a cor na vitrine do cliente escolhido. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
+  vitrine: { subtitulo: "· vitrine", rodape: "As cores escolhidas para o cliente, gravadas no banco atrás do login: fecha e volta, no celular ou no computador, e estão aqui. × tira da vitrine. Exportar PDF = imprimir." },
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
 const COB = { carteira: [], giro: [], erro: null };
@@ -414,10 +426,11 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao";
-  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col);
-  $("filtros").classList.toggle("oculto", metas || cat || atas || col); $("resultado").classList.toggle("oculto", metas || cat || atas || col);
+  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit);
+  $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit);
   if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
+  if (vit) { Colecao.abrirVitrine(sb, $("tela-vitrine")); return; }
   if (col) { Colecao.abrir(sb, $("tela-colecao")); return; }
   if (cat) { Catalogo.abrir(sb, $("tela-catalogo")); return; }
   if (metas) { mostrarMetas(); return; }

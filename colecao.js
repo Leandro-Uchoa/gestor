@@ -10,8 +10,12 @@
 // foto); nenhuma palavra sozinha na quebra do nome; fonte Arial; silhueta (Turbo 2, Trilha 4, Vento 4) com o selo CONVENÇÃO.
 // Conferência do PICASSO (v5.1): a coluna fica sobre o cinza e cada FOTO é o cartão branco com sombra; nome com três linhas.
 // Paleta só a oficial Olympikus.
-// Foto: miniatura local (img/mini/) quando existe; senão a URL pública do pacote; o zoom usa a URL (original) quando há.
-// Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto e preço moram no banco.
+// VITRINE DO CLIENTE (15/10, palavra dele via PICASSO: "seleciona lá, pum, automaticamente sobe para outra parte que vai ter a
+// vitrine da Polyélle… precisa da imagem, a referência e a cor"): cada COR ganha um "+" no cartão; tocou, entra na vitrine do
+// cliente escolhido (gravada no banco, tabela vitrine, atrás do login); tocou de novo, sai. Selecionada = contorno azul e "✓".
+// A aba Vitrine mostra as cores do cliente agrupadas e ordenadas como na Coleção, com "×" para tirar, e o contador. Fora da
+// vitrine: PDV nulo/zero (DTC/marketplace, NÚCLEO) em todo cliente; e a lista por cliente (tabela vitrine_bloqueio: CARDIO na Poly).
+// Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto, preço, bloqueio moram no banco.
 (function(){
 const IMG = "img/mini/";
 const TIPOS = [["", "Geral"], ["TENIS", "Footwear"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
@@ -21,26 +25,64 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&a
 const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 const dinheiro = v => v == null ? "PDV a confirmar" : "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const titulo = s => String(s || "").toLowerCase().replace(/(^|\s|\/)\S/g, c => c.toUpperCase());
-// nenhuma palavra sozinha na linha de baixo (regra dele): um fim curto (F, M, 3, 33/38, 2.0) fica preso à palavra anterior
 const semViuva = n => { const p = String(n || "").trim().split(/\s+/); if (p.length < 2) return p.join(" "); const u = p[p.length - 1]; if (u.length <= 5) { p[p.length - 2] += NBSP + u; p.pop(); } return p.join(" "); };
+const nomeCli = c => (typeof NOME_CLI !== "undefined" && NOME_CLI[c]) || titulo(c);
+async function tudo(consulta) {
+  const PAG = 1000; let de = 0, out = [];
+  for (;;) { const { data, error } = await consulta.range(de, de + PAG - 1); if (error) return { data: out, error }; out = out.concat(data || []); if (!data || data.length < PAG) return { data: out, error: null }; de += PAG; }
+}
 
-let DADOS = null, EL = null, SB = null;
+let DADOS = null, EL = null, ELV = null, SB = null;
 const S = { marca: "OLY", tipo: "", grupo: new Set(), selo: new Set(), busca: "" };
+// a vitrine: cliente escolhido, cores dele (chave marca|ref|cor), bloqueios por cliente (cliente|marca|ref), id do escritório
+const VIT = { cliente: null, clientes: [], itens: new Set(), bloq: new Set(), esc: null, carregadoPara: null, erro: "" };
+const chaveCor = it => it.m + "|" + it.r + "|" + it.c;
+const chave = it => it.m + "|" + it.t + "|" + it.o;
+const chaveModelo = it => it.m + "|" + it.t + "|" + (it.g || "") + "|" + (it.n || "") + "|" + (it.r || "");
+const sit = it => (it.s || "").toLowerCase();
+const ehLanc = it => sit(it).startsWith("lan"), ehNova = it => sit(it).startsWith("cor");
+// por que a cor NÃO vai para a vitrine deste cliente (null = pode)
+const foraDaVitrine = it => (it.p == null || +it.p === 0) ? "fora da vitrine (sem PDV)" : (VIT.cliente && VIT.bloq.has(VIT.cliente + "|" + it.m + "|" + it.r) ? "não vai para " + nomeCli(VIT.cliente) : null);
+
+async function carregarDados(sb, el){
+  if (DADOS) return true;
+  el.innerHTML = `<div class="card">carregando a coleção…</div>`;
+  const r = await sb.rpc("colecao_consulta", { p_colecao: null });
+  if (r.error) { el.innerHTML = `<div class="msg erro">O banco recusou: ${esc(r.error.message)}</div>`; return false; }
+  DADOS = r.data || { itens: [], n: 0 };
+  if (!DADOS.itens.length) { el.innerHTML = `<div class="msg aviso">O banco ainda não tem coleção carregada.</div>`; return false; }
+  return true;
+}
+async function carregarVitrine(sb){
+  if (VIT.esc == null) {
+    const e = await sb.from("escritorio").select("id").limit(1);
+    VIT.esc = (e.data && e.data[0] && e.data[0].id) || null;
+    const [cob, vc, bl] = await Promise.all([tudo(sb.from("v_cobertura").select("cliente")), tudo(sb.from("vitrine").select("cliente")), tudo(sb.from("vitrine_bloqueio").select("cliente,marca,referencia"))]);
+    const nomes = new Set([...(cob.data || []).map(r => r.cliente), ...(vc.data || []).map(r => r.cliente)].filter(Boolean));
+    VIT.clientes = [...nomes].sort();
+    VIT.bloq = new Set((bl.data || []).map(r => r.cliente + "|" + r.marca + "|" + r.referencia));
+    if (!VIT.cliente) VIT.cliente = VIT.clientes.includes("POLYELLE") ? "POLYELLE" : (VIT.clientes[0] || null);
+  }
+  if (VIT.cliente && VIT.carregadoPara !== VIT.cliente) {
+    const r = await tudo(sb.from("vitrine").select("marca,referencia,cor").eq("cliente", VIT.cliente).eq("colecao", DADOS.colecao));
+    if (r.error) { VIT.erro = "não consegui ler a vitrine: " + r.error.message; return; }
+    VIT.itens = new Set(r.data.map(x => x.marca + "|" + x.referencia + "|" + x.cor)); VIT.carregadoPara = VIT.cliente; VIT.erro = "";
+  }
+}
 
 async function abrir(sb, el){
   SB = sb; EL = el;
-  if (!DADOS) {
-    el.innerHTML = `<div class="card">carregando a coleção…</div>`;
-    const r = await sb.rpc("colecao_consulta", { p_colecao: null });
-    if (r.error) { el.innerHTML = `<div class="msg erro">O banco recusou: ${esc(r.error.message)}</div>`; return; }
-    DADOS = r.data || { itens: [], n: 0 };
-    if (!DADOS.itens.length) { el.innerHTML = `<div class="msg aviso">O banco ainda não tem coleção carregada.</div>`; return; }
-  }
+  if (!(await carregarDados(sb, el))) return;
+  await carregarVitrine(sb);
   desenhar();
 }
+async function abrirVitrine(sb, el){
+  SB = sb; ELV = el;
+  if (!(await carregarDados(sb, el))) return;
+  await carregarVitrine(sb);
+  desenharVitrine();
+}
 
-const sit = it => (it.s || "").toLowerCase();
-const ehLanc = it => sit(it).startsWith("lan"), ehNova = it => sit(it).startsWith("cor");
 function itensFiltrados(){
   const t = semAcento(S.busca).split(/\s+/).filter(Boolean);
   return DADOS.itens.filter(it => it.m === S.marca
@@ -50,11 +92,12 @@ function itensFiltrados(){
     && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, it.g, it.ge, it.nu].join(" ")).includes(x))));
 }
 
-function chips(id, lista, sel, aoClicar){
-  const el = EL.querySelector("#" + id);
+function chips(raiz, id, lista, sel, aoClicar){
+  const el = raiz.querySelector("#" + id);
   el.innerHTML = lista.map(([v, r, n]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(r)}${n != null ? ` <small>${n}</small>` : ""}</button>`).join("");
   for (const b of el.querySelectorAll("button")) b.onclick = () => aoClicar(b.dataset.v);
 }
+const chipsClientes = (raiz, id) => chips(raiz, id, VIT.clientes.map(c => [c, nomeCli(c)]), new Set(VIT.cliente ? [VIT.cliente] : []), async v => { VIT.cliente = v; await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); });
 
 function desenhar(){
   const el = EL;
@@ -66,26 +109,28 @@ function desenhar(){
         <label>tipo</label><div class="chips" id="col-tipo"></div>
         <div id="col-bloco-grupo"><label>bloco</label><div class="chips" id="col-grupo"></div></div>
         <div class="chips" id="col-selo" style="margin-top:6px"></div>
+        <label>vitrine de (o "+" no cartão leva a cor para a vitrine deste cliente)</label><div class="chips" id="col-cliente"></div>
         <div class="acoes"><button type="button" id="col-pdf" class="sec">exportar PDF</button></div>
-        <div class="mu" id="col-conta"></div>
+        <div class="mu" id="col-conta"></div><div class="msg erro oculto" id="col-erro"></div>
       </div>
       <div class="pagina" id="col-pagina"></div>
       <div class="luz oculto" id="col-luz"></div>
     </div>`;
     el.querySelector("#col-busca").oninput = (ev) => { S.busca = ev.target.value; clearTimeout(desenhar._t); desenhar._t = setTimeout(desenharPagina, 120); };
     el.querySelector("#col-pdf").onclick = () => window.print();
-    el.querySelector("#col-luz").onclick = (ev) => { if (ev.target.id === "col-luz" || ev.target.classList.contains("fecha")) fecharLuz(); };
+    el.querySelector("#col-luz").onclick = (ev) => { if (ev.target.id === "col-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
   }
   const daMarca = DADOS.itens.filter(it => it.m === S.marca);
-  chips("col-marca", [["OLY", "Olympikus"], ["UA", "Under Armour"]], new Set([S.marca]), v => { S.marca = v; S.tipo = ""; S.grupo.clear(); desenhar(); });
+  chips(el, "col-marca", [["OLY", "Olympikus"], ["UA", "Under Armour"]], new Set([S.marca]), v => { S.marca = v; S.tipo = ""; S.grupo.clear(); desenhar(); });
   const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
-  chips("col-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(S.tipo ? [S.tipo] : []), v => { S.tipo = v; S.grupo.clear(); desenhar(); });
+  chips(el, "col-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(S.tipo ? [S.tipo] : []), v => { S.tipo = v; S.grupo.clear(); desenhar(); });
   const doTipo = S.tipo ? daMarca.filter(it => it.t === S.tipo) : [];
   const cg = new Map(); for (const it of doTipo) if (it.g) cg.set(it.g, (cg.get(it.g) || 0) + 1);
   el.querySelector("#col-bloco-grupo").classList.toggle("oculto", !S.tipo || cg.size < 2);
-  chips("col-grupo", [["", "todos"], ...[...cg.entries()].map(([v, n]) => [v, titulo(v), n])], S.grupo, v => { if (v === "") S.grupo.clear(); else if (S.grupo.has(v)) S.grupo.delete(v); else S.grupo.add(v); desenhar(); });
+  chips(el, "col-grupo", [["", "todos"], ...[...cg.entries()].map(([v, n]) => [v, titulo(v), n])], S.grupo, v => { if (v === "") S.grupo.clear(); else if (S.grupo.has(v)) S.grupo.delete(v); else S.grupo.add(v); desenhar(); });
   const base = S.tipo ? doTipo : daMarca;
-  chips("col-selo", [["", "sem selo"], ["l", "lançamento", base.filter(ehLanc).length], ["cn", "cor nova", base.filter(ehNova).length]], S.selo, v => { if (v === "") S.selo.clear(); else if (S.selo.has(v)) S.selo.delete(v); else S.selo.add(v); desenhar(); });
+  chips(el, "col-selo", [["", "sem selo"], ["l", "lançamento", base.filter(ehLanc).length], ["cn", "cor nova", base.filter(ehNova).length]], S.selo, v => { if (v === "") S.selo.clear(); else if (S.selo.has(v)) S.selo.delete(v); else S.selo.add(v); desenhar(); });
+  chipsClientes(el, "col-cliente");
   desenharPagina();
 }
 
@@ -98,17 +143,22 @@ function fotoHtml(it){
   return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">${tri}<div class="sem oculto">sem foto</div></div>`;
 }
 function fotoFalhou(img){
-  // miniatura jpg → png → a URL pública → "sem foto"
   const passo = img.dataset.passo;
   if (passo === "jpg") { img.dataset.passo = "png"; img.src = img.src.replace(/\.jpg$/, ".png"); return; }
   if (passo === "png" && img.dataset.url) { img.dataset.passo = "url"; img.src = img.dataset.url; return; }
   img.classList.add("oculto"); img.parentElement.querySelector(".sem").classList.remove("oculto");
 }
-const chave = it => it.m + "|" + it.t + "|" + it.o;
-const chaveModelo = it => it.m + "|" + it.t + "|" + (it.g || "") + "|" + (it.n || "") + "|" + (it.r || "");
 
+// o cartão da cor: foto, código, descrição e, na vitrine, o botão ("+" / "✓" na Coleção; "×" na aba Vitrine) ou o motivo de ficar fora
+function corHtml(it, modo){
+  const k = chaveCor(it), fora = foraDaVitrine(it), sel = VIT.itens.has(k);
+  let botao = "";
+  if (VIT.cliente && !fora) botao = modo === "vitrine" ? `<button type="button" class="mais tira" data-kc="${esc(k)}" title="tirar da vitrine">×</button>`
+                                                        : `<button type="button" class="mais${sel ? " on" : ""}" data-kc="${esc(k)}" title="${sel ? "tirar da vitrine" : "pôr na vitrine"}">${sel ? "✓" : "+"}</button>`;
+  return `<div class="cor${sel && modo !== "vitrine" ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}">${botao}${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(it.cd)}</div>` : ""}${fora ? `<div class="fora-txt">${esc(fora)}</div>` : ""}</div>`;
+}
 // uma coluna por modelo: cabeçalho fixo (nome, referência copiável, PDV, selo) e as cores embaixo
-function coluna(cores){
+function coluna(cores, modo){
   const m = cores[0], lanc = cores.some(ehLanc), sl = cores.some(it => it.sl);
   return `<div class="modelo">
     <div class="cab">
@@ -116,33 +166,89 @@ function coluna(cores){
       <div class="linha"><button type="button" class="ref" data-ref="${esc(m.r)}" title="toque para copiar a referência">${esc(m.r)}</button><span class="pdv">${esc(dinheiro(m.p))}</span></div>
       <div class="selos">${lanc ? `<span class="selo lanc">lançamento</span>` : ""}${sl ? `<span class="selo conv">convenção</span>` : ""}${m.nu ? `<span class="mu">${esc(m.ge ? m.ge + " · " : "")}${esc(m.nu)}</span>` : (m.ge ? `<span class="mu">${esc(m.ge)}</span>` : "")}</div>
     </div>
-    <div class="cores">${cores.map(it => `<div class="cor">${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(it.cd)}</div>` : ""}</div>`).join("")}</div>
+    <div class="cores">${cores.map(it => corHtml(it, modo)).join("")}</div>
   </div>`;
 }
-
-function desenharPagina(){
-  const lista = itensFiltrados();
-  const pg = EL.querySelector("#col-pagina");
-  // seções na ordem do pacote: tipo → bloco; dentro, uma coluna por modelo com as cores juntas
+// a página: seções na ordem do pacote (tipo → bloco), uma coluna por modelo; devolve {html, modelos}
+function montarPagina(lista, modo){
   let html = "", modelos = 0;
   for (const [tv] of TIPOS.filter(([v]) => v)) {
     const doTipo = lista.filter(it => it.t === tv);
     if (!doTipo.length) continue;
-    let bloco = null, cols = "", porModelo = new Map();
-    // faixa de preço no título do bloco (ordem dele via PICASSO, 14/10): menor e maior PDV dos modelos VISÍVEIS (já filtrados); PDV nulo
-    // fica fora; todos iguais → um preço só; nenhum com preço → sem faixa
+    let bloco = null, porModelo = new Map();
     const faixa = () => { const ps = [...porModelo.values()].flat().map(it => it.p).filter(p => p != null); if (!ps.length) return ""; const a = Math.min(...ps), b = Math.max(...ps); return " · " + esc(a === b ? dinheiro(a) : dinheiro(a) + " a " + dinheiro(b)); };
-    const fecha = () => { if (bloco == null) return; html += `<div class="bloco"><div class="sec-tit">${esc(NOME_TIPO[tv])}${bloco ? " · " + esc(bloco) : ""} <small>${porModelo.size} modelo(s)${faixa()}</small></div><div class="colunas">${[...porModelo.values()].map(coluna).join("")}</div></div>`; modelos += porModelo.size; porModelo = new Map(); };
+    const fecha = () => { if (bloco == null) return; html += `<div class="bloco"><div class="sec-tit">${esc(NOME_TIPO[tv])}${bloco ? " · " + esc(bloco) : ""} <small>${porModelo.size} modelo(s)${faixa()}</small></div><div class="colunas">${[...porModelo.values()].map(c => coluna(c, modo)).join("")}</div></div>`; modelos += porModelo.size; porModelo = new Map(); };
     for (const it of doTipo) {
       if ((it.g || "") !== (bloco == null ? null : bloco)) { fecha(); bloco = it.g || ""; }
       const k = chaveModelo(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it);
     }
     fecha();
   }
-  pg.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
-  EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}`;
+  return { html, modelos };
+}
+function ligarPagina(raiz, pg, modo){
   for (const b of pg.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
-  for (const f of pg.querySelectorAll(".foto")) f.onclick = () => abrirLuz(f.dataset.k);
+  for (const f of pg.querySelectorAll(".foto")) f.onclick = () => abrirLuz(raiz, f.dataset.k);
+  for (const b of pg.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); alternar(b.dataset.kc, modo); };
+}
+
+function desenharPagina(){
+  const lista = itensFiltrados();
+  const pg = EL.querySelector("#col-pagina");
+  const { html, modelos } = montarPagina(lista, "colecao");
+  pg.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
+  EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}` + (VIT.cliente ? ` · vitrine ${nomeCli(VIT.cliente)}: ${VIT.itens.size} cor(es)` : "");
+  ligarPagina(EL, pg, "colecao");
+}
+
+function desenharVitrine(){
+  const el = ELV;
+  if (!el.querySelector(".cat")) {
+    el.innerHTML = `<div class="cat colecao vitrine">
+      <div class="card filtros">
+        <label>cliente</label><div class="chips" id="vit-cliente"></div>
+        <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div><div class="acoes"><button type="button" id="vit-pdf" class="sec">exportar PDF</button></div></div>
+        <div class="msg erro oculto" id="vit-erro"></div>
+      </div>
+      <div class="pagina" id="vit-pagina"></div>
+      <div class="luz oculto" id="vit-luz"></div>
+    </div>`;
+    el.querySelector("#vit-pdf").onclick = () => window.print();
+    el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
+  }
+  chipsClientes(el, "vit-cliente");
+  const lista = VIT.cliente ? DADOS.itens.filter(it => VIT.itens.has(chaveCor(it))) : [];
+  const pg = el.querySelector("#vit-pagina");
+  const { html, modelos } = montarPagina(lista, "vitrine");
+  pg.innerHTML = html || `<div class="card mu">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} está vazia. Na aba Coleção, toque no "+" de cada cor.` : "Escolha o cliente."}</div>`;
+  el.querySelector("#vit-conta").textContent = VIT.cliente ? `Vitrine ${nomeCli(VIT.cliente)} · ${lista.length} cor(es) · ${modelos} modelo(s)` : "";
+  const er = el.querySelector("#vit-erro"); er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro);
+  ligarPagina(el, pg, "vitrine");
+}
+
+// pôr / tirar da vitrine: grava no banco na hora (insert / delete), com o login dele; a tela muda antes e volta se o banco recusar
+async function alternar(kc, modo){
+  if (!VIT.cliente || !VIT.esc || !DADOS) return;
+  const it = DADOS.itens.find(x => chaveCor(x) === kc); if (!it || foraDaVitrine(it)) return;
+  const tinha = VIT.itens.has(kc);
+  if (tinha) VIT.itens.delete(kc); else VIT.itens.add(kc);
+  refrescar();
+  const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: DADOS.colecao, marca: it.m, referencia: it.r, cor: it.c };
+  const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(linha);
+  if (r.error) {
+    if (tinha) VIT.itens.add(kc); else VIT.itens.delete(kc);
+    VIT.erro = "O banco recusou a vitrine: " + r.error.message; refrescar();
+    const e = (modo === "vitrine" ? ELV : EL).querySelector(modo === "vitrine" ? "#vit-erro" : "#col-erro"); if (e) { e.textContent = VIT.erro; e.classList.remove("oculto"); }
+    return;
+  }
+  VIT.erro = "";
+}
+function refrescar(){
+  if (EL && EL.querySelector(".cat")) {
+    for (const c of EL.querySelectorAll("#col-pagina .cor")) { const k = c.dataset.kc, sel = VIT.itens.has(k), b = c.querySelector(".mais"); c.classList.toggle("sel", sel); if (b) { b.classList.toggle("on", sel); b.textContent = sel ? "✓" : "+"; b.title = sel ? "tirar da vitrine" : "pôr na vitrine"; } }
+    const conta = EL.querySelector("#col-conta"); if (conta) conta.textContent = conta.textContent.replace(/vitrine [^:]+: \d+ cor\(es\)/, `vitrine ${nomeCli(VIT.cliente)}: ${VIT.itens.size} cor(es)`);
+  }
+  if (ELV && ELV.querySelector(".cat")) desenharVitrine();
 }
 
 async function copiar(b){
@@ -154,11 +260,11 @@ async function copiar(b){
   setTimeout(() => { b.classList.remove("copiado"); b.textContent = ref; }, 900);
 }
 
-function abrirLuz(k){
+function abrirLuz(raiz, k){
   const it = DADOS.itens.find(x => chave(x) === k);
   if (!it) return;
   const grande = it.u || srcFoto(it);
-  const luz = EL.querySelector("#col-luz");
+  const luz = raiz.querySelector(".luz");
   luz.innerHTML = `<div class="quadro"><button type="button" class="fecha">×</button>
     <div class="angulos">${grande ? `<img src="${esc(grande)}" alt="" onerror="Colecao.fotoFalhouGrande(this)">` : `<div class="mu">sem foto</div>`}</div>
     <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(it.cd) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;
@@ -166,7 +272,7 @@ function abrirLuz(k){
   luz.classList.remove("oculto");
 }
 function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createElement("div"), { className: "mu", textContent: "sem foto" })); }
-function fecharLuz(){ EL.querySelector("#col-luz").classList.add("oculto"); }
+function fecharLuz(raiz){ raiz.querySelector(".luz").classList.add("oculto"); }
 
-window.Colecao = { abrir, fotoFalhou, fotoFalhouGrande };
+window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande };
 })();
