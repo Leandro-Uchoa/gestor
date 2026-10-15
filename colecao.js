@@ -358,7 +358,10 @@ function desenharDireita(pg){
     .sort((a, b) => ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   const modelos = new Set(todas.map(it => it.m + "|" + it.r)).size, soma = todas.reduce((s, it) => s + (+it.p || 0), 0);
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
-  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b><small>cor(es)</small></span><span><b>${modelos}</b><small>modelo(s)</small></span><span><b>${esc(soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—")}</b><small>em PDV</small></span>`;
+  // o valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
+  const cheio = soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+  const curto = !soma ? "—" : (soma >= 1e6 ? "R$ " + (soma / 1e6).toFixed(2).replace(".", ",") + " mi" : (soma >= 1e3 ? "R$ " + (soma / 1e3).toFixed(1).replace(".", ",") + " mil" : "R$ " + Math.round(soma)));
+  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b><small>cor(es)</small></span><span><b>${modelos}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(cheio)}</b><b class="curto">${esc(curto)}</b><small>em PDV</small></span>`;
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
   V.innerHTML = lista.length ? lista.map(it => `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">

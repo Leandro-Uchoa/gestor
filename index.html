@@ -71,6 +71,9 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
 .abas button.ativa,.seletor button.ativa{background:var(--acc);color:#000000;border-color:var(--acc)}
+/* celular (PICASSO, 15/10): seis abas largas empurravam a página para o lado — 3 + 3 em grade, sem rolagem horizontal */
+@media (max-width:600px){.abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.abas button{padding:9px 4px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.mont-placar .curto{display:none}@media (max-width:600px){.mont-placar .cheio{display:none}.mont-placar .curto{display:block}}
 .seletor{margin:10px 0 0}.seletor button{padding:8px;font-size:.85rem}
 /* ordem dele (28/09): filtro de cliente por NOME, um toque — nada de digitar no celular */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
@@ -281,7 +284,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 @keyframes sobe{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 .vcard.nova{animation:sobe .6s ease-out;outline:3px solid #2E3EFC;outline-offset:-1px}.vcard{transition:outline-color 1.5s}
 .vvazia{grid-column:1/-1;padding:42px 16px;text-align:center;color:#787B86;font-weight:800;font-size:1rem}.vvazia small{display:block;margin-top:8px;font-weight:600;font-size:.8rem}
-@media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:minmax(0,1fr)}.colecao .pagina{padding:10px}.mont-placar b{font-size:1rem}}
+@media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:minmax(0,1fr)}.colecao .pagina{padding:10px}.mont-placar{grid-template-columns:minmax(0,.7fr) minmax(0,1fr) minmax(0,1.6fr);gap:6px}.mont-placar span{padding:6px 8px}.mont-placar b{font-size:.95rem}}
 @media print{.mont-esq,.mont-troca,.mont-cab .chips,.mont-cab .frow,.mont-placar{display:none}.montador{display:block}.mont-dir{background:#fff;padding:0;box-shadow:none}.mont-vitrine{max-height:none;overflow:visible;-webkit-print-color-adjust:exact;print-color-adjust:exact}.vcard{break-inside:avoid;border:1px solid #ddd;box-shadow:none}}
 /* circular OLY (15/10): início de faturamento = selo preto sobre cinza claro; fora da circular = linha cinza */
 .colecao .selo.inicio{display:inline-block;background:#ADAEB3;color:#000000;margin-top:4px;text-transform:none;letter-spacing:0;font-size:.6rem}
@@ -298,7 +301,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.8</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.9</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -356,7 +359,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=9"></script>
+<script src="colecao.js?v=10"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
