@@ -13,8 +13,13 @@
 // VITRINE DO CLIENTE (15/10, palavra dele via PICASSO: "seleciona lá, pum, automaticamente sobe para outra parte que vai ter a
 // vitrine da Polyélle… precisa da imagem, a referência e a cor"): cada COR ganha um "+" no cartão; tocou, entra na vitrine do
 // cliente escolhido (gravada no banco, tabela vitrine, atrás do login); tocou de novo, sai. Selecionada = contorno azul e "✓".
-// A aba Vitrine mostra as cores do cliente agrupadas e ordenadas como na Coleção, com "×" para tirar, e o contador. Fora da
-// vitrine: PDV nulo/zero (DTC/marketplace, NÚCLEO) em todo cliente; e a lista por cliente (tabela vitrine_bloqueio: CARDIO na Poly).
+// A aba Vitrine tem DUAS coleções lado a lado (ordem dele, 15/10): a ATUAL ("como ela está hoje": o que o cliente comprou, carteira +
+// faturado, tabela vitrine_atual, carregada do pacote do PICASSO) e a que ele MONTA clicando. Na atual, item em carteira ganha
+// RETIRAR ("a gente decida que ele não vai receber, possa retirar ali na hora"): foto a 40%, cor riscada, "retirar da carteira";
+// reversível ("voltar"); só faturado não tem botão. ⛔ Nada disso escreve na DETALHADA nem no EBM: a vitrine REGISTRA a decisão.
+// Cada marcação guarda quem, quando e o estado anterior (histórico pelo gatilho do banco — BOSS; a ATA VIVA lê).
+// Fora da vitrine que ele monta: PDV nulo/zero (DTC/marketplace, NÚCLEO) e a lista por cliente (vitrine_bloqueio: CARDIO na Poly).
+// Exportar PDF = imprimir: página cinza, cartão branco, cada bloco numa página, item retirado sai riscado (registro da conversa).
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto, preço, bloqueio moram no banco.
 (function(){
 const IMG = "img/mini/";
@@ -34,13 +39,16 @@ async function tudo(consulta) {
 
 let DADOS = null, EL = null, ELV = null, SB = null;
 const S = { marca: "OLY", tipo: "", grupo: new Set(), selo: new Set(), busca: "" };
-// a vitrine: cliente escolhido, cores dele (chave marca|ref|cor), bloqueios por cliente (cliente|marca|ref), id do escritório
-const VIT = { cliente: null, clientes: [], itens: new Set(), bloq: new Set(), esc: null, carregadoPara: null, erro: "" };
+// a vitrine: cliente escolhido; marcas dele por coleção (chave marca|ref|cor → estado); a coleção ATUAL do cliente (vitrine_atual);
+// bloqueios por cliente (cliente|marca|ref); qual vista está aberta (atual | montando); id do escritório
+const VIT = { cliente: null, clientes: [], marcas: new Map(), atual: null, vista: null, bloq: new Set(), esc: null, carregadoPara: null, erro: "" };
 const chaveCor = it => it.m + "|" + it.r + "|" + it.c;
 const chave = it => it.m + "|" + it.t + "|" + it.o;
 const chaveModelo = it => it.m + "|" + it.t + "|" + (it.g || "") + "|" + (it.n || "") + "|" + (it.r || "");
 const sit = it => (it.s || "").toLowerCase();
 const ehLanc = it => sit(it).startsWith("lan"), ehNova = it => sit(it).startsWith("cor");
+const marcas = col => { if (!VIT.marcas.has(col)) VIT.marcas.set(col, new Map()); return VIT.marcas.get(col); };
+const emCarteira = it => /carteira/i.test(it.st || "");
 // por que a cor NÃO vai para a vitrine deste cliente (null = pode)
 const foraDaVitrine = it => (it.p == null || +it.p === 0) ? "fora da vitrine (sem PDV)" : (VIT.cliente && VIT.bloq.has(VIT.cliente + "|" + it.m + "|" + it.r) ? "não vai para " + nomeCli(VIT.cliente) : null);
 
@@ -64,9 +72,13 @@ async function carregarVitrine(sb){
     if (!VIT.cliente) VIT.cliente = VIT.clientes.includes("POLYELLE") ? "POLYELLE" : (VIT.clientes[0] || null);
   }
   if (VIT.cliente && VIT.carregadoPara !== VIT.cliente) {
-    const r = await tudo(sb.from("vitrine").select("marca,referencia,cor").eq("cliente", VIT.cliente).eq("colecao", DADOS.colecao));
+    const [r, a] = await Promise.all([tudo(sb.from("vitrine").select("colecao,marca,referencia,cor,estado").eq("cliente", VIT.cliente)), sb.rpc("vitrine_atual_consulta", { p_cliente: VIT.cliente, p_colecao: null })]);
     if (r.error) { VIT.erro = "não consegui ler a vitrine: " + r.error.message; return; }
-    VIT.itens = new Set(r.data.map(x => x.marca + "|" + x.referencia + "|" + x.cor)); VIT.carregadoPara = VIT.cliente; VIT.erro = "";
+    VIT.marcas = new Map();
+    for (const x of r.data) marcas(x.colecao).set(x.marca + "|" + x.referencia + "|" + x.cor, x.estado || "escolhida");
+    VIT.atual = (!a.error && a.data && a.data.n > 0) ? a.data : null;
+    VIT.carregadoPara = VIT.cliente; VIT.erro = a.error ? "não consegui ler a coleção atual: " + a.error.message : "";
+    VIT.vista = VIT.atual ? "atual" : "montando";
   }
 }
 
@@ -149,13 +161,23 @@ function fotoFalhou(img){
   img.classList.add("oculto"); img.parentElement.querySelector(".sem").classList.remove("oculto");
 }
 
-// o cartão da cor: foto, código, descrição e, na vitrine, o botão ("+" / "✓" na Coleção; "×" na aba Vitrine) ou o motivo de ficar fora
+// o cartão da cor, por modo: "colecao" (o "+" / "✓"), "montando" (a vitrine que ele monta: "×"), "atual" (a coleção atual: "retirar" / "voltar")
 function corHtml(it, modo){
-  const k = chaveCor(it), fora = foraDaVitrine(it), sel = VIT.itens.has(k);
-  let botao = "";
-  if (VIT.cliente && !fora) botao = modo === "vitrine" ? `<button type="button" class="mais tira" data-kc="${esc(k)}" title="tirar da vitrine">×</button>`
-                                                        : `<button type="button" class="mais${sel ? " on" : ""}" data-kc="${esc(k)}" title="${sel ? "tirar da vitrine" : "pôr na vitrine"}">${sel ? "✓" : "+"}</button>`;
-  return `<div class="cor${sel && modo !== "vitrine" ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}">${botao}${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(it.cd)}</div>` : ""}${fora ? `<div class="fora-txt">${esc(fora)}</div>` : ""}</div>`;
+  const k = chaveCor(it);
+  let botao = "", classes = "", extra = "";
+  if (modo === "atual") {
+    const retirada = VIT.atual && marcas(VIT.atual.colecao).get(k) === "retirar";
+    if (retirada) classes += " retirada";
+    extra = `<div class="st">${esc(it.st || "")}</div>${retirada ? `<div class="fora-txt">retirar da carteira</div>` : ""}`;
+    if (emCarteira(it)) botao = `<button type="button" class="mais txt${retirada ? " on" : ""}" data-kc="${esc(k)}" title="${retirada ? "voltar para a carteira" : "retirar da carteira"}">${retirada ? "voltar" : "retirar"}</button>`;
+  } else {
+    const fora = foraDaVitrine(it), sel = VIT.cliente && marcas(DADOS.colecao).get(k) === "escolhida";
+    if (sel && modo === "colecao") classes += " sel";
+    if (fora) { classes += " fora"; extra = `<div class="fora-txt">${esc(fora)}</div>`; }
+    if (VIT.cliente && !fora) botao = modo === "montando" ? `<button type="button" class="mais tira" data-kc="${esc(k)}" title="tirar da vitrine">×</button>`
+                                                          : `<button type="button" class="mais${sel ? " on" : ""}" data-kc="${esc(k)}" title="${sel ? "tirar da vitrine" : "pôr na vitrine"}">${sel ? "✓" : "+"}</button>`;
+  }
+  return `<div class="cor${classes}" data-kc="${esc(k)}">${botao}${fotoHtml(it)}<div class="cod">${esc(it.c)}</div>${it.cd && it.cd !== it.c ? `<div class="desc">${esc(it.cd)}</div>` : ""}${extra}</div>`;
 }
 // uma coluna por modelo: cabeçalho fixo (nome, referência copiável, PDV, selo) e as cores embaixo
 function coluna(cores, modo){
@@ -188,7 +210,7 @@ function montarPagina(lista, modo){
 }
 function ligarPagina(raiz, pg, modo){
   for (const b of pg.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
-  for (const f of pg.querySelectorAll(".foto")) f.onclick = () => abrirLuz(raiz, f.dataset.k);
+  for (const f of pg.querySelectorAll(".foto")) f.onclick = () => abrirLuz(raiz, f.dataset.k, modo);
   for (const b of pg.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); alternar(b.dataset.kc, modo); };
 }
 
@@ -197,9 +219,11 @@ function desenharPagina(){
   const pg = EL.querySelector("#col-pagina");
   const { html, modelos } = montarPagina(lista, "colecao");
   pg.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
-  EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}` + (VIT.cliente ? ` · vitrine ${nomeCli(VIT.cliente)}: ${VIT.itens.size} cor(es)` : "");
+  EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}` + (VIT.cliente ? ` · vitrine ${nomeCli(VIT.cliente)}: ${contaEscolhidas()} cor(es)` : "");
   ligarPagina(EL, pg, "colecao");
 }
+const contaEscolhidas = () => [...marcas(DADOS.colecao).values()].filter(v => v === "escolhida").length;
+const contaRetiradas = () => VIT.atual ? [...marcas(VIT.atual.colecao).values()].filter(v => v === "retirar").length : 0;
 
 function desenharVitrine(){
   const el = ELV;
@@ -207,7 +231,9 @@ function desenharVitrine(){
     el.innerHTML = `<div class="cat colecao vitrine">
       <div class="card filtros">
         <label>cliente</label><div class="chips" id="vit-cliente"></div>
+        <label>coleção</label><div class="chips" id="vit-colecao"></div>
         <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div><div class="acoes"><button type="button" id="vit-pdf" class="sec">exportar PDF</button></div></div>
+        <div class="mu" id="vit-nota"></div>
         <div class="msg erro oculto" id="vit-erro"></div>
       </div>
       <div class="pagina" id="vit-pagina"></div>
@@ -217,36 +243,55 @@ function desenharVitrine(){
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
   }
   chipsClientes(el, "vit-cliente");
-  const lista = VIT.cliente ? DADOS.itens.filter(it => VIT.itens.has(chaveCor(it))) : [];
-  const pg = el.querySelector("#vit-pagina");
-  const { html, modelos } = montarPagina(lista, "vitrine");
-  pg.innerHTML = html || `<div class="card mu">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} está vazia. Na aba Coleção, toque no "+" de cada cor.` : "Escolha o cliente."}</div>`;
-  el.querySelector("#vit-conta").textContent = VIT.cliente ? `Vitrine ${nomeCli(VIT.cliente)} · ${lista.length} cor(es) · ${modelos} modelo(s)` : "";
+  const vistas = [];
+  if (VIT.atual) vistas.push(["atual", VIT.atual.colecao + " (atual)"]);
+  vistas.push(["montando", (DADOS.colecao || "?") + " (montando)"]);
+  if (!vistas.some(([v]) => v === VIT.vista)) VIT.vista = vistas[0][0];
+  chips(el, "vit-colecao", vistas, new Set([VIT.vista]), v => { VIT.vista = v; desenharVitrine(); });
+  const pg = el.querySelector("#vit-pagina"), nota = el.querySelector("#vit-nota");
+  if (VIT.vista === "atual" && VIT.atual) {
+    const lista = VIT.atual.itens, { html, modelos } = montarPagina(lista, "atual");
+    pg.innerHTML = html || `<div class="card mu">Sem itens na coleção atual.</div>`;
+    el.querySelector("#vit-conta").textContent = `${nomeCli(VIT.cliente)} · ${VIT.atual.colecao} · ${lista.length} cor(es) · ${modelos} modelo(s) · ${contaRetiradas()} para retirar`;
+    nota.textContent = `como ${nomeCli(VIT.cliente)} está hoje: carteira + faturado, da base de ${VIT.atual.base_em ? VIT.atual.base_em.split("-").reverse().join("/") : "?"}. "retirar" registra a decisão aqui; a carteira mesmo muda pela AÇÃO, na DETALHADA.`;
+    ligarPagina(el, pg, "atual");
+  } else {
+    const lista = VIT.cliente ? DADOS.itens.filter(it => marcas(DADOS.colecao).get(chaveCor(it)) === "escolhida") : [];
+    const { html, modelos } = montarPagina(lista, "montando");
+    pg.innerHTML = html || `<div class="card mu">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} (${esc(DADOS.colecao || "")}) está vazia. Na aba Coleção, toque no "+" de cada cor.` : "Escolha o cliente."}</div>`;
+    el.querySelector("#vit-conta").textContent = VIT.cliente ? `Vitrine ${nomeCli(VIT.cliente)} · ${DADOS.colecao || ""} · ${lista.length} cor(es) · ${modelos} modelo(s)` : "";
+    nota.textContent = "a coleção que ele monta: as cores escolhidas na aba Coleção, gravadas no banco.";
+    ligarPagina(el, pg, "montando");
+  }
   const er = el.querySelector("#vit-erro"); er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro);
-  ligarPagina(el, pg, "vitrine");
 }
 
-// pôr / tirar da vitrine: grava no banco na hora (insert / delete), com o login dele; a tela muda antes e volta se o banco recusar
+// pôr / tirar (escolhida) e retirar / voltar (atual): grava no banco na hora, com o login dele; a tela muda antes e volta se o banco recusar
 async function alternar(kc, modo){
   if (!VIT.cliente || !VIT.esc || !DADOS) return;
-  const it = DADOS.itens.find(x => chaveCor(x) === kc); if (!it || foraDaVitrine(it)) return;
-  const tinha = VIT.itens.has(kc);
-  if (tinha) VIT.itens.delete(kc); else VIT.itens.add(kc);
+  const atual = modo === "atual";
+  if (atual && !VIT.atual) return;
+  const fonte = atual ? VIT.atual.itens : DADOS.itens, it = fonte.find(x => chaveCor(x) === kc);
+  if (!it || (!atual && foraDaVitrine(it)) || (atual && !emCarteira(it))) return;
+  const col = atual ? VIT.atual.colecao : DADOS.colecao, estado = atual ? "retirar" : "escolhida", M = marcas(col);
+  const tinha = M.get(kc) === estado;
+  if (tinha) M.delete(kc); else M.set(kc, estado);
   refrescar();
-  const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: DADOS.colecao, marca: it.m, referencia: it.r, cor: it.c };
-  const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(linha);
+  const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: col, marca: it.m, referencia: it.r, cor: it.c };
+  const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(Object.assign({ estado, estado_anterior: atual ? (it.st || null) : null }, linha));
   if (r.error) {
-    if (tinha) VIT.itens.add(kc); else VIT.itens.delete(kc);
+    if (tinha) M.set(kc, estado); else M.delete(kc);
     VIT.erro = "O banco recusou a vitrine: " + r.error.message; refrescar();
-    const e = (modo === "vitrine" ? ELV : EL).querySelector(modo === "vitrine" ? "#vit-erro" : "#col-erro"); if (e) { e.textContent = VIT.erro; e.classList.remove("oculto"); }
+    const e = (modo === "colecao" ? EL : ELV).querySelector(modo === "colecao" ? "#col-erro" : "#vit-erro"); if (e) { e.textContent = VIT.erro; e.classList.remove("oculto"); }
     return;
   }
   VIT.erro = "";
 }
 function refrescar(){
   if (EL && EL.querySelector(".cat")) {
-    for (const c of EL.querySelectorAll("#col-pagina .cor")) { const k = c.dataset.kc, sel = VIT.itens.has(k), b = c.querySelector(".mais"); c.classList.toggle("sel", sel); if (b) { b.classList.toggle("on", sel); b.textContent = sel ? "✓" : "+"; b.title = sel ? "tirar da vitrine" : "pôr na vitrine"; } }
-    const conta = EL.querySelector("#col-conta"); if (conta) conta.textContent = conta.textContent.replace(/vitrine [^:]+: \d+ cor\(es\)/, `vitrine ${nomeCli(VIT.cliente)}: ${VIT.itens.size} cor(es)`);
+    const M = marcas(DADOS.colecao);
+    for (const c of EL.querySelectorAll("#col-pagina .cor")) { const k = c.dataset.kc, sel = M.get(k) === "escolhida", b = c.querySelector(".mais"); c.classList.toggle("sel", sel); if (b) { b.classList.toggle("on", sel); b.textContent = sel ? "✓" : "+"; b.title = sel ? "tirar da vitrine" : "pôr na vitrine"; } }
+    const conta = EL.querySelector("#col-conta"); if (conta) conta.textContent = conta.textContent.replace(/vitrine [^:]+: \d+ cor\(es\)/, `vitrine ${nomeCli(VIT.cliente)}: ${contaEscolhidas()} cor(es)`);
   }
   if (ELV && ELV.querySelector(".cat")) desenharVitrine();
 }
@@ -260,14 +305,14 @@ async function copiar(b){
   setTimeout(() => { b.classList.remove("copiado"); b.textContent = ref; }, 900);
 }
 
-function abrirLuz(raiz, k){
-  const it = DADOS.itens.find(x => chave(x) === k);
+function abrirLuz(raiz, k, modo){
+  const fonte = (modo === "atual" && VIT.atual) ? VIT.atual.itens : DADOS.itens, it = fonte.find(x => chave(x) === k);
   if (!it) return;
   const grande = it.u || srcFoto(it);
   const luz = raiz.querySelector(".luz");
   luz.innerHTML = `<div class="quadro"><button type="button" class="fecha">×</button>
     <div class="angulos">${grande ? `<img src="${esc(grande)}" alt="" onerror="Colecao.fotoFalhouGrande(this)">` : `<div class="mu">sem foto</div>`}</div>
-    <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(it.cd) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;
+    <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(it.cd) : ""}${it.st ? " · " + esc(it.st) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;
   for (const b of luz.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   luz.classList.remove("oculto");
 }

@@ -237,7 +237,11 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .colecao .cor.fora .foto img{opacity:.4}.colecao .fora-txt{font-size:.62rem;color:#787B86;margin-top:3px;font-weight:700}
 .colecao .vit-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px}.colecao .vit-topo .acoes{margin-top:0}
 .colecao .vit-conta{font-weight:800;font-size:1rem;color:var(--ink)}
-@media print{.colecao .mais{display:none}}
+/* a coleção ATUAL (15/10): situação em cinza; "retirar" = foto a 40%, cor riscada, etiqueta cinza; o botão com texto (retirar / voltar) */
+.colecao .st{font-size:.6rem;color:#787B86;margin-top:2px}
+.colecao .mais.txt{width:auto;height:auto;border-radius:999px;padding:4px 9px;font-size:.64rem;letter-spacing:.02em;text-transform:uppercase}
+.colecao .cor.retirada .foto img{opacity:.4}.colecao .cor.retirada .cod{text-decoration:line-through;color:#787B86}.colecao .cor.retirada .desc{text-decoration:line-through}
+@media print{.colecao .mais{display:none}.colecao .bloco{break-before:page}.colecao .bloco:first-child{break-before:auto}.colecao .cor.retirada .foto img{opacity:.4}.colecao .cor.retirada .cod,.colecao .cor.retirada .desc{text-decoration:line-through}}
 .colecao .quadro{background:#FFFFFF;color:#000000;font-family:Arial,Helvetica,sans-serif}.colecao .quadro .fecha{color:#000000}.colecao .quadro .mu{color:#787B86}
 .colecao .angulos img{background:#FFFFFF}.colecao .quadro .preco{color:#000000;margin-top:6px;font-weight:800}
 @media print{.colecao .pagina{background:#E6E7E8;-webkit-print-color-adjust:exact;print-color-adjust:exact}.colecao .colunas{grid-template-columns:repeat(4,minmax(0,1fr))}.colecao .modelo{break-inside:avoid}}
@@ -247,7 +251,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.4</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.5</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -305,7 +309,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=5"></script>
+<script src="colecao.js?v=6"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
