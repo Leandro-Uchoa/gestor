@@ -159,7 +159,9 @@ function fotoFalhou(img){
   const passo = img.dataset.passo;
   if (passo === "jpg") { img.dataset.passo = "png"; img.src = img.src.replace(/\.jpg$/, ".png"); return; }
   if (passo === "png" && img.dataset.url) { img.dataset.passo = "url"; img.src = img.dataset.url; return; }
-  img.classList.add("oculto"); img.parentElement.querySelector(".sem").classList.remove("oculto");
+  img.classList.add("oculto");
+  const sem = img.parentElement.querySelector(".sem");
+  if (sem) sem.classList.remove("oculto"); else img.insertAdjacentHTML("afterend", `<div class="sem">sem foto</div>`);
 }
 
 // o cartão da cor, por modo: "colecao" (o "+" / "✓"), "montando" (a vitrine que ele monta: "×"), "atual" (a coleção atual: "retirar" / "voltar")
@@ -285,10 +287,11 @@ function desenharMontador(pg){
       <div class="mont-troca"><button type="button" data-p="esq" class="ativa">Coleção</button><button type="button" data-p="dir">Vitrine <b id="mont-n"></b></button></div>
       <div class="mont-esq">
         <div class="mont-filtros">
-          <div class="linha-topo"><div class="chips marcas" id="mf-marca"></div><input type="search" id="mf-busca" placeholder="digite o nome do produto, a referência ou a cor" autocomplete="off" value="${esc(MF.busca)}"></div>
-          <div class="chips" id="mf-tipo"></div>
-          <div class="chips" id="mf-bloco"></div>
-          <div class="chips" id="mf-gen"></div>
+          <input type="search" id="mf-busca" placeholder="digite o nome do produto, a referência ou a cor" autocomplete="off" value="${esc(MF.busca)}">
+          <div class="frow"><span class="fl">marca</span><div class="chips" id="mf-marca"></div></div>
+          <div class="frow"><span class="fl">tipo</span><div class="chips" id="mf-tipo"></div></div>
+          <div class="frow"><span class="fl">família</span><div class="chips" id="mf-bloco"></div></div>
+          <div class="frow"><span class="fl">gênero</span><div class="chips" id="mf-gen"></div></div>
           <div class="mu" id="mf-conta"></div>
         </div>
         <div class="mont-lista" id="mf-lista"></div>
@@ -297,9 +300,9 @@ function desenharMontador(pg){
         <div class="mont-cab">
           <div class="mont-tit" id="vf-tit"></div>
           <div class="mont-placar" id="vf-placar"></div>
-          <div class="chips" id="vf-tipo"></div>
-          <div class="chips" id="vf-gen"></div>
-          <div class="chips" id="vf-bloco"></div>
+          <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
+          <div class="frow"><span class="fl">gênero</span><div class="chips" id="vf-gen"></div></div>
+          <div class="frow"><span class="fl">família</span><div class="chips" id="vf-bloco"></div></div>
         </div>
         <div class="mont-vitrine" id="vf-lista"></div>
       </div>
@@ -355,7 +358,7 @@ function desenharDireita(pg){
     .sort((a, b) => ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   const modelos = new Set(todas.map(it => it.m + "|" + it.r)).size, soma = todas.reduce((s, it) => s + (+it.p || 0), 0);
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
-  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b> cor(es)</span><span><b>${modelos}</b> modelo(s)</span><span><b>${esc(soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—")}</b> em PDV</span>`;
+  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b><small>cor(es)</small></span><span><b>${modelos}</b><small>modelo(s)</small></span><span><b>${esc(soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—")}</b><small>em PDV</small></span>`;
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
   V.innerHTML = lista.length ? lista.map(it => `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">
