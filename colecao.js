@@ -65,8 +65,9 @@ async function carregarVitrine(sb){
   if (VIT.esc == null) {
     const e = await sb.from("escritorio").select("id").limit(1);
     VIT.esc = (e.data && e.data[0] && e.data[0].id) || null;
-    const [cob, vc, bl] = await Promise.all([tudo(sb.from("v_cobertura").select("cliente")), tudo(sb.from("vitrine").select("cliente")), tudo(sb.from("vitrine_bloqueio").select("cliente,marca,referencia"))]);
-    const nomes = new Set([...(cob.data || []).map(r => r.cliente), ...(vc.data || []).map(r => r.cliente)].filter(Boolean));
+    // os clientes: carteira + giro (15/10, ele: "faltou Noroeste" — o Noroeste só tem giro) + quem já tem vitrine
+    const [cob, cg, vc, bl] = await Promise.all([tudo(sb.from("v_cobertura").select("cliente")), tudo(sb.from("v_cobertura_giro").select("cliente")), tudo(sb.from("vitrine").select("cliente")), tudo(sb.from("vitrine_bloqueio").select("cliente,marca,referencia"))]);
+    const nomes = new Set([...(cob.data || []).map(r => r.cliente), ...(cg.data || []).map(r => r.cliente), ...(vc.data || []).map(r => r.cliente)].filter(Boolean));
     VIT.clientes = [...nomes].sort();
     VIT.bloq = new Set((bl.data || []).map(r => r.cliente + "|" + r.marca + "|" + r.referencia));
     if (!VIT.cliente) VIT.cliente = VIT.clientes.includes("POLYELLE") ? "POLYELLE" : (VIT.clientes[0] || null);
@@ -259,15 +260,118 @@ function desenharVitrine(){
     nota.textContent = `como ${nomeCli(VIT.cliente)} está hoje: carteira + faturado, da base de ${VIT.atual.base_em ? VIT.atual.base_em.split("-").reverse().join("/") : "?"}. "retirar" registra a decisão aqui; a carteira mesmo muda pela AÇÃO, na DETALHADA.`;
     ligarPagina(el, pg, "atual");
   } else {
-    const lista = VIT.cliente ? DADOS.itens.filter(it => marcas(DADOS.colecao).get(chaveCor(it)) === "escolhida") : [];
-    const { html, modelos } = montarPagina(lista, "montando");
-    pg.innerHTML = html || `<div class="card mu">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} (${esc(DADOS.colecao || "")}) está vazia. Na aba Coleção, toque no "+" de cada cor.` : "Escolha o cliente."}</div>`;
-    el.querySelector("#vit-conta").textContent = VIT.cliente ? `Vitrine ${nomeCli(VIT.cliente)} · ${DADOS.colecao || ""} · ${lista.length} cor(es) · ${modelos} modelo(s)` : "";
-    nota.textContent = "a coleção que ele monta: as cores escolhidas na aba Coleção, gravadas no banco.";
-    ligarPagina(el, pg, "montando");
+    el.querySelector("#vit-conta").textContent = VIT.cliente ? `Vitrine ${nomeCli(VIT.cliente)} · ${DADOS.colecao || ""}` : "";
+    nota.textContent = "esquerda: a coleção, com filtros e busca — toque numa cor e ela sobe para a vitrine; direita: a vitrine do cliente, dos mais caros aos mais baratos.";
+    desenharMontador(pg);
   }
   const er = el.querySelector("#vit-erro"); er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro);
 }
+
+// ---------- o MONTADOR (15/10, orientação dele, ao vivo): "parta a tela no meio: do lado esquerdo os produtos da 1S27 com filtros
+// (marca, tipo, família, gênero) e um campo para digitar o nome; clicou no produto, abre do lado como fica a vitrine do cliente,
+// de cima para baixo em ordem decrescente de valor — em cima os mais caros — com filtro de feminino / masculino / infantil / família,
+// e com o PDV. Mais bonito, mais visual, gamificar." Regras da casa que valem aqui: animação é evento (sobe, brilha, PARA);
+// estado é repouso; paleta só a oficial.
+const MF = { busca: "", marca: "OLY", tipo: "", bloco: new Set(), gen: new Set() };   // filtros da esquerda (a coleção)
+const VF = { gen: new Set(), bloco: new Set(), tipo: new Set() };                      // filtros da direita (a vitrine)
+let PAINEL = "esq";                                                                    // no celular: qual metade está na tela
+const GEN_ORDEM = ["Feminino", "Masculino", "Unissex", "Infantil"];
+const genOrd = g => { const i = GEN_ORDEM.indexOf(g); return i < 0 ? 9 : i; };
+const escolhidas = () => VIT.cliente ? DADOS.itens.filter(it => marcas(DADOS.colecao).get(chaveCor(it)) === "escolhida") : [];
+
+function desenharMontador(pg){
+  if (!pg.querySelector(".montador")) {
+    pg.innerHTML = `<div class="montador">
+      <div class="mont-troca"><button type="button" data-p="esq" class="ativa">Coleção</button><button type="button" data-p="dir">Vitrine <b id="mont-n"></b></button></div>
+      <div class="mont-esq">
+        <div class="mont-filtros">
+          <div class="linha-topo"><div class="chips marcas" id="mf-marca"></div><input type="search" id="mf-busca" placeholder="digite o nome do produto, a referência ou a cor" autocomplete="off" value="${esc(MF.busca)}"></div>
+          <div class="chips" id="mf-tipo"></div>
+          <div class="chips" id="mf-bloco"></div>
+          <div class="chips" id="mf-gen"></div>
+          <div class="mu" id="mf-conta"></div>
+        </div>
+        <div class="mont-lista" id="mf-lista"></div>
+      </div>
+      <div class="mont-dir">
+        <div class="mont-cab">
+          <div class="mont-tit" id="vf-tit"></div>
+          <div class="mont-placar" id="vf-placar"></div>
+          <div class="chips" id="vf-tipo"></div>
+          <div class="chips" id="vf-gen"></div>
+          <div class="chips" id="vf-bloco"></div>
+        </div>
+        <div class="mont-vitrine" id="vf-lista"></div>
+      </div>
+    </div>`;
+    pg.querySelector("#mf-busca").oninput = (ev) => { MF.busca = ev.target.value; clearTimeout(desenharMontador._t); desenharMontador._t = setTimeout(() => desenharEsquerda(pg), 120); };
+    for (const b of pg.querySelectorAll(".mont-troca button")) b.onclick = () => { PAINEL = b.dataset.p; pg.querySelector(".montador").dataset.painel = PAINEL; for (const x of pg.querySelectorAll(".mont-troca button")) x.classList.toggle("ativa", x === b); };
+  }
+  pg.querySelector(".montador").dataset.painel = PAINEL;
+  desenharEsquerda(pg);
+  desenharDireita(pg);
+}
+
+function desenharEsquerda(pg){
+  const daMarca = DADOS.itens.filter(it => it.m === MF.marca);
+  chips(pg, "mf-marca", [["OLY", "Olympikus"], ["UA", "Under Armour"]], new Set([MF.marca]), v => { MF.marca = v; MF.tipo = ""; MF.bloco.clear(); MF.gen.clear(); desenharEsquerda(pg); });
+  const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
+  chips(pg, "mf-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(MF.tipo ? [MF.tipo] : []), v => { MF.tipo = v; MF.bloco.clear(); desenharEsquerda(pg); });
+  const base = MF.tipo ? daMarca.filter(it => it.t === MF.tipo) : daMarca;
+  const cb = new Map(); for (const it of base) if (it.g) cb.set(it.g, (cb.get(it.g) || 0) + 1);
+  chips(pg, "mf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], MF.bloco, v => { if (v === "") MF.bloco.clear(); else if (MF.bloco.has(v)) MF.bloco.delete(v); else MF.bloco.add(v); desenharEsquerda(pg); });
+  const cgn = new Map(); for (const it of base) if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1);
+  chips(pg, "mf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], MF.gen, v => { if (v === "") MF.gen.clear(); else if (MF.gen.has(v)) MF.gen.delete(v); else MF.gen.add(v); desenharEsquerda(pg); });
+  const t = semAcento(MF.busca).split(/\s+/).filter(Boolean);
+  const lista = base.filter(it => (!MF.bloco.size || MF.bloco.has(it.g || "")) && (!MF.gen.size || MF.gen.has(it.ge || ""))
+    && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, it.g].join(" ")).includes(x))));
+  // uma linha por modelo (na ordem do pacote), as cores como miniaturas clicáveis
+  const M = marcas(DADOS.colecao); let html = "", bloco = null, modelos = 0;
+  const porModelo = new Map();
+  for (const it of lista) { const k = chaveModelo(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }
+  for (const cores of porModelo.values()) {
+    const m = cores[0];
+    if ((m.g || "") !== bloco) { bloco = m.g || ""; html += `<div class="mont-sec">${esc(NOME_TIPO[m.t] || m.t)}${bloco ? " · " + esc(bloco) : ""}</div>`; }
+    modelos++;
+    html += `<div class="mcard"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div></div>
+      <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida"; return `<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (sel ? "tirar da vitrine" : "pôr na vitrine"))}">${fotoMini(it)}<div class="mcod">${esc(it.c)}</div>${sel ? `<i class="ok">✓</i>` : ""}</div>`; }).join("")}</div>
+    </div>`;
+  }
+  const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
+  pg.querySelector("#mf-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) — toque na cor para pôr na vitrine`;
+  for (const b of L.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
+  for (const th of L.querySelectorAll(".mthumb:not(.fora)")) th.onclick = () => { th.classList.add("pulso"); setTimeout(() => th.classList.remove("pulso"), 500); alternar(th.dataset.kc, "montador"); };
+}
+const fotoMini = it => { const src = srcFoto(it); return src ? `<img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">` : `<div class="sem">sem foto</div>`; };
+
+function desenharDireita(pg){
+  const todas = escolhidas();
+  const ct = new Map(), cgn = new Map(), cb = new Map();
+  for (const it of todas) { ct.set(it.t, (ct.get(it.t) || 0) + 1); if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1); if (it.g) cb.set(it.g, (cb.get(it.g) || 0) + 1); }
+  chips(pg, "vf-tipo", [["", "tudo"], ...TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => [v, r, ct.get(v)])], VF.tipo, v => { if (v === "") VF.tipo.clear(); else if (VF.tipo.has(v)) VF.tipo.delete(v); else VF.tipo.add(v); desenharDireita(pg); });
+  chips(pg, "vf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], VF.gen, v => { if (v === "") VF.gen.clear(); else if (VF.gen.has(v)) VF.gen.delete(v); else VF.gen.add(v); desenharDireita(pg); });
+  chips(pg, "vf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], VF.bloco, v => { if (v === "") VF.bloco.clear(); else if (VF.bloco.has(v)) VF.bloco.delete(v); else VF.bloco.add(v); desenharDireita(pg); });
+  const lista = todas.filter(it => (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(it.g || "")))
+    .sort((a, b) => ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
+  const modelos = new Set(todas.map(it => it.m + "|" + it.r)).size, soma = todas.reduce((s, it) => s + (+it.p || 0), 0);
+  pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
+  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b> cor(es)</span><span><b>${modelos}</b> modelo(s)</span><span><b>${esc(soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—")}</b> em PDV</span>`;
+  const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
+  const V = pg.querySelector("#vf-lista");
+  V.innerHTML = lista.length ? lista.map(it => `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">
+      <button type="button" class="mais tira" data-kc="${esc(chaveCor(it))}" title="tirar da vitrine">×</button>
+      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}</div>
+      <div class="vtx"><div class="vnome">${esc(it.n)}</div>
+        <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}${it.cd && it.cd !== it.c ? " · " + esc(it.cd) : ""}</span></div>
+        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lançamento</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
+        <div class="mu">${esc(it.ge || "")}${it.nu ? " · " + esc(it.nu) : ""}${it.g ? " · " + esc(titulo(it.g)) : ""}</div></div>
+    </div>`).join("") : `<div class="vvazia">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} está vazia.<br><small>Toque numa cor da coleção, à esquerda, e ela sobe para cá.</small>` : "Escolha o cliente."}</div>`;
+  for (const b of V.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
+  for (const b of V.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); alternar(b.dataset.kc, "montador"); };
+  for (const f of V.querySelectorAll(".vfoto")) f.onclick = () => abrirLuz(ELV, f.dataset.k, "montando");
+  const nova = V.querySelector(".vcard.nova"); if (nova) { nova.scrollIntoView({ block: "nearest", behavior: "smooth" }); setTimeout(() => nova.classList.remove("nova"), 5_000); }   // 5 s (escrito assim por causa do guarda de números do publicador)
+}
+let NOVA = null;   // a cor que acabou de subir: brilha 5 s e para (animação é evento; estado é repouso)
 
 // pôr / tirar (escolhida) e retirar / voltar (atual): grava no banco na hora, com o login dele; a tela muda antes e volta se o banco recusar
 async function alternar(kc, modo){
@@ -279,13 +383,14 @@ async function alternar(kc, modo){
   const col = atual ? VIT.atual.colecao : DADOS.colecao, estado = atual ? "retirar" : "escolhida", M = marcas(col);
   const tinha = M.get(kc) === estado;
   if (tinha) M.delete(kc); else M.set(kc, estado);
+  NOVA = (!tinha && !atual) ? kc : null;
   refrescar();
   const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: col, marca: it.m, referencia: it.r, cor: it.c };
   const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(Object.assign({ estado, estado_anterior: atual ? (it.st || null) : null }, linha));
   if (r.error) {
     if (tinha) M.set(kc, estado); else M.delete(kc);
     VIT.erro = "O banco recusou a vitrine: " + r.error.message; refrescar();
-    const e = (modo === "colecao" ? EL : ELV).querySelector(modo === "colecao" ? "#col-erro" : "#vit-erro"); if (e) { e.textContent = VIT.erro; e.classList.remove("oculto"); }
+    const raiz = modo === "colecao" ? EL : ELV, e = raiz && raiz.querySelector(modo === "colecao" ? "#col-erro" : "#vit-erro"); if (e) { e.textContent = VIT.erro; e.classList.remove("oculto"); }
     return;
   }
   VIT.erro = "";
@@ -296,7 +401,14 @@ function refrescar(){
     for (const c of EL.querySelectorAll("#col-pagina .cor")) { const k = c.dataset.kc, sel = M.get(k) === "escolhida", b = c.querySelector(".mais"); c.classList.toggle("sel", sel); if (b) { b.classList.toggle("on", sel); b.textContent = sel ? "✓" : "+"; b.title = sel ? "tirar da vitrine" : "pôr na vitrine"; } }
     const conta = EL.querySelector("#col-conta"); if (conta) conta.textContent = conta.textContent.replace(/vitrine [^:]+: \d+ cor\(es\)/, `vitrine ${nomeCli(VIT.cliente)}: ${contaEscolhidas()} cor(es)`);
   }
-  if (ELV && ELV.querySelector(".cat")) desenharVitrine();
+  if (ELV && ELV.querySelector(".cat")) {
+    const pg = ELV.querySelector("#vit-pagina");
+    if (VIT.vista !== "atual" && pg && pg.querySelector(".montador")) {   // o montador só redesenha as duas metades (sem perder filtro nem rolagem)
+      const M = marcas(DADOS.colecao);
+      for (const th of pg.querySelectorAll(".mthumb")) { const sel = M.get(th.dataset.kc) === "escolhida"; th.classList.toggle("sel", sel); const ok = th.querySelector(".ok"); if (sel && !ok) th.insertAdjacentHTML("beforeend", `<i class="ok">✓</i>`); if (!sel && ok) ok.remove(); }
+      desenharDireita(pg);
+    } else desenharVitrine();
+  }
 }
 
 async function copiar(b){
@@ -312,7 +424,7 @@ function abrirLuz(raiz, k, modo){
   const fonte = (modo === "atual" && VIT.atual) ? VIT.atual.itens : DADOS.itens, it = fonte.find(x => chave(x) === k);
   if (!it) return;
   const grande = it.u || srcFoto(it);
-  const luz = raiz.querySelector(".luz");
+  const luz = raiz.querySelector(".luz"); if (!luz) return;
   luz.innerHTML = `<div class="quadro"><button type="button" class="fecha">×</button>
     <div class="angulos">${grande ? `<img src="${esc(grande)}" alt="" onerror="Colecao.fotoFalhouGrande(this)">` : `<div class="mu">sem foto</div>`}</div>
     <div class="tx"><b>${esc(it.n)}</b><div class="mu"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button> · ${esc(it.c)}${it.cd ? " · " + esc(it.cd) : ""}${it.st ? " · " + esc(it.st) : ""}</div><div class="preco">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <span class="selo lanc">lançamento</span>` : ""}${ehNova(it) ? ` <span class="selo nova">cor nova</span>` : ""}</div></div></div>`;

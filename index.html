@@ -239,6 +239,42 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .colecao .vit-conta{font-weight:800;font-size:1rem;color:var(--ink)}
 /* a coleção ATUAL (15/10): situação em cinza; "retirar" = foto a 40%, cor riscada, etiqueta cinza; o botão com texto (retirar / voltar) */
 .colecao .st{font-size:.6rem;color:#787B86;margin-top:2px}
+/* ---- o MONTADOR da vitrine (15/10, orientação dele ao vivo): tela partida — esquerda a coleção com filtros e busca, direita a vitrine
+   do cliente dos mais caros aos mais baratos; "mais bonito, mais visual, gamificar" — animação é evento (sobe e brilha 5 s), estado é repouso ---- */
+.montador{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start}
+.mont-troca{display:none;gap:6px;margin-bottom:8px}.mont-troca button{width:auto;margin:0;padding:8px 14px;border-radius:999px}.mont-troca button.ativa{background:var(--acc);color:#000000;border-color:var(--acc)}.mont-troca b{margin-left:4px}
+.mont-esq{background:var(--card);border-radius:14px;padding:10px}.mont-filtros .chips{margin-top:6px}.mont-filtros .linha-topo input{padding:9px 12px}
+.mont-lista{max-height:74vh;overflow:auto;margin-top:8px;padding-right:4px}
+.mont-sec{font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#ADAEB3;margin:12px 2px 4px;padding-left:8px;border-left:3px solid #FFFF1A}
+.mcard{background:rgba(120,123,134,.14);border-radius:12px;padding:8px 10px;margin:6px 0}
+.mnome{font-weight:800;font-size:.9rem;line-height:1.15}.mref{font-size:.74rem;color:var(--mu);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.mpdv{color:#FFFF1A;font-weight:800}
+.mcard .ref{background:rgba(120,123,134,.3);color:var(--ink);font-size:.72rem;padding:1px 6px;border-radius:5px;border:0;margin:0;width:auto;cursor:copy;font-weight:700}.mcard .ref.copiado{background:#FFFF1A;color:#000000}
+.mthumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.mthumb{width:76px;position:relative;text-align:center;cursor:pointer}.mthumb img{width:76px;height:76px;object-fit:contain;background:#FFFFFF;border-radius:9px;display:block}
+.mthumb .sem{width:76px;height:76px;border-radius:9px;background:rgba(120,123,134,.3);display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#787B86}
+.mthumb.sel img{outline:3px solid #2E3EFC;outline-offset:-3px}.mthumb.fora{opacity:.4;cursor:not-allowed}
+.mthumb .ok{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:#2E3EFC;color:#F6F5F0;font-style:normal;font-weight:800;font-size:.75rem;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mcod{font-size:.62rem;color:var(--mu);margin-top:3px;font-weight:700}
+@keyframes pulso{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}.mthumb.pulso img{animation:pulso .5s ease-out}
+.mont-dir{background:var(--card);border-radius:14px;padding:10px}
+.mont-tit{font-weight:800;font-size:1.05rem}.mont-placar{display:flex;gap:8px;margin:8px 0 6px;flex-wrap:wrap}
+.mont-placar span{background:rgba(120,123,134,.22);border-radius:10px;padding:6px 10px;font-size:.76rem;color:var(--mu)}.mont-placar b{color:#FFFF1A;font-size:1.05rem;margin-right:4px}
+.mont-cab .chips{margin-top:6px}
+.mont-vitrine{background:#E6E7E8;border-radius:10px;padding:10px;margin-top:8px;max-height:74vh;overflow:auto;font-family:Arial,Helvetica,sans-serif;color:#000000}
+.vcard{position:relative;display:grid;grid-template-columns:128px minmax(0,1fr);gap:12px;background:#FFFFFF;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.14);padding:10px;margin-bottom:10px}
+.vfoto{position:relative;aspect-ratio:1/1;background:#FFFFFF;border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:zoom-in}.vfoto img{width:100%;height:100%;object-fit:contain;display:block}.vfoto img.oculto{display:none}
+.vfoto .sem{color:#787B86;font-size:.7rem}.vfoto .tri{position:absolute;top:0;right:0;width:0;height:0;border-top:22px solid #2E3EFC;border-left:22px solid transparent}
+.vtx{min-width:0;padding-right:30px}.vnome{font-weight:800;font-size:1rem;line-height:1.15;text-wrap:balance}
+.vlinha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px}.vcor{font-size:.78rem;color:#787B86;font-weight:700}
+.vpdv{font-weight:900;font-size:1.3rem;color:#2E3EFC;letter-spacing:-.01em}
+.vcard .ref{background:transparent;color:#2E3EFC;font-weight:800;font-size:.8rem;padding:1px 6px;border:0;border-radius:5px;margin:0;width:auto;cursor:copy;user-select:all}.vcard .ref.copiado{background:#FFFF1A;color:#000000}
+.vcard .mu{color:#787B86;font-size:.72rem;margin-top:4px}.vcard .selo{font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase}.vcard .selo.lanc{background:#FFFF1A;color:#000000}.vcard .selo.inicio{background:#ADAEB3;color:#000000;text-transform:none}
+.vcard .mais.tira{top:8px;right:8px;left:auto;border-color:#787B86;color:#000000}
+@keyframes sobe{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.vcard.nova{animation:sobe .6s ease-out;outline:3px solid #2E3EFC;outline-offset:-1px}.vcard{transition:outline-color 1.5s}
+.vvazia{padding:42px 16px;text-align:center;color:#787B86;font-weight:800;font-size:1rem}.vvazia small{display:block;margin-top:8px;font-weight:600;font-size:.8rem}
+@media (max-width:860px){.montador{grid-template-columns:1fr}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.vcard{grid-template-columns:104px minmax(0,1fr)}}
+@media print{.mont-esq,.mont-troca,.mont-cab .chips,.mont-placar{display:none}.montador{display:block}.mont-dir{background:#fff;padding:0}.mont-vitrine{max-height:none;overflow:visible;-webkit-print-color-adjust:exact;print-color-adjust:exact}.vcard{break-inside:avoid;border:1px solid #ddd;box-shadow:none}}
 /* circular OLY (15/10): início de faturamento = selo preto sobre cinza claro; fora da circular = linha cinza */
 .colecao .selo.inicio{display:inline-block;background:#ADAEB3;color:#000000;margin-top:4px;text-transform:none;letter-spacing:0;font-size:.6rem}
 .colecao .circ{font-size:.6rem;color:#787B86;font-weight:700;margin-top:2px}
@@ -254,7 +290,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.6</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.7</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -312,7 +348,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=7"></script>
+<script src="colecao.js?v=8"></script>
 <script src="atas.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
