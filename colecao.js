@@ -47,6 +47,20 @@ const chave = it => it.m + "|" + it.t + "|" + it.o;
 const chaveModelo = it => it.m + "|" + it.t + "|" + (it.g || "") + "|" + (it.n || "") + "|" + (it.r || "");
 const sit = it => (it.s || "").toLowerCase();
 const ehLanc = it => sit(it).startsWith("lan"), ehNova = it => sit(it).startsWith("cor");
+// 16/10, pedido dele via NÚCLEO: no tênis Olympikus a família é a CLASSIFICAÇÃO OFICIAL 1S27 (coluna FAIXA do DNA, por artigo + cor;
+// campo `fo`), exibida como CAMINHADA P1 · CAMINHADA P2 · CORRIDA · CORRIDA LEVE · TREINO · CLÁSSICOS · INFANTIL · CHINELOS; o que não
+// está na circular (Família Corre, circular própria por vir) vira "sem família na circular". Nos outros tipos e na UA, os blocos do PICASSO.
+const SEM_FAM = "sem família na circular";
+const FAM_ORDEM = ["CAMINHADA P1", "CAMINHADA P2", "CORRIDA", "CORRIDA LEVE", "TREINO", "CLÁSSICOS", "INFANTIL", "CHINELOS", SEM_FAM];
+// só vale onde a consulta traz o campo `fo` (colecao_consulta, 0027): a vitrine ATUAL (2S26, vitrine_atual_consulta) não o traz e segue nos blocos
+const oficial = it => it.m === "OLY" && it.t === "TENIS" && it.fo !== undefined;
+const familiaDe = it => oficial(it) ? (it.fo || SEM_FAM) : (it.g || "");
+const famOrd = f => { const i = FAM_ORDEM.indexOf(f); return i < 0 ? 50 : i; };
+// a ordem de exibição (a mesma da consulta: marca → tipo → ordem do pacote), com a família oficial entre o tipo e a ordem no tênis OLY.
+// `o` repete entre tipos, por isso o tipo entra na chave — senão a lista "Geral" do montador embaralha (visto no harness, 16/10)
+const tipoIdx = t => { const i = TIPOS.findIndex(([v]) => v === t); return i < 0 ? 9 : i; };
+const ordenar = lista => lista.slice().sort((a, b) => (a.m < b.m ? -1 : a.m > b.m ? 1 : 0) || (tipoIdx(a.t) - tipoIdx(b.t))
+  || ((oficial(a) ? famOrd(familiaDe(a)) : 0) - (oficial(b) ? famOrd(familiaDe(b)) : 0)) || (a.o - b.o));
 const marcas = col => { if (!VIT.marcas.has(col)) VIT.marcas.set(col, new Map()); return VIT.marcas.get(col); };
 const emCarteira = it => /carteira/i.test(it.st || "");
 // por que a cor NÃO vai para a vitrine deste cliente (null = pode)
@@ -100,9 +114,9 @@ function itensFiltrados(){
   const t = semAcento(S.busca).split(/\s+/).filter(Boolean);
   return DADOS.itens.filter(it => it.m === S.marca
     && (!S.tipo || it.t === S.tipo)
-    && (!S.grupo.size || S.grupo.has(it.g || ""))
+    && (!S.grupo.size || S.grupo.has(familiaDe(it)))
     && (!S.selo.size || (S.selo.has("l") && ehLanc(it)) || (S.selo.has("cn") && ehNova(it)))
-    && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, it.g, it.ge, it.nu].join(" ")).includes(x))));
+    && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, familiaDe(it), it.ge, it.nu].join(" ")).includes(x))));
 }
 
 function chips(raiz, id, lista, sel, aoClicar){
@@ -120,7 +134,7 @@ function desenhar(){
         <div class="linha-topo"><div class="chips marcas" id="col-marca"></div>
           <input type="search" id="col-busca" placeholder="buscar: produto, referência, cor, bloco…" autocomplete="off" value="${esc(S.busca)}"></div>
         <label>tipo</label><div class="chips" id="col-tipo"></div>
-        <div id="col-bloco-grupo"><label>bloco</label><div class="chips" id="col-grupo"></div></div>
+        <div id="col-bloco-grupo"><label>família</label><div class="chips" id="col-grupo"></div></div>
         <div class="chips" id="col-selo" style="margin-top:6px"></div>
         <label>vitrine de (o "+" no cartão leva a cor para a vitrine deste cliente)</label><div class="chips" id="col-cliente"></div>
         <div class="acoes"><button type="button" id="col-pdf" class="sec">exportar PDF</button></div>
@@ -138,9 +152,9 @@ function desenhar(){
   const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
   chips(el, "col-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(S.tipo ? [S.tipo] : []), v => { S.tipo = v; S.grupo.clear(); desenhar(); });
   const doTipo = S.tipo ? daMarca.filter(it => it.t === S.tipo) : [];
-  const cg = new Map(); for (const it of doTipo) if (it.g) cg.set(it.g, (cg.get(it.g) || 0) + 1);
+  const cg = new Map(); for (const it of ordenar(doTipo)) { const f = familiaDe(it); if (f) cg.set(f, (cg.get(f) || 0) + 1); }
   el.querySelector("#col-bloco-grupo").classList.toggle("oculto", !S.tipo || cg.size < 2);
-  chips(el, "col-grupo", [["", "todos"], ...[...cg.entries()].map(([v, n]) => [v, titulo(v), n])], S.grupo, v => { if (v === "") S.grupo.clear(); else if (S.grupo.has(v)) S.grupo.delete(v); else S.grupo.add(v); desenhar(); });
+  chips(el, "col-grupo", [["", "todas"], ...[...cg.entries()].map(([v, n]) => [v, titulo(v), n])], S.grupo, v => { if (v === "") S.grupo.clear(); else if (S.grupo.has(v)) S.grupo.delete(v); else S.grupo.add(v); desenhar(); });
   const base = S.tipo ? doTipo : daMarca;
   chips(el, "col-selo", [["", "sem selo"], ["l", "lançamento", base.filter(ehLanc).length], ["cn", "cor nova", base.filter(ehNova).length]], S.selo, v => { if (v === "") S.selo.clear(); else if (S.selo.has(v)) S.selo.delete(v); else S.selo.add(v); desenhar(); });
   chipsClientes(el, "col-cliente");
@@ -201,13 +215,13 @@ function coluna(cores, modo){
 function montarPagina(lista, modo){
   let html = "", modelos = 0;
   for (const [tv] of TIPOS.filter(([v]) => v)) {
-    const doTipo = lista.filter(it => it.t === tv);
+    const doTipo = ordenar(lista.filter(it => it.t === tv));
     if (!doTipo.length) continue;
     let bloco = null, porModelo = new Map();
     const faixa = () => { const ps = [...porModelo.values()].flat().map(it => it.p).filter(p => p != null); if (!ps.length) return ""; const a = Math.min(...ps), b = Math.max(...ps); return " · " + esc(a === b ? dinheiro(a) : dinheiro(a) + " a " + dinheiro(b)); };
     const fecha = () => { if (bloco == null) return; html += `<div class="bloco"><div class="sec-tit">${esc(NOME_TIPO[tv])}${bloco ? " · " + esc(bloco) : ""} <small>${porModelo.size} modelo(s)${faixa()}</small></div><div class="colunas">${[...porModelo.values()].map(c => coluna(c, modo)).join("")}</div></div>`; modelos += porModelo.size; porModelo = new Map(); };
     for (const it of doTipo) {
-      if ((it.g || "") !== (bloco == null ? null : bloco)) { fecha(); bloco = it.g || ""; }
+      if (familiaDe(it) !== (bloco == null ? null : bloco)) { fecha(); bloco = familiaDe(it); }
       const k = chaveModelo(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it);
     }
     fecha();
@@ -321,20 +335,20 @@ function desenharEsquerda(pg){
   const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
   chips(pg, "mf-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(MF.tipo ? [MF.tipo] : []), v => { MF.tipo = v; MF.bloco.clear(); desenharEsquerda(pg); });
   const base = MF.tipo ? daMarca.filter(it => it.t === MF.tipo) : daMarca;
-  const cb = new Map(); for (const it of base) if (it.g) cb.set(it.g, (cb.get(it.g) || 0) + 1);
+  const cb = new Map(); for (const it of ordenar(base)) { const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
   chips(pg, "mf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], MF.bloco, v => { if (v === "") MF.bloco.clear(); else if (MF.bloco.has(v)) MF.bloco.delete(v); else MF.bloco.add(v); desenharEsquerda(pg); });
   const cgn = new Map(); for (const it of base) if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1);
   chips(pg, "mf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], MF.gen, v => { if (v === "") MF.gen.clear(); else if (MF.gen.has(v)) MF.gen.delete(v); else MF.gen.add(v); desenharEsquerda(pg); });
   const t = semAcento(MF.busca).split(/\s+/).filter(Boolean);
-  const lista = base.filter(it => (!MF.bloco.size || MF.bloco.has(it.g || "")) && (!MF.gen.size || MF.gen.has(it.ge || ""))
-    && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, it.g].join(" ")).includes(x))));
-  // uma linha por modelo (na ordem do pacote), as cores como miniaturas clicáveis
+  const lista = ordenar(base.filter(it => (!MF.bloco.size || MF.bloco.has(familiaDe(it))) && (!MF.gen.size || MF.gen.has(it.ge || ""))
+    && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, familiaDe(it)].join(" ")).includes(x)))));
+  // uma linha por modelo (família oficial → ordem do pacote), as cores como miniaturas clicáveis; o mesmo modelo pode cair em duas famílias conforme a cor
   const M = marcas(DADOS.colecao); let html = "", bloco = null, modelos = 0;
   const porModelo = new Map();
-  for (const it of lista) { const k = chaveModelo(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }
+  for (const it of lista) { const k = chaveModelo(it) + "|" + familiaDe(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }
   for (const cores of porModelo.values()) {
     const m = cores[0];
-    if ((m.g || "") !== bloco) { bloco = m.g || ""; html += `<div class="mont-sec">${esc(NOME_TIPO[m.t] || m.t)}${bloco ? " · " + esc(bloco) : ""}</div>`; }
+    if (familiaDe(m) !== bloco) { bloco = familiaDe(m); html += `<div class="mont-sec">${esc(NOME_TIPO[m.t] || m.t)}${bloco ? " · " + esc(bloco) : ""}</div>`; }
     modelos++;
     html += `<div class="mcard"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div></div>
       <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida"; return `<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (sel ? "tirar da vitrine" : "pôr na vitrine"))}">${fotoMini(it)}<div class="mcod">${esc(it.c)}</div>${sel ? `<i class="ok">✓</i>` : ""}</div>`; }).join("")}</div>
@@ -350,11 +364,11 @@ const fotoMini = it => { const src = srcFoto(it); return src ? `<img loading="la
 function desenharDireita(pg){
   const todas = escolhidas();
   const ct = new Map(), cgn = new Map(), cb = new Map();
-  for (const it of todas) { ct.set(it.t, (ct.get(it.t) || 0) + 1); if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1); if (it.g) cb.set(it.g, (cb.get(it.g) || 0) + 1); }
+  for (const it of ordenar(todas)) { ct.set(it.t, (ct.get(it.t) || 0) + 1); if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1); const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
   chips(pg, "vf-tipo", [["", "tudo"], ...TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => [v, r, ct.get(v)])], VF.tipo, v => { if (v === "") VF.tipo.clear(); else if (VF.tipo.has(v)) VF.tipo.delete(v); else VF.tipo.add(v); desenharDireita(pg); });
   chips(pg, "vf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], VF.gen, v => { if (v === "") VF.gen.clear(); else if (VF.gen.has(v)) VF.gen.delete(v); else VF.gen.add(v); desenharDireita(pg); });
   chips(pg, "vf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], VF.bloco, v => { if (v === "") VF.bloco.clear(); else if (VF.bloco.has(v)) VF.bloco.delete(v); else VF.bloco.add(v); desenharDireita(pg); });
-  const lista = todas.filter(it => (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(it.g || "")))
+  const lista = todas.filter(it => (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
     .sort((a, b) => ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   const modelos = new Set(todas.map(it => it.m + "|" + it.r)).size, soma = todas.reduce((s, it) => s + (+it.p || 0), 0);
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
@@ -370,7 +384,7 @@ function desenharDireita(pg){
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}${it.cd && it.cd !== it.c ? " · " + esc(it.cd) : ""}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lançamento</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
-        <div class="mu">${esc(it.ge || "")}${it.nu ? " · " + esc(it.nu) : ""}${it.g ? " · " + esc(titulo(it.g)) : ""}</div></div>
+        <div class="mu">${esc(it.ge || "")}${it.nu ? " · " + esc(it.nu) : ""}${familiaDe(it) ? " · " + esc(titulo(familiaDe(it))) : ""}</div></div>
     </div>`).join("") : `<div class="vvazia">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} está vazia.<br><small>Toque numa cor da coleção, à esquerda, e ela sobe para cá.</small>` : "Escolha o cliente."}</div>`;
   for (const b of V.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   for (const b of V.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); alternar(b.dataset.kc, "montador"); };
