@@ -182,6 +182,30 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 /* computador: no TOTAL a CMS e o vendedor ficam lado a lado (cabe); nas faixas e famílias ficam empilhados (medido 30/09: lado a lado não cabe) */
 @media (min-width:900px){.mt .tot .num{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.mt .tot .g,.mt .tot .cel.v .g{margin-top:0}}
 @media (prefers-reduced-motion:reduce){.mt .b{animation:none}}
+/* ---- RAIO-X CLIENTES (16/10): uma linha por porta; cluster, regulador, categorias, sazonalidade, pirâmide ---- */
+.raiox .sec-tit{font-weight:800;font-size:.95rem;margin:0 0 8px;color:var(--acc);letter-spacing:.02em}.raiox .sec-tit small,.raiox .sub-tit small{font-weight:500;color:var(--mu);font-size:.74rem;letter-spacing:0}
+.raiox .sub-tit{font-weight:800;font-size:.82rem;margin:14px 0 6px;color:var(--ink)}
+.raiox .rolagem{overflow-x:auto}.raiox table.rx{font-size:.82rem;min-width:560px}.raiox table.rx th{text-align:left;color:var(--mu);font-weight:600;font-size:.72rem;padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.raiox table.rx td{padding:6px 8px;border-bottom:1px solid rgba(120,123,134,.18);vertical-align:middle;white-space:nowrap}.raiox table.rx .n{text-align:right;font-variant-numeric:tabular-nums}.raiox table.rx th.n{text-align:right}
+.raiox table.rx tfoot td{font-weight:800;border-top:2px solid var(--bd);border-bottom:0}.raiox td.loja{font-weight:800}.raiox td.nome{color:var(--mu)}.raiox .cod{display:block;font-size:.68rem}
+.raiox .cl{display:inline-block;min-width:26px;text-align:center;padding:2px 7px;border-radius:999px;font-weight:800;font-size:.76rem;border:1px solid var(--bd)}.raiox .cl-A{background:var(--acc);color:#000;border-color:var(--acc)}.raiox .cl-B{background:#2E3EFC;color:#F6F5F0;border-color:#2E3EFC}.raiox .cl-C{color:var(--mu)}
+.raiox .barra{position:relative;display:inline-block;min-width:88px;height:20px;background:rgba(120,123,134,.14);border-radius:4px;overflow:hidden;text-align:right}.raiox .barra::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--w);background:rgba(46,62,252,.55)}.raiox .barra span{position:relative;padding:0 6px;line-height:20px;font-weight:700}
+.raiox td.pede{color:var(--acc);font-weight:800}.raiox td.sobra{color:var(--mu)}.raiox td.pede small,.raiox td.sobra small{display:block;font-size:.64rem;font-weight:500}.raiox td.pesado{color:var(--acc);font-weight:800}
+.raiox .idx .ibar{position:relative;display:inline-block;width:120px;height:18px;background:rgba(120,123,134,.14);border-radius:4px;text-align:left}.raiox .idx .ibar::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--w);background:rgba(120,123,134,.5);border-radius:4px}
+.raiox .idx .ibar i{position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--ink);opacity:.6}.raiox .idx .ibar span{position:absolute;right:6px;line-height:18px;font-weight:700}.raiox .idx.alto .ibar::before{background:var(--acc)}.raiox .idx.alto span{color:#000}.raiox .idx.baixo span{color:var(--mu)}
+.raiox .leitura{font-size:.9rem;line-height:1.5;background:rgba(120,123,134,.14);border-left:3px solid var(--acc);border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 12px}
+.raiox .legenda{font-size:.74rem;margin-top:10px}.raiox .legenda .am{color:var(--acc)}.raiox .legenda .ci{color:var(--mu)}
+.raiox .grafico{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:3px;align-items:end;height:190px;padding-top:18px;position:relative;border-bottom:1px solid var(--bd)}.raiox .grafico::after{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed rgba(246,245,240,.35)}
+.raiox .grafico .col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}.raiox .grafico .b{width:100%;height:var(--h);background:rgba(120,123,134,.5);border-radius:3px 3px 0 0;min-height:2px}
+.raiox .grafico .pico .b{background:var(--acc)}.raiox .grafico .vale .b{background:transparent;border:1px solid var(--mu);border-bottom:0}.raiox .grafico .v{font-size:.6rem;color:var(--mu);font-variant-numeric:tabular-nums}.raiox .grafico .pico .v{color:var(--acc);font-weight:800}
+.raiox .grafico .m{font-size:.6rem;color:var(--mu);margin-top:4px;writing-mode:vertical-rl;transform:rotate(180deg);height:34px}
+.raiox .duas{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}.raiox .calend{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;margin:4px 0 8px}
+.raiox .calend div{text-align:center;border:1px solid var(--bd);border-radius:6px;padding:4px 0;font-size:.7rem}.raiox .calend b{display:block;color:var(--mu);font-weight:600}.raiox .calend span{font-weight:800}.raiox .calend .pico{background:var(--acc);color:#000;border-color:var(--acc)}.raiox .calend .pico b{color:#000}.raiox .calend .vale{color:var(--mu);border-style:dashed}
+.raiox .partes div,.raiox .pir .faixa{display:grid;grid-template-columns:150px 1fr 110px;gap:10px;align-items:center;margin:4px 0;font-size:.82rem}.raiox .pb{height:16px;background:rgba(120,123,134,.14);border-radius:4px;overflow:hidden}.raiox .pb i{display:block;height:100%;width:var(--w);background:rgba(46,62,252,.7)}
+.raiox .faixa.topo .pb i{background:var(--acc)}.raiox .faixa.meio .pb i{background:rgba(46,62,252,.8)}.raiox .faixa.base .pb i{background:rgba(120,123,134,.6)}.raiox .partes .p,.raiox .pir .p{text-align:right;font-variant-numeric:tabular-nums}.raiox .r{font-weight:700;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.raiox .pirs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px}
+@media (max-width:700px){.raiox .duas,.raiox .pirs{grid-template-columns:1fr}.raiox .grafico{height:150px}.raiox .grafico .v{display:none}.raiox .partes div,.raiox .pir .faixa{grid-template-columns:110px 1fr 90px}}
+@media print{.raiox .filtros{display:none}.raiox .card{background:#fff;color:#000;border:1px solid #ddd;break-inside:avoid}.raiox table.rx td,.raiox table.rx th{color:#000}.raiox td.pede,.raiox .sec-tit{color:#000}.raiox .cl-A{background:#ddd;color:#000}}
 /* ---- ATAS (14/10): uma linha por reunião; toque abre a ata inteira ---- */
 .atas .lista{display:flex;flex-direction:column;gap:8px}.atas .ata{background:var(--card);border-radius:12px;padding:10px 14px;cursor:pointer}.atas .ata:hover{background:rgba(120,123,134,.22)}
 .atas .cab{display:flex;gap:10px;align-items:baseline;font-size:.78rem}.atas .data{font-weight:800;color:var(--acc)}.atas .pasta{font-weight:700;color:#F6F5F0}.atas .fmt{font-size:.7rem}
@@ -303,7 +327,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.11</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.12</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -328,7 +352,9 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
     <button data-aba="colecao">Coleção</button>
     <button data-aba="vitrine">Vitrine</button>
     <button data-aba="atas">Atas</button>
+    <button data-aba="raiox">Raio-X</button>
   </div>
+  <div id="tela-raiox" class="oculto"></div>
   <div id="tela-catalogo" class="oculto"></div>
   <div id="tela-colecao" class="oculto"></div>
   <div id="tela-vitrine" class="oculto"></div>
@@ -363,6 +389,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="catalogo.js?v=2"></script>
 <script src="colecao.js?v=11"></script>
 <script src="atas.js?v=1"></script>
+<script src="raiox.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -421,6 +448,7 @@ const ABAS = {
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
   colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar; toque no + para pôr a cor na vitrine do cliente escolhido. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
   vitrine: { subtitulo: "· vitrine", rodape: "As cores escolhidas para o cliente, gravadas no banco atrás do login: fecha e volta, no celular ou no computador, e estão aqui. × tira da vitrine. Exportar PDF = imprimir." },
+  raiox: { subtitulo: "· raio-x clientes", rodape: "O raio-x do cliente, loja a loja: cluster, regulador, categorias, sazonalidade e pirâmide de PDV. Calculado da AG PORTA pelo NÚCLEO; mora no banco, atrás do login. Imprimir = exportar." },
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
 const COB = { carteira: [], giro: [], erro: null };
@@ -482,9 +510,10 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine";
-  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit);
-  $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit);
+  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine", rx = nova === "raiox";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit); $("tela-raiox").classList.toggle("oculto", !rx);
+  $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit || rx); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit || rx);
+  if (rx) { RaioX.abrir(sb, $("tela-raiox")); return; }
   if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
   if (vit) { Colecao.abrirVitrine(sb, $("tela-vitrine")); return; }
   if (col) { Colecao.abrir(sb, $("tela-colecao")); return; }
