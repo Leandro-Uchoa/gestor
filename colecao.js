@@ -390,19 +390,43 @@ function desenharEsquerda(pg){
     modelos++;
     html += `<div class="mcard" data-kc="${esc(chaveCor(m))}"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}${m.nu ? " " + esc(m.nu) : ""}</span>` : ""}${grandeEspecial(m) && !ehInf(m) ? `<span class="selo ate48" title="numeração até o ${numMax(m)}: cabe grade especial">até ${numMax(m)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div>${gtm ? tetoDoModelo(m) : ""}</div>
       <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida", g = gtm ? gtmDe(it) : null; const mix = g ? (g.mf != null ? g.mf : g.mx) : 0;
-        return `<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${g && g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "classe " + g.cl)}">${esc(g.cl)}</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>`; }).join("")}</div>
+        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${g && g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "classe " + g.cl)}">${esc(g.cl)}</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
     </div>`;
   }
   const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
   pg.querySelector("#mf-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) — toque na cor para pôr na vitrine`;
   for (const b of L.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   for (const th of L.querySelectorAll(".mthumb:not(.fora)")) th.onclick = () => { th.classList.add("pulso"); setTimeout(() => th.classList.remove("pulso"), 500); alternar(th.dataset.kc, "montador"); };
+  ligarCaixas(L);
+}
+// a CAIXA (ele, 19/10 11:4x): "diminuir caixa em caixa, de 12 pares" — o − e o + mexem 12 de cada vez, direto embaixo da cor, no bloco do modelo
+const CAIXA = 12;
+const distDaCor = it => { const k = chaveCor(it), sel = marcas(DADOS.colecao).get(k) === "escolhida", p = VIT.pares.get(k), g = gtmDe(it), teto = g ? (g.vm[gtmMes()] || 0) : 0;
+  if (!sel) return `<div class="mdist vazia" data-kc="${esc(k)}"></div>`;
+  return `<div class="mdist" data-kc="${esc(k)}"><button type="button" class="cx cx-menos" data-kc="${esc(k)}" title="tira uma caixa (${CAIXA} pares)">−</button><span><b>${(p || 0).toLocaleString("pt-BR")}</b><small>${teto ? Math.round((p || 0) * 100 / teto) + "%" : "—"}</small></span><button type="button" class="cx cx-mais" data-kc="${esc(k)}" title="põe uma caixa (${CAIXA} pares)">+</button></div>`; };
+function ligarCaixas(raiz){
+  for (const b of raiz.querySelectorAll(".mdist .cx")) b.onclick = ev => { ev.stopPropagation(); mexerCaixa(b.dataset.kc, b.classList.contains("cx-mais") ? CAIXA : -CAIXA); };
+}
+const GRAVA_PARES = new Map();   // kc → timer: a tela muda na hora; o banco recebe 600 ms depois do último toque
+function mexerCaixa(kc, delta){
+  if (marcas(DADOS.colecao).get(kc) !== "escolhida") return;
+  const p = Math.max(0, (VIT.pares.get(kc) || 0) + delta);
+  VIT.pares.set(kc, p); refrescar();
+  clearTimeout(GRAVA_PARES.get(kc)); GRAVA_PARES.set(kc, setTimeout(() => gravarPares(kc), 600));
+}
+async function gravarPares(kc){
+  const it = DADOS.itens.find(x => chaveCor(x) === kc); if (!it || !VIT.cliente || marcas(DADOS.colecao).get(kc) !== "escolhida") return;
+  const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: DADOS.colecao, marca: it.m, referencia: it.r, cor: it.c }, pares = VIT.pares.get(kc) || 0, grade = VIT.grades.get(kc) || null;
+  const d = await SB.from("vitrine").delete().match(linha); if (d.error) { VIT.erro = "O banco recusou: " + d.error.message; refrescar(); return; }
+  const r = await SB.from("vitrine").insert(Object.assign({ estado: "escolhida", estado_anterior: null, grade, pares }, linha));
+  if (r.error) { marcas(DADOS.colecao).delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.erro = "O banco recusou: " + r.error.message; refrescar(); } else VIT.erro = "";
 }
 // o teto do modelo no mês (o que se digita no GTM) e o que já foi distribuído nas cores — a faixa azul vira amarela quando fecha, vermelha quando passa
 function tetoDoModelo(m){
   const gm = gtmDe(m), mes = gtmMes(), teto = gm ? (gm.vm[mes] || 0) : 0, dist = paresDoModelo(m);
   if (!gm) return "";
-  return `<div class="mteto${dist > teto ? " passou" : (dist === teto && teto ? " cheio" : "")}">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares${dist ? ` · distribuídos <b>${dist.toLocaleString("pt-BR")}</b> · ${dist > teto ? `<em>passou ${(dist - teto).toLocaleString("pt-BR")}</em>` : `ficam <b>${(teto - dist).toLocaleString("pt-BR")}</b>`}` : ""}</div>`;
+  const aberto = teto - dist, cx = Math.floor(Math.abs(aberto) / CAIXA);
+  return `<div class="mteto${dist > teto ? " passou" : (dist === teto && teto ? " cheio" : "")}">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares${dist ? ` · distribuídos <b>${dist.toLocaleString("pt-BR")}</b> · ${aberto < 0 ? `<em>passou ${(-aberto).toLocaleString("pt-BR")} (${cx} cx)</em>` : (aberto ? `em aberto <b>${aberto.toLocaleString("pt-BR")}</b> pares · ${cx} cx` : "<b>fechou</b>")}` : ""}</div>`;
 }
 const fotoMini = it => { const src = srcFoto(it); return src ? `<img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">` : `<div class="sem">sem foto</div>`; };
 
@@ -544,7 +568,7 @@ const GRADES_GTM = it => ["feminina", "masculina", "estendida"].concat(grandeEsp
 const paresDoModelo = (m, menos) => DADOS.itens.filter(it => chaveModelo(it) === chaveModelo(m) && chaveCor(it) !== menos).reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0);
 function perguntarGtm(it, atualGrade, atualPares){
   const g = gtmDe(it), mes = gtmMes(), teto = g ? (g.vm[mes] || 0) : 0, outras = paresDoModelo(it, chaveCor(it)), ficam = Math.max(0, teto - outras);
-  const sugerido = atualPares != null ? atualPares : Math.min(ficam, (g && g.ps[mes]) || ficam);
+  const sugerido = atualPares != null ? atualPares : Math.floor(Math.min(ficam, (g && g.ps[mes]) || ficam) / CAIXA) * CAIXA;   // em caixas fechadas
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro gtm"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}</span></div>
@@ -552,11 +576,12 @@ function perguntarGtm(it, atualGrade, atualPares){
       <div class="gq-perg">Em que grade?</div>
       <div class="gq-botoes">${GRADES_GTM(it).map(v => `<button type="button" data-g="${v}" class="${v === atualGrade ? "ativa" : ""}">${esc(ROTULO_GRADE[v])}</button>`).join("")}</div>
       <div class="gq-perg">Quantos pares desta cor?</div>
-      <div class="gq-pares"><input type="number" min="0" step="1" inputmode="numeric" value="${sugerido}"><span class="gq-pct"></span></div>
+      <div class="gq-pares"><button type="button" class="cx cx-menos" title="tira uma caixa (${CAIXA} pares)">−</button><input type="number" min="0" step="${CAIXA}" inputmode="numeric" value="${sugerido}"><button type="button" class="cx cx-mais" title="põe uma caixa (${CAIXA} pares)">+</button><span class="gq-pct"></span></div>
       <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
     let grade = atualGrade || null;
     const inp = luz.querySelector("input"), pct = luz.querySelector(".gq-pct"), sobe = luz.querySelector(".gq-sobe");
-    const mostra = () => { const p = +inp.value || 0; pct.textContent = teto ? `${Math.round(p * 100 / teto)}% do modelo${p > ficam ? " · passa do teto" : ""}` : ""; pct.classList.toggle("passou", p > ficam); sobe.disabled = !grade; };
+    const mostra = () => { const p = +inp.value || 0; pct.textContent = teto ? `${Math.round(p * 100 / teto)}% do modelo · ${Math.floor(p / CAIXA)} cx${p > ficam ? " · passa do teto" : ""}` : ""; pct.classList.toggle("passou", p > ficam); sobe.disabled = !grade; };
+    for (const b of luz.querySelectorAll(".gq-pares .cx")) b.onclick = () => { inp.value = Math.max(0, (+inp.value || 0) + (b.classList.contains("cx-mais") ? CAIXA : -CAIXA)); mostra(); };
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
     const confirma = () => { if (!grade) return; fecha({ grade, pares: Math.max(0, Math.round(+inp.value || 0)) }); };
     const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter") confirma(); };
@@ -592,7 +617,11 @@ function refrescar(){
     if (VIT.vista !== "atual" && pg && pg.querySelector(".montador")) {   // o montador só redesenha as duas metades (sem perder filtro nem rolagem)
       const M = marcas(DADOS.colecao);
       for (const th of pg.querySelectorAll(".mthumb")) { const sel = M.get(th.dataset.kc) === "escolhida"; th.classList.toggle("sel", sel); const ok = th.querySelector(".ok"); if (sel && !ok) th.insertAdjacentHTML("beforeend", `<i class="ok">✓</i>`); if (!sel && ok) ok.remove(); }
-      if (ehGtm()) for (const c of pg.querySelectorAll(".mcard[data-kc]")) { const m = DADOS.itens.find(x => chaveCor(x) === c.dataset.kc), v = c.querySelector(".mteto"); if (m && v) v.outerHTML = tetoDoModelo(m); }
+      if (ehGtm()) {
+        for (const c of pg.querySelectorAll(".mcard[data-kc]")) { const m = DADOS.itens.find(x => chaveCor(x) === c.dataset.kc), v = c.querySelector(".mteto"); if (m && v) v.outerHTML = tetoDoModelo(m); }
+        for (const d of pg.querySelectorAll(".mdist")) { const it = DADOS.itens.find(x => chaveCor(x) === d.dataset.kc); if (it) d.outerHTML = distDaCor(it); }
+        ligarCaixas(pg);
+      }
       desenharDireita(pg);
     } else desenharVitrine();
   }
