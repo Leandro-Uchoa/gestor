@@ -123,6 +123,11 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cliente table.cart td,.cliente table.ped td{white-space:nowrap;vertical-align:top}.cliente table.cart td small,.cliente table.ped td small{display:block;font-size:.64rem;color:var(--mu);white-space:normal;max-width:260px}.cliente table.cart select.dec,.cliente table.cart input.dec{margin:0;padding:3px 6px;font-size:.74rem;width:auto;min-width:0}.cliente table.cart input.dec[data-campo=volume]{width:64px}.cliente table.cart input.dec[data-campo=destinatario]{width:110px}.cliente table.cart input.dec[data-campo=nota]{width:150px}
 .cliente table.cart tr.decidida td:first-child{box-shadow:inset 3px 0 0 var(--amarelo)}.cliente table.cart small.xl.dif{color:var(--amarelo)}
 .cliente table.ped tr.riscada td{text-decoration:line-through;color:var(--mu)}.cliente .chip.conferir{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.cliente table.ped button.orig{width:auto;margin:0 2px 0 0;padding:3px 8px;font-size:.72rem}
+#fale{position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));max-height:70vh;display:flex;flex-direction:column;z-index:50;background:#1a1b1e;border:1px solid var(--cinza-escuro);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#fale.oculto{display:none}
+.fale-topo{display:flex;align-items:center;gap:8px}.fale-topo b{color:var(--amarelo)}.fale-topo small{flex:1;font-size:.7rem}.fale-topo button{width:auto;margin:0;padding:2px 8px}
+.fale-lista{flex:1;overflow:auto;min-height:80px;max-height:40vh;margin:8px 0;display:flex;flex-direction:column;gap:6px}.fm{max-width:88%;padding:6px 10px;border-radius:10px;font-size:.84rem;line-height:1.35}.fm span{white-space:pre-wrap}.fm small{display:block;font-size:.62rem;color:var(--mu);margin-top:2px}.fm.eu{align-self:flex-end;background:rgba(46,62,252,.35)}.fm.ti{align-self:flex-start;background:rgba(120,123,134,.25);border-left:3px solid var(--amarelo)}
+.fale-linha{display:flex;gap:6px}.fale-linha textarea{flex:1;margin:0;padding:8px 10px;font-size:.84rem;resize:vertical}.fale-linha button{width:auto;margin:0;padding:8px 12px}
+.tradeaba select.st{margin:0;padding:3px 6px;font-size:.74rem;width:auto}.tradeaba .atu{margin-top:4px;min-height:1.1em;font-size:.76rem;color:var(--ink);border-left:3px solid var(--azul);padding:1px 0 1px 6px;outline:none;white-space:normal;max-width:220px}.tradeaba .atu:empty::before{content:"sua atualização…";color:var(--mu);opacity:.6}.tradeaba .atu:focus{background:rgba(46,62,252,.12)}
 .tradeaba .filtros .linha{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 8px}.tradeaba .filtros label{margin:0;min-width:70px}.tradeaba .filtros input{margin:4px 0 0;padding:9px 12px}
 .tradeaba table.tr td{vertical-align:top}.tradeaba td.estr{position:relative;min-width:220px;white-space:normal}.tradeaba td.estr .barra{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:rgba(46,62,252,.18);pointer-events:none}.tradeaba td.estr>*:not(.barra){position:relative}
 .tradeaba td .nota{display:block;color:var(--mu);font-size:.7rem;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}.tradeaba td .nota.aberta{white-space:normal}
@@ -460,7 +465,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.58</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.59</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -491,7 +496,12 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
     <button data-aba="trade">Trade</button>
   </div>
   <!-- 19/10, ele: "cada botão abre no próprio local; e dentro do local eu tenho a opção de abrir numa outra janela" -->
-  <div class="tela-topo"><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
+  <div class="tela-topo"><button type="button" id="bt-fale" class="sec" title="escreva para o TI daqui; a resposta aparece aqui mesmo">fale com o TI ✉</button><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
+  <!-- 19/10, ele: "um campo de conversa contigo dentro do Gestor". É caixa de correio pelo banco (gestor_mensagem): o que ele escreve
+       chega ao TI (vigia no banco) e a resposta volta aqui. Não é IA dentro da página — isso é outra decisão (custo e chave da API). -->
+  <div id="fale" class="card oculto"><div class="fale-topo"><b>Fale com o TI</b> <small class="mu" id="fale-estado"></small><button type="button" class="sec" id="fale-fecha">×</button></div>
+    <div id="fale-lista" class="fale-lista"></div>
+    <div class="fale-linha"><textarea id="fale-txt" rows="2" placeholder="escreva aqui e aperte Enter (Shift+Enter quebra linha). O TI responde aqui mesmo."></textarea><button type="button" id="fale-envia">enviar</button></div></div>
   <div id="tela-cliente" class="oculto"></div>
   <div id="tela-raiox" class="oculto"></div>
   <div id="tela-topics" class="oculto"></div>
@@ -531,8 +541,8 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=46"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=3"></script>
-<script src="cliente.js?v=3"></script>
-<script src="trade.js?v=1"></script>
+<script src="cliente.js?v=4"></script>
+<script src="trade.js?v=2"></script>
 <script src="topics.js?v=4"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
@@ -697,6 +707,32 @@ function enderecoDaAba(){
 }
 function outraJanela(url){ const w = Math.min(screen.availWidth, 1400), h = Math.min(screen.availHeight, 900); window.open(url, "_blank", `popup=yes,width=${w},height=${h},left=0,top=0`); }
 $("bt-janela").onclick = () => outraJanela(enderecoDaAba());
+// ---------- Fale com o TI (19/10): insere em gestor_mensagem; relê a cada 20 s enquanto a caixa está aberta
+const FALE = { aberta: false, esc: null, timer: null, ultimo: null };
+async function faleLer(){
+  const r = await sb.from("gestor_mensagem").select("id,texto,enviado_em,resposta,respondido_em,respondido_por,lido_em").order("enviado_em", { ascending: false }).limit(30);
+  if (r.error) { $("fale-estado").textContent = "o banco recusou: " + r.error.message; return; }
+  const lista = (r.data || []).reverse();
+  $("fale-lista").innerHTML = lista.map(m => `<div class="fm eu"><span>${esc(m.texto)}</span><small>${esc(hhmm(m.enviado_em))}${m.lido_em ? " · lida" : ""}</small></div>${m.resposta ? `<div class="fm ti"><span>${esc(m.resposta)}</span><small>TI · ${esc(hhmm(m.respondido_em))}</small></div>` : ""}`).join("") || `<div class="mu">nenhuma mensagem ainda.</div>`;
+  $("fale-lista").scrollTop = $("fale-lista").scrollHeight;
+  const pend = lista.filter(m => !m.resposta).length; $("fale-estado").textContent = pend ? pend + " sem resposta · o TI lê em até 2 min quando a sala está aberta" : "o TI responde aqui";
+}
+const hhmm = t => t ? new Date(t).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+async function faleAbrir(){
+  FALE.aberta = !FALE.aberta; $("fale").classList.toggle("oculto", !FALE.aberta);
+  if (!FALE.aberta) { clearInterval(FALE.timer); return; }
+  if (!FALE.esc) { const e = await sb.from("escritorio").select("id").limit(1); FALE.esc = (e.data && e.data[0] && e.data[0].id) || null; }
+  await faleLer(); $("fale-txt").focus(); FALE.timer = setInterval(faleLer, 20000);
+}
+async function faleEnviar(){
+  const t = $("fale-txt").value.trim(); if (!t) return;
+  const est = ABA === "cliente" ? (window.Cliente && Cliente.estado()) : ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine()) : null;
+  const r = await sb.from("gestor_mensagem").insert({ escritorio_id: FALE.esc, texto: t, contexto: Object.assign({ aba: ABA }, est || {}) });
+  if (r.error) { $("fale-estado").textContent = "não foi: " + r.error.message; return; }
+  $("fale-txt").value = ""; await faleLer();
+}
+$("bt-fale").onclick = faleAbrir; $("fale-fecha").onclick = faleAbrir; $("fale-envia").onclick = faleEnviar;
+$("fale-txt").onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); faleEnviar(); } };
 function mostrarCobertura(){
   if (COB.erro) { $("cobertura").textContent = "não consegui ler a cobertura (" + COB.erro + ") — recarregue a página; sem a cobertura não respondo"; return; }
   $("cobertura").textContent = "carteira: " + (COB.carteira.map(mesBR).join(", ") || "sem carga") + " · giro: " + (COB.giro.map(mesBR).join(", ") || "sem carga");

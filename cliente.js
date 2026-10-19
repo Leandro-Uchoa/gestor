@@ -333,5 +333,5 @@ async function desenharPedidos(corpo, d){
   };
 }
 
-window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao };
+window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao, recarregar: () => { DOCS = {}; } };
 })();
