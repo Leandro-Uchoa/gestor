@@ -26,7 +26,7 @@ async function abrir(sb, el){
     // o bloco de abertura: o do endereço (#bloco=…), senão o último que ele abriu neste aparelho, senão o primeiro
     const h = new URLSearchParams(location.hash.slice(1)).get("bloco");
     let lembrado = null; try { lembrado = localStorage.getItem("gestor.topics.bloco"); } catch (e) {}
-    S.bloco = [h, lembrado].find(x => x && D.blocos.some(b => b.nome === x)) || (D.blocos[0] || {}).nome;
+    S.bloco = [S.bloco, h, lembrado].find(x => x && D.blocos.some(b => b.nome === x)) || (D.blocos[0] || {}).nome;   // S.bloco: pedido pela aba Cliente (19/10)
   }
   desenhar();
 }
@@ -133,5 +133,5 @@ async function marcar(id){
 async function responder(id, resposta){
   if (await gravar(id, { resposta: resposta || null })) { desenharAgora(); desenharCorpo(); }
 }
-window.Topics = { abrir, estado: () => ({ bloco: S.bloco }) };
+window.Topics = { abrir, estado: () => ({ bloco: S.bloco }), ir: b => { if (b) { S.bloco = b; S.vista = "pendentes"; S.agora = "fechado"; S.busca = ""; if (D && !D.blocos.some(x => x.nome === b)) return; try { localStorage.setItem("gestor.topics.bloco", b); } catch (e) {} } } };
 })();

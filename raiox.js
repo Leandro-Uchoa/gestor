@@ -32,8 +32,8 @@ async function abrir(sb, el){
     if (!LISTA.length) { el.innerHTML = `<div class="card mu">Nenhum cliente com raio-x ainda. O NÚCLEO calcula (AG PORTA) e o TI carrega.</div>`; return; }
     const h = new URLSearchParams(location.hash.slice(1));            // 19/10: #aba=raiox&cliente=…&vista=… (outra janela) abre onde ele estava
     if (!S.cliente && h.get("cliente") && LISTA.some(c => c.cliente === h.get("cliente"))) { S.cliente = h.get("cliente"); if (h.get("vista")) S.vista = h.get("vista"); }
-    S.cliente = S.cliente || LISTA[0].cliente;
   }
+  if (!S.cliente || !LISTA.some(c => c.cliente === S.cliente)) S.cliente = LISTA[0].cliente;   // 19/10: a aba Cliente pede um cliente antes de a lista existir
   await desenhar();
 }
 
@@ -222,5 +222,5 @@ function vistaPir(d){
 const nivel = k => /TOPO/i.test(k) ? 3 : /MEIO/i.test(k) ? 2 : /BASE/i.test(k) ? 1 : parseFloat(String(k).replace(",", ".")) || 0;
 const nivelNome = k => /TOPO/i.test(k) ? "topo" : /MEIO/i.test(k) ? "meio" : /BASE/i.test(k) ? "base" : "";
 
-window.RaioX = { abrir, estado: () => ({ cliente: S.cliente, vista: S.vista }) };
+window.RaioX = { abrir, estado: () => ({ cliente: S.cliente, vista: S.vista }), ir: (c, v) => { if (c) S.cliente = c; if (v) S.vista = v; S.cat = null; S.fam = null; } };
 })();

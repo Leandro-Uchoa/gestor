@@ -99,6 +99,25 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 /* celular (PICASSO, 15/10): seis abas largas empurravam a página para o lado — 3 + 3 em grade, sem rolagem horizontal */
 @media (max-width:600px){.abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.abas button{padding:9px 4px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .mont-placar .curto{display:none}@media (max-width:900px){.mont-placar .cheio{display:none}.mont-placar .curto{display:block}}
+/* ---- CLIENTE (19/10): um painel por assunto, cada um com o botão que abre a aba inteira já no cliente ---- */
+.cliente,.cliente *{font-family:var(--fonte-sans)}
+.cliente .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}.cliente .grade .card{margin:0}
+.cliente .sec-tit{font-weight:800;color:var(--acc);margin:0 0 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cliente .sec-tit small{color:var(--mu);font-weight:500;font-size:.74rem}.cliente .sec-tit .nome{font-size:1.3rem;color:var(--ink)}
+.cliente .sec-tit .ir,.cliente .sec-tit .ir-form{margin-left:auto;width:auto;padding:5px 10px;font-size:.74rem;color:var(--ink)}
+.cliente .num{display:flex;gap:18px;flex-wrap:wrap;margin:4px 0 10px}.cliente .num>div{display:flex;flex-direction:column}.cliente .num b{font-size:1.45rem;line-height:1.1;font-variant-numeric:tabular-nums}.cliente .num small{font-size:.64rem;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}.cliente .num.alerta>div:nth-child(2) b,.cliente .num>div.al b{color:var(--acc)}
+.cliente table.mini{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px}.cliente table.mini th{text-align:left;color:var(--mu);font-weight:600;font-size:.66rem;padding:4px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}.cliente table.mini td{padding:4px 6px;border-bottom:1px solid rgba(120,123,134,.18);vertical-align:top}.cliente table.mini .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.cliente table.mini td.c{color:var(--acc);font-weight:700}.cliente table.mini small{display:block;font-size:.68rem}
+.cliente .ti{padding:6px 0;border-bottom:1px solid rgba(120,123,134,.18);font-size:.86rem;line-height:1.3}.cliente .ti:last-child{border-bottom:0}.cliente .ti.urg{border-left:3px solid var(--amarelo);padding-left:8px}.cliente .ti.feito{text-decoration:line-through;color:var(--mu)}.cliente .ti small{display:block;color:var(--mu);font-size:.7rem;text-decoration:none}.cliente .ti small i{color:var(--acc);font-style:normal}
+.cliente .chip{display:inline-block;font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);color:var(--ink);margin:0 4px 4px 0}.cliente .chip b{color:var(--acc)}.cliente .chip.urg{border-color:var(--amarelo)}.cliente .chips.mini{margin:0 0 8px}
+.cliente .cond>div{margin:2px 0;font-size:.84rem}.cliente .cond small{color:var(--mu);margin:0 6px}.cliente .fontes{font-size:.72rem;color:var(--mu);margin-top:8px}.cliente .vazio{color:var(--mu);font-size:.86rem}
+.cliente .barras{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:4px;align-items:end;height:100px;border-bottom:1px solid var(--bd);padding-top:14px;margin-top:4px}.cliente .barras div{position:relative;background:rgba(246,245,240,.35);border-radius:3px 3px 0 0;min-height:2px}.cliente .barras div.parcial{background:repeating-linear-gradient(45deg,rgba(246,245,240,.35) 0 4px,rgba(246,245,240,.15) 4px 8px)}.cliente .barras span{position:absolute;bottom:100%;left:0;right:0;text-align:center;font-size:.58rem;color:var(--mu);white-space:nowrap;overflow:hidden}
+.cliente .eixo{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:4px;font-size:.6rem;color:var(--mu);text-align:center;margin-top:3px}
+.cliente .leitura{font-size:.82rem;line-height:1.45;border-left:3px solid var(--acc);padding:3px 10px;margin:8px 0}.cliente .leitura b{color:var(--acc);margin-right:4px}
+.cliente .cl{display:inline-block;min-width:22px;text-align:center;padding:1px 6px;border-radius:999px;font-weight:800;font-size:.72rem;border:1px solid var(--bd)}.cliente .cl-A{background:var(--acc);color:#000;border-color:var(--acc)}.cliente .cl-B{background:var(--azul);color:var(--off-white);border-color:var(--azul)}.cliente .cl-C{color:var(--mu)}
+.cliente .sub-tit{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:10px 0 2px}.cliente .colecao+.colecao{margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)}
+.cliente form.trade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.cliente form.trade input,.cliente form.trade select{margin:0;padding:7px 9px;font-size:.84rem;width:100%}.cliente form.trade .larga{grid-column:1/-1}.cliente form.trade button{width:auto;margin:0 6px 0 0;padding:8px 14px}
+.cliente select.st{margin:0;padding:3px 6px;font-size:.76rem;width:auto}
+.cliente .grade{grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr))}.cliente .grade .card{min-width:0;overflow-x:auto}
+@media (max-width:700px){.cliente .grade{grid-template-columns:minmax(0,1fr)}.cliente .sec-tit .ir,.cliente .sec-tit .ir-form{margin-left:0}}
 .seletor{margin:10px 0 0}.seletor button{padding:8px;font-size:.85rem}
 /* ordem dele (28/09): filtro de cliente por NOME, um toque — nada de digitar no celular */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
@@ -428,7 +447,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.55</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.56</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -447,6 +466,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 
 <div id="tela-pergunta" class="oculto">
   <div class="abas">
+    <button data-aba="cliente">Cliente</button>
     <button data-aba="cg" class="ativa">Carteira e giro</button>
     <button data-aba="metas">Metas</button>
     <button data-aba="catalogo">Catálogo</button>
@@ -458,6 +478,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
   </div>
   <!-- 19/10, ele: "cada botão abre no próprio local; e dentro do local eu tenho a opção de abrir numa outra janela" -->
   <div class="tela-topo"><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
+  <div id="tela-cliente" class="oculto"></div>
   <div id="tela-raiox" class="oculto"></div>
   <div id="tela-topics" class="oculto"></div>
   <div id="tela-catalogo" class="oculto"></div>
@@ -495,6 +516,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=46"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=3"></script>
+<script src="cliente.js?v=1"></script>
 <script src="topics.js?v=3"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
@@ -548,6 +570,7 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 // ---------- as abas
 // Cada aba tem a sua fonte, a sua cobertura de meses e o seu rodapé. Os filtros são os mesmos.
 const ABAS = {
+  cliente: { subtitulo: "· cliente", rodape: "Tudo do cliente numa tela: assuntos pendentes, carteira e giro, raio-x, vitrine, atas e ações de trade. Cada painel tem o botão que abre a aba inteira já nele. Mora no banco, atrás do login." },
   cg:    { subtitulo: "· carteira e giro", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em amarelo (amarelo cheio = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
   metas: { subtitulo: "· metas", rodape: "" },
   atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
@@ -617,9 +640,11 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine", rx = nova === "raiox", top = nova === "topics";
-  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit); $("tela-raiox").classList.toggle("oculto", !rx); $("tela-topics").classList.toggle("oculto", !top);
-  $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit || rx || top); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit || rx || top);
+  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine", rx = nova === "raiox", top = nova === "topics", cli = nova === "cliente";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit); $("tela-raiox").classList.toggle("oculto", !rx); $("tela-topics").classList.toggle("oculto", !top); $("tela-cliente").classList.toggle("oculto", !cli);
+  const outra = metas || cat || atas || col || vit || rx || top || cli;
+  $("filtros").classList.toggle("oculto", outra); $("resultado").classList.toggle("oculto", outra);
+  if (cli) { Cliente.abrir(sb, $("tela-cliente")); return; }
   if (top) { Topics.abrir(sb, $("tela-topics")); return; }
   if (rx) { RaioX.abrir(sb, $("tela-raiox")); return; }
   if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
@@ -630,13 +655,25 @@ function trocarAba(nova){
   mostrarCobertura(); consultar();
 }
 for (const b of document.querySelectorAll(".abas button[data-aba]")) b.onclick = () => trocarAba(b.dataset.aba);
+// 19/10 (aba CLIENTE): cada painel do cliente tem o botão que abre a aba inteira JÁ NELE — carteira e giro com o cliente marcado,
+// raio-x no cliente, vitrine no cliente, atas na pasta dele, TOPICS no bloco dele
+window.irPara = (aba, est) => {
+  est = est || {};
+  if (aba === "cg" && est.cliente) { TODOS_CLI = false; CLIENTE_SEL.clear(); CLIENTE_SEL.add(est.cliente); if (!CLIENTES.includes(est.cliente)) CLIENTES.push(est.cliente); montarChips(); }
+  if (aba === "raiox" && window.RaioX && RaioX.ir) RaioX.ir(est.cliente, est.vista);
+  if (aba === "vitrine" && window.Colecao && Colecao.irVitrine) Colecao.irVitrine(est.cliente);
+  if (aba === "atas" && window.Atas && Atas.ir) Atas.ir(est.pasta);
+  if (aba === "topics" && window.Topics && Topics.ir) Topics.ir(est.bloco);
+  if (aba === "cliente" && window.Cliente && Cliente.ir) Cliente.ir(est.cliente);
+  trocarAba(aba);
+};
 // 19/10, ordem dele: "um botão que eu clique e tem a opção de extrair para outra janela — em todos os campos". A aba abre numa JANELA
 // nova (não aba), pelo endereço com #aba=…; vitrine e raio-x levam o cliente e a vista em que ele está. O TOPICS (painel de decisão,
 // artifact dele no claude.ai) abre do mesmo jeito. O endereço do TOPICS não tem dado: só abre para quem está logado na conta dele.
 const TOPICS_URL = "https://claude.ai/artifact/AkHbS4bcFruP86xLekjNUv";
 function enderecoDaAba(){
   const p = new URLSearchParams(); p.set("aba", ABA);
-  const est = ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado && RaioX.estado()) : ABA === "topics" ? (window.Topics && Topics.estado()) : null;
+  const est = ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado && RaioX.estado()) : ABA === "topics" ? (window.Topics && Topics.estado()) : ABA === "cliente" ? (window.Cliente && Cliente.estado()) : null;
   if (est) { if (est.cliente) p.set("cliente", est.cliente); if (est.vista) p.set("vista", est.vista); if (est.bloco) p.set("bloco", est.bloco); }
   return location.origin + location.pathname + "#" + p.toString();
 }

@@ -1008,5 +1008,5 @@ function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createEle
 function fecharLuz(raiz){ raiz.querySelector(".luz").classList.add("oculto"); }
 
 const estadoVitrine = () => ({ cliente: VIT.cliente, vista: VIT.vista });   // 19/10: para "abrir em outra janela" levar o cliente e a vista
-window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande, estadoVitrine };
+window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande, estadoVitrine, irVitrine: c => { if (c) { VIT.cliente = c; MF.tipo = ""; MF.bloco.clear(); } } };   // irVitrine (19/10): a aba Cliente abre a vitrine já no cliente
 })();

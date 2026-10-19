@@ -188,5 +188,6 @@ function md2html(src){
   return out;
 }
 
-window.Atas = { abrir, tituloCliente, corpoCliente, nomeArquivoCliente, pdfHtmlCliente, md2html };
+window.Atas = { abrir, tituloCliente, corpoCliente, nomeArquivoCliente, pdfHtmlCliente, md2html,
+  ir: pasta => { S.pasta = new Set(pasta ? [pasta] : []); S.ano.clear(); S.mes.clear(); S.assunto.clear(); S.recente = false; S.busca = ""; ATA = null; VERSAO = "geral"; } };   // ir (19/10): a aba Cliente abre as atas já na pasta dele
 })();
