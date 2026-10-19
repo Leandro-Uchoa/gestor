@@ -8,7 +8,8 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&a
 const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 const dmy = d => d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(2, 4) : "";
 let D = null, EL = null, SB = null, ESC = null, EMAIL = null;
-const S = { bloco: null, vista: "pendentes", busca: "", abertas: new Set(), agora: "mini" };   // agora: mini (5) | tudo | fechado (uma linha)
+// agora: fechado (uma linha) | mini (5) | tudo. Abre FECHADO (PICASSO, 19/10): sempre há um bloco escolhido na abertura, e ele vem primeiro
+const S = { bloco: null, vista: "pendentes", busca: "", abertas: new Set(), agora: "fechado" };
 const AGORA_MINI = 5;
 const hoje = () => new Date().toISOString().slice(0, 10);
 
@@ -22,8 +23,10 @@ async function abrir(sb, el){
     if (!D.blocos.length) { el.innerHTML = `<div class="card mu">O TOPICS está vazio para este login — ou este login não está na lista de quem vê o TOPICS.</div>`; return; }
     const e = await sb.from("topics_leitor").select("escritorio_id").limit(1); ESC = (e.data && e.data[0] && e.data[0].escritorio_id) || null;
     try { const s = await sb.auth.getSession(); EMAIL = s.data && s.data.session && s.data.session.user ? s.data.session.user.email : null; } catch (x) { EMAIL = null; }
+    // o bloco de abertura: o do endereço (#bloco=…), senão o último que ele abriu neste aparelho, senão o primeiro
     const h = new URLSearchParams(location.hash.slice(1)).get("bloco");
-    S.bloco = (h && D.blocos.some(b => b.nome === h)) ? h : (D.blocos[0] || {}).nome;
+    let lembrado = null; try { lembrado = localStorage.getItem("gestor.topics.bloco"); } catch (e) {}
+    S.bloco = [h, lembrado].find(x => x && D.blocos.some(b => b.nome === x)) || (D.blocos[0] || {}).nome;
   }
   desenhar();
 }
@@ -46,7 +49,7 @@ function desenhar(){
   }
   chips("tp-vista", [["pendentes", "pendentes", D.pendentes], ["feitos", "feitos", D.n - D.pendentes], ["todos", "todos", D.n]], S.vista, v => { S.vista = v; desenharCorpo(); });
   // PICASSO (19/10): o bloco que ele tocou vem primeiro — tocar num bloco recolhe o AGORA a uma linha; aberto, mostra 5 e o botão "ver os N"
-  chips("tp-blocos", D.blocos.map(b => [b.nome, b.nome, pend(b)]), S.bloco, v => { S.bloco = v; S.agora = "fechado"; desenharAgora(); desenharCorpo(); }, b => D.blocos.find(x => x.nome === b).cliente ? "cli" : "");
+  chips("tp-blocos", D.blocos.map(b => [b.nome, b.nome, pend(b)]), S.bloco, v => { S.bloco = v; S.agora = "fechado"; try { localStorage.setItem("gestor.topics.bloco", v); } catch (e) {} desenharAgora(); desenharCorpo(); }, b => D.blocos.find(x => x.nome === b).cliente ? "cli" : "");
   desenharAgora();
   desenharCorpo();
 }
