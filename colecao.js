@@ -344,46 +344,53 @@ const PDF_CSS = `
 .vit-pdf .topo h2{font-size:15pt;letter-spacing:.6pt;color:#000;font-weight:700;margin:0}
 .vit-pdf .topo span{font-size:9pt;color:#787B86}
 .vit-pdf .grade{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:4mm;min-height:0}
-.vit-pdf .card{background:#fff;border:0;border-radius:1.8mm;box-shadow:0 .2mm .6mm rgba(0,0,0,.12);padding:3mm;margin:0;display:flex;flex-direction:column;min-height:0}
+.vit-pdf .card{background:#fff;border:0;border-radius:1.8mm;box-shadow:0 .2mm .6mm rgba(0,0,0,.12);padding:3mm;margin:0;display:flex;flex-direction:column;min-height:0;position:relative}
 .vit-pdf .ft{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
 .vit-pdf .ft img{max-width:100%;max-height:100%;object-fit:contain}
 .vit-pdf .sem{color:#787B86;font-size:9pt}
-.vit-pdf .nome{font-size:10pt;font-weight:700;margin-top:2mm;line-height:1.15;height:2.3em;overflow:hidden;text-wrap:balance}
-.vit-pdf .ref{font-family:"Courier New",monospace;font-weight:700;color:#2E3EFC;font-size:10pt;margin-top:.8mm}
-.vit-pdf .cor{font-size:8pt;color:#000;margin-top:.6mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vit-pdf .nome{font-size:10pt;font-weight:700;margin-top:2mm;line-height:1.15;height:1.15em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:none}
+.vit-pdf .ref{font-family:"Courier New",monospace;font-weight:700;color:#2E3EFC;font-size:10pt;margin-top:.8mm;height:1.2em;flex:none;white-space:nowrap;overflow:hidden}
+.vit-pdf .cor{font-size:8pt;color:#000;margin-top:.6mm;height:1.25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
 .vit-pdf .cor b{font-family:"Courier New",monospace}
-.vit-pdf .lin{display:flex;align-items:center;gap:1.5mm;margin-top:1.4mm;flex-wrap:wrap}
-.vit-pdf .pdv{font-size:13pt;font-weight:700;color:#2E3EFC}
-.vit-pdf .tag{font-size:6.5pt;font-weight:700;padding:.4mm 1.2mm;border-radius:.8mm;background:#FFFF1A;color:#000}
+.vit-pdf .lin{display:flex;align-items:center;gap:1.5mm;margin-top:1.2mm;flex-wrap:nowrap;height:6mm;overflow:hidden;flex:none}
+.vit-pdf .pdv{font-size:13pt;font-weight:700;color:#2E3EFC;white-space:nowrap}
+.vit-pdf .tag{font-size:6.5pt;font-weight:700;padding:.4mm 1.2mm;border-radius:.8mm;background:#FFFF1A;color:#000;white-space:nowrap}
 .vit-pdf .tag.ini{background:#ADAEB3}
 .vit-pdf .tag.ret{background:#000;color:#FFFF1A}
-.vit-pdf .det{font-size:7pt;color:#787B86;margin-top:.8mm}
-.vit-pdf .g{font-size:7pt;font-weight:700;color:#2E3EFC;margin-top:.6mm}
+.vit-pdf .det{font-size:7pt;color:#787B86;margin-top:.6mm;height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.vit-pdf .g{font-size:7pt;font-weight:700;color:#2E3EFC;margin-top:.6mm;line-height:1.3;height:2.6em;overflow:hidden;flex:none}
+.vit-pdf .g.vazia{visibility:hidden}
 .vit-pdf .card.ret .ft img{opacity:.35}.vit-pdf .card.ret .nome,.vit-pdf .card.ret .ref{text-decoration:line-through}
 .vit-pdf .rod{display:flex;justify-content:space-between;font-size:7.5pt;color:#787B86;margin-top:3mm}
-.vit-pdf .parede{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:3mm 4mm;min-height:0;position:relative}
+.vit-pdf .secao{--k:1;flex:1;min-height:0;display:flex;flex-direction:column}
+.vit-pdf .secao+.secao{margin-top:4mm}
+.vit-pdf .parede{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:calc(3mm*var(--k)) calc(4mm*var(--k));min-height:0;position:relative}
 .vit-pdf .mod{background:#fff;border-radius:1.8mm;box-shadow:0 .2mm .6mm rgba(0,0,0,.12);padding:1.6mm 2mm 1.4mm}
-.vit-pdf .mod .cab{display:flex;align-items:baseline;gap:1.6mm;font-size:7.5pt;white-space:nowrap}
-.vit-pdf .mod .cab b{font-size:8pt}
+.vit-pdf .mod .cab{display:flex;align-items:baseline;gap:1.6mm;font-size:calc(7.5pt*min(var(--k),1.5));white-space:nowrap}
+.vit-pdf .mod .cab b{font-size:calc(8pt*min(var(--k),1.5))}
 .vit-pdf .mod .cab .p{color:#2E3EFC;font-weight:700}
 .vit-pdf .mod .cab .r{font-family:"Courier New",monospace;font-weight:700;color:#2E3EFC}
 .vit-pdf .tiras{display:flex;gap:1.2mm;margin-top:1mm}
-.vit-pdf .tile{width:27mm;text-align:center}
-.vit-pdf .tile .im{height:15mm;display:flex;align-items:center;justify-content:center}
+.vit-pdf .tile{width:calc(27mm*var(--k));text-align:center}
+.vit-pdf .tile .im{height:calc(15mm*var(--k));display:flex;align-items:center;justify-content:center}
 .vit-pdf .tile img{max-width:100%;max-height:100%;object-fit:contain}
-.vit-pdf .tile .c{font-family:"Courier New",monospace;font-weight:700;font-size:6.5pt;margin-top:.4mm}
-.vit-pdf .tile.pe{width:20mm}.vit-pdf .tile.pe .im{height:20mm}
+.vit-pdf .tile .c{font-family:"Courier New",monospace;font-weight:700;font-size:calc(6.5pt*min(var(--k),1.5));margin-top:.4mm}
+.vit-pdf .tile.pe{width:calc(20mm*var(--k))}.vit-pdf .tile.pe .im{height:calc(20mm*var(--k))}
 .vit-pdf .resumo{font-size:8pt;color:#787B86;margin:-2mm 0 3mm 4.4mm}`;
-// o cartão do molde: foto · nome · referência · cor (código em Courier + descrição) · PDV com os selos · gênero · numeração · família;
-// ctx.linha = a linha a mais desta vitrine (meses e pares do cliente; pares e grade no GTM); ctx.retirada = marcada "retirar" na atual
+// o cartão do molde: foto · nome · referência · cor (código em Courier + descrição) · PDV com os selos · gênero · numeração · família.
+// PICASSO (20/10): bloco de texto com ALTURAS FIXAS (nome 1 linha, referência, cor, PDV+selos, detalhe e, na programação, 2 linhas de
+// pares) — a foto fica com o resto (~metade do cartão) e o nome na mesma altura nos 4 cartões da fileira.
+// ctx.linha = os pares por mês (só na PROGRAMAÇÃO); ctx.retirada = marcada "retirar" na atual. NADA interno (NÚCLEO, 20/10): sem o C de
+// continuidade, sem classe, motivo, venda média, estoque ou carteira — só o que o cliente pode ver.
 function pdfCartao(it, ctx){
   const sg = VIT.sug.get(chaveCor(it)), inicio = it.if || (sg && sg.inicio) || "";
   const selos = (ehLanc(it) ? `<span class="tag">LANÇAMENTO</span>` : "") + (inicio ? `<span class="tag ini">${esc(inicio)}</span>` : "") + (it.sl ? `<span class="tag ini">CONVENÇÃO</span>` : "") + (ctx.retirada ? `<span class="tag ret">RETIRAR</span>` : "");
   const cor = `<b>${esc(it.c)}</b>` + (it.cd && it.cd !== it.c ? ` · ${esc(it.cd)}` : "");
   const det = [it.ge, it.nu, pdfFamilia(it)].filter(Boolean).map(x => esc(x)).join(" · ");
+  const g = ctx.grade ? `<div class="g${ctx.linha ? "" : " vazia"}">${ctx.linha || "&nbsp;"}</div>` : "";   // na programação a linha existe sempre (vazia = invisível) para a fileira alinhar
   return `<div class="card${ctx.retirada ? " ret" : ""}"><div class="ft">${pdfFoto(it)}</div><div class="nome">${esc(it.n)}</div>
 <div class="ref">${esc(it.r)}</div><div class="cor">${cor}</div>
-<div class="lin"><span class="pdv">${esc(dinheiro(it.p))}</span>${selos}</div><div class="det">${det}</div>${ctx.linha ? `<div class="g">${ctx.linha}</div>` : ""}</div>`;
+<div class="lin"><span class="pdv">${esc(dinheiro(it.p))}</span>${selos}</div><div class="det">${det}</div>${g}</div>`;
 }
 // os BLOCOS: por tipo; no tênis um bloco por família oficial (a lista já vem na ordem tipo → família → PDV); 8 por página, o título e a faixa
 // de preço (do primeiro ao último da página) repetidos a cada quebra; rodapé com cliente · coleção e k/n
@@ -401,67 +408,110 @@ function pdfBlocos(lista, ctxDe, rod){
   }
   return out;
 }
-// as PAREDES: uma página por gênero; dentro, um bloco por modelo (do mais caro ao mais barato) com as cores em tiras; chinelo em pé (tile.pe)
+// as PAREDES: uma página por gênero; dentro, um bloco por modelo (do mais caro ao mais barato) com as cores em tiras; chinelo em pé (tile.pe).
+// PICASSO (20/10): INFANTIL e CHINELOS dividem a mesma página (uma seção em cima da outra) quando são poucas cores; o tamanho da miniatura
+// é calculado depois, no palco (pdfAjustarParedes), pela quantidade — poucas cores, fotos maiores, até encher ~80% do espaço
+const PDF_JUNTAS = 24;   // até tantas cores somadas, infantil + chinelos na mesma página
 function pdfParedes(lista, rod){
-  const out = [];
-  for (const p of PDF_PAREDES) {
+  const secao = p => {
     const cores = lista.filter(it => pdfParede(it) === p).sort((a, b) => (pdfPdv(b) - pdfPdv(a)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
-    if (!cores.length) continue;
+    if (!cores.length) return null;
     const mods = new Map(); for (const it of cores) { const k = it.m + "|" + it.r + "|" + it.n; if (!mods.has(k)) mods.set(k, []); mods.get(k).push(it); }
     const pe = p === "CHINELOS" ? " pe" : "";
     const blocos = [...mods.values()].map(cs => `<div class="mod"><div class="cab"><b>${esc(cs[0].n)}</b><span class="r">${esc(cs[0].r)}</span><span class="p">${esc(dinheiro(cs[0].p))}</span></div><div class="tiras">${cs.map(c => `<div class="tile${pe}"><div class="im">${pdfFoto(c)}</div><div class="c">${esc(c.c)}</div></div>`).join("")}</div></div>`).join("");
     const ps = cores.map(pdfPdv).filter(x => x >= 0), faixa = ps.length ? `${dinheiro(Math.max(...ps))} a ${dinheiro(Math.min(...ps))}` : "";
     const nota = p === "UNISSEX" ? " · gênero unissex no cadastro, sem lado definido na grade" : "";
-    out.push(`<div class="pg"><div class="topo"><h2>VITRINE ${p}</h2><span>${esc(faixa)}</span></div>
+    return { n: cores.length, html: `<div class="secao"><div class="topo"><h2>VITRINE ${p}</h2><span>${esc(faixa)}</span></div>
 <div class="resumo">${cores.length} cores · ${mods.size} modelos · do mais caro ao mais barato${nota}</div>
-<div class="parede">${blocos}</div>
-<div class="rod"><span>a parede: distribuição de cores · ${rod.esq}</span><span><b>${rod.dir}</b></span></div></div>`);
-  }
+<div class="parede">${blocos}</div></div>` };
+  };
+  const pagina = secs => `<div class="pg">${secs.map(x => x.html).join("")}
+<div class="rod"><span>a parede: distribuição de cores · ${rod.esq}</span><span><b>${rod.dir}</b></span></div></div>`;
+  const out = [], S = Object.fromEntries(PDF_PAREDES.map(p => [p, secao(p)]));
+  for (const p of ["FEMININO", "MASCULINO", "UNISSEX"]) if (S[p]) out.push(pagina([S[p]]));
+  const inf = S.INFANTIL, chi = S.CHINELOS;
+  if (inf && chi && inf.n + chi.n <= PDF_JUNTAS) out.push(pagina([inf, chi]));
+  else { if (inf) out.push(pagina([inf])); if (chi) out.push(pagina([chi])); }
   return out;
 }
 // a parede NÃO corta calada (o molde é overflow hidden): o que não coube na página vai para uma página "(cont.)" — medido no palco, antes de fotografar
 function pdfRepaginarParedes(palco){
   for (let n = 0; n < 40; n++) {
-    const pg = [...palco.querySelectorAll(".pg")].find(p => { const w = p.querySelector(".parede"); return w && w.scrollHeight > w.clientHeight + 1; });
-    if (!pg) return;
-    const w = pg.querySelector(".parede"), lim = w.clientHeight, sobra = [...w.children].filter(m => m.offsetTop + m.offsetHeight > lim);
+    const sec = [...palco.querySelectorAll(".secao")].find(x => { const w = x.querySelector(".parede"); return w.scrollHeight > w.clientHeight + 1; });
+    if (!sec) return;
+    const w = sec.querySelector(".parede"), lim = w.clientHeight, sobra = [...w.children].filter(m => m.offsetTop + m.offsetHeight > lim);
     if (!sobra.length || sobra.length === w.children.length) return;   // um bloco só, maior que a página: fica como está
-    const nova = pg.cloneNode(true), nw = nova.querySelector(".parede"); nw.innerHTML = ""; for (const m of sobra) nw.appendChild(m);
-    const h2 = nova.querySelector("h2"); if (h2 && !/\(cont\.\)$/.test(h2.textContent)) h2.textContent += " (cont.)";
-    pg.after(nova);
+    const pg = sec.closest(".pg"), nova = pg.cloneNode(true);
+    for (const x of nova.querySelectorAll(".secao")) x.remove();
+    const ns = sec.cloneNode(true), nw = ns.querySelector(".parede"); nw.innerHTML = ""; for (const m of sobra) nw.appendChild(m);
+    const h2 = ns.querySelector("h2"); if (h2 && !/\(cont\.\)$/.test(h2.textContent)) h2.textContent += " (cont.)";
+    nova.insertBefore(ns, nova.querySelector(".rod")); pg.after(nova);
   }
 }
-async function imprimirVitrine(){
+// o tamanho da miniatura pela quantidade (PICASSO, 20/10): cada seção cresce o fator --k (largura e altura das fotos, espaçamento) até a
+// parede encher ~80% do espaço dela — nunca abaixo do tamanho do molde (k = 1), nunca acima de 3×
+function pdfAjustarParedes(palco){
+  for (const sec of palco.querySelectorAll(".secao")) {
+    const w = sec.querySelector(".parede"), alvo = w.clientHeight * 0.9;   // a parede enche até ~80–90% (a fileira a mais entra se couber inteira)
+    let lo = 1, hi = 3;
+    // a altura OCUPADA = o pé do último bloco (scrollHeight não serve: sem estouro ele é a altura da caixa, não do conteúdo)
+    const ocupado = () => Math.max(0, ...[...w.children].map(m => m.offsetTop + m.offsetHeight));
+    const cabe = k => { sec.style.setProperty("--k", String(k)); return ocupado() <= alvo && w.scrollWidth <= w.clientWidth + 1; };
+    if (!cabe(1)) continue;                                   // já estoura no tamanho do molde: fica como está
+    for (let i = 0; i < 14; i++) { const k = (lo + hi) / 2; if (cabe(k)) lo = k; else hi = k; }
+    sec.style.setProperty("--k", String(Math.floor(lo * 20) / 20));
+  }
+}
+// a TRAVA DE DATA (PICASSO, 20/10): lançamento não leva pares em mês ANTERIOR ao início de faturamento ("1ª quinzena mar" com pares em JAN
+// ou FEV). A checagem roda antes de gerar; o PDF vai ao cliente, então a violação aparece na TELA, nunca no arquivo. Dezembro é o mês de antes.
+const PDF_MES_IDX = { DEZ: -1, JAN: 0, FEV: 1, MAR: 2, ABR: 3, MAI: 4, JUN: 5 };
+const pdfMesInicio = txt => { const m = String(txt || "").toLowerCase().match(/quinzena\s+([a-z]{3})/); return m && PDF_MES_IDX[m[1].toUpperCase()] != null ? PDF_MES_IDX[m[1].toUpperCase()] : null; };
+// os meses (com pares > 0) anteriores ao início de faturamento da cor; [] quando não há início parseável
+const pdfForaDoInicio = (it, pm) => { const sg = VIT.sug.get(chaveCor(it)), i0 = pdfMesInicio(it.if || (sg && sg.inicio)); if (i0 == null || !pm) return []; return Object.keys(pm).filter(m => (pm[m] || 0) > 0 && PDF_MES_IDX[m] != null && PDF_MES_IDX[m] < i0); };
+// DUAS SAÍDAS (NÚCLEO, 20/10): SEM GRADE = "VITRINE" (a vitrine de escolha: nenhum par em lugar nenhum); COM GRADE = "PROGRAMAÇÃO" (o programa
+// fechado, com os pares por mês). Nas duas, nada interno. opcoes.grade decide.
+async function imprimirVitrine(opcoes){
+  const grade = !!(opcoes && opcoes.grade);
   if (!VIT.cliente || !DADOS) return;
   const atual = VIT.vista === "atual" && VIT.atual, gtm = ehGtm(), mes = gtmMes();
   const f = (!atual && !gtm) ? filtroDaTela() : null;
   const lista = atual ? VIT.atual.itens.slice() : (f ? cartoesFiltrados() : escolhidas());
   if (!lista.length) { alert(f ? "Com esse filtro não sobra nenhuma cor para o PDF." : "A vitrine está vazia: nada para o PDF."); return; }
   if (f && !(await confirmar("PDF com o filtro da tela", `Deseja realmente gerar o PDF apenas com ${f.texto} — ${lista.length} cor(es) de ${escolhidas().length}?`))) return;
-  const bt = ELV && ELV.querySelector("#vit-pdf"), antes = bt ? bt.textContent : "", avisa = t => { if (bt) bt.textContent = t; };
+  const bt = ELV && ELV.querySelector(grade ? "#vit-pdf-prog" : "#vit-pdf"), antes = bt ? bt.textContent : "", avisa = t => { if (bt) bt.textContent = t; };
+  const erro = t => { VIT.erro = t; const e = ELV && ELV.querySelector("#vit-erro"); if (e) { e.textContent = t; e.classList.toggle("oculto", !t); } };
   try {
     avisa("montando…");
     const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col), cli = nomeCli(VIT.cliente);
     // a ordem do gerador: tipo → família oficial (ordem da circular; as outras por nome) → do mais caro ao mais barato → modelo → cor
     lista.sort((a, b) => (pdfTipoIdx(pdfTipo(a)) - pdfTipoIdx(pdfTipo(b))) || (famOrd(pdfFamilia(a) ? familiaDe(a) : "") - famOrd(pdfFamilia(b) ? familiaDe(b) : "")) || pdfFamilia(a).localeCompare(pdfFamilia(b))
       || (pdfPdv(b) - pdfPdv(a)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
-    // a linha a mais de cada cartão: no GTM pares, % do teto e grade (a lista de digitação); na vitrine do cliente os meses e pares (NÚCLEO, 19/10:
-    // "só foto, modelo, cor, data de início e pares por mês — nada interno"), com o filtro de mês da tela; na atual só o selo RETIRAR
-    const ctxDe = it => { const k = chaveCor(it), ctx = { retirada: !!(atual && M.get(k) === "retirar"), linha: "" };
-      if (gtm) { const g = gtmDe(it), p = VIT.pares.get(k), gr = VIT.grades.get(k); ctx.linha = p == null ? "pares a definir" : `<b>${p.toLocaleString("pt-BR")}</b> pares${g && g.vm[mes] ? ` · ${Math.round(p * 100 / g.vm[mes])}% de ${g.vm[mes].toLocaleString("pt-BR")}` : ""}${gr ? ` · ${esc(ROTULO_GRADE[gr] || gr)}` : ""}`; }
-      else if (!atual) { const pm0 = VIT.meses.get(k), pm = (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : pm0; let p = VIT.pares.get(k); if (pm && f && f.mes) p = Object.values(pm).reduce((x, y) => x + y, 0);
-        ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir"; }
+    // os pares por mês de cada cor nesta saída (GTM: o mês da distribuição; cliente: os meses marcados, com o filtro de mês da tela); null = sem programação
+    const mesesDe = it => { const k = chaveCor(it); if (atual) return null; if (gtm) { const p = VIT.pares.get(k); return p == null ? null : { [mes]: p }; }
+      const pm0 = VIT.meses.get(k); return (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : (pm0 || null); };
+    // a trava de data, antes de gerar: na tela, nunca no arquivo
+    if (grade) {
+      const fora = lista.map(it => ({ it, ms: pdfForaDoInicio(it, mesesDe(it)) })).filter(x => x.ms.length);
+      if (fora.length) { const txt = `${fora.length} cor(es) com pares antes do início de faturamento: ${fora.map(x => `${x.it.r} ${x.it.c} (${x.ms.join(", ")})`).join(" · ")} — acerte os meses no cartão e gere de novo.`; erro(txt); avisa(`${fora.length} cor(es) com pares antes do início`); setTimeout(() => avisa(antes), 8e3); return; }
+    }
+    const ctxDe = it => { const k = chaveCor(it), ctx = { grade, retirada: !!(atual && M.get(k) === "retirar"), linha: "" };
+      if (!grade) return ctx;
+      const pm = mesesDe(it), p = pm ? Object.values(pm).reduce((x, y) => x + y, 0) : null, gr = VIT.grades.get(k);
+      if (gtm) ctx.linha = pm ? `<b>${p.toLocaleString("pt-BR")}</b> pares ${esc(mes)}${gr ? ` · ${esc(ROTULO_GRADE[gr] || gr)}` : ""}` : "pares a definir";
+      else if (!atual) ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir";
       return ctx; };
-    // a capa: uma linha por tipo (cores · modelos · pares quando há), nunca somando chinelo com tênis — sem total geral
-    const paresDe = it => { const k = chaveCor(it); if (atual) return 0; if (gtm) return VIT.pares.get(k) || 0; const pm = VIT.meses.get(k); return (pm && f && f.mes) ? f.mes.reduce((s, m) => s + (pm[m] || 0), 0) : (VIT.pares.get(k) || 0); };
-    const linhas = PDF_TIPOS.map(([v, r]) => { const its = lista.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const p = its.reduce((s, it) => s + paresDe(it), 0);
+    // a capa: uma linha por tipo (cores · modelos; na programação os pares), nunca somando chinelo com tênis — sem total geral
+    const paresDe = it => { const pm = mesesDe(it); return pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; };
+    const linhas = PDF_TIPOS.map(([v, r]) => { const its = lista.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const p = grade ? its.reduce((s, it) => s + paresDe(it), 0) : 0;
       return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${p ? ` · ${p.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : ""}`; }).filter(Boolean);
+    const tituloDoc = grade ? "PROGRAMAÇÃO" : "VITRINE";
     const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)}` };
-    const paginas = [`<div class="pg capa"><h1>VITRINE<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
+    const paginas = [`<div class="pg capa"><h1>${tituloDoc}<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
 <p>${linhas.join("<br>")}<br>Do mais caro ao mais barato, por tipo · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
       ...pdfBlocos(lista, ctxDe, rod), ...pdfParedes(lista, rod)];
-    const r = await GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, "VITRINE " + col),
-      { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: pdfRepaginarParedes, avisa: t => avisa("gerando o PDF… " + t) });
+    erro("");
+    const r = await GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, tituloDoc + " " + col),
+      { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: palco => { pdfRepaginarParedes(palco); pdfAjustarParedes(palco); }, avisa: t => avisa("gerando o PDF… " + t) });
     const semFoto = r.semFoto ? ` · ${r.semFoto} sem foto` : "";
     if (r.modo === "cancelado") { avisa(antes); return; }
     avisa((r.modo === "compartilhado" ? "compartilhado ✓" : "baixado: " + r.nome) + ` · ${r.paginas} pág.` + semFoto); setTimeout(() => avisa(antes), 6e3);
@@ -478,14 +528,16 @@ function desenharVitrine(){
         <label>cliente</label><div class="chips" id="vit-cliente"></div>
         <label>coleção</label><div class="chips" id="vit-colecao"></div>
         <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div></div>
-        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" id="vit-pdf" class="sec sai">exportar PDF</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm" title="os três arquivos e o PDF">todos</button><div class="mu" id="vit-saidas"></div></div>
+        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" id="vit-pdf" class="sec sai" title="a vitrine de escolha: sem pares — MM,AA CLIENTE - VITRINE.pdf">PDF vitrine (sem grade)</button><button type="button" id="vit-pdf-prog" class="sec sai" title="o programa fechado, com os pares por mês — MM,AA CLIENTE - PROGRAMAÇÃO.pdf">PDF programação (com grade)</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm" title="os três arquivos e o PDF da vitrine">todos</button><div class="mu" id="vit-saidas"></div></div>
         <div class="mu" id="vit-nota"></div>
         <div class="msg erro oculto" id="vit-erro"></div>
       </div>
       <div class="pagina" id="vit-pagina"></div>
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
-    el.querySelector("#vit-pdf").onclick = () => imprimirVitrine();   // 19/10: PDF no padrão do PICASSO, gerado aqui mesmo (sem janela nova)
+    // 19/10: PDF no padrão do PICASSO, gerado aqui mesmo (sem janela nova); 20/10 (NÚCLEO): duas saídas — vitrine sem grade e programação com grade
+    el.querySelector("#vit-pdf").onclick = () => imprimirVitrine({ grade: false });
+    el.querySelector("#vit-pdf-prog").onclick = () => imprimirVitrine({ grade: true });
     // "todos" = os três arquivos + o PDF (ele, 19/10 15:3x: "bota exportar PDF junto, e todos — tudo pertinho, senão fica dessincronizado")
     for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = async () => { await pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) el.querySelector("#vit-pdf").onclick(); };
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
@@ -982,7 +1034,15 @@ const MESES_V = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN"];
 // A distribuição por tamanho (1-2-3…) vem num segundo momento, na perguntinha completa do cartão.
 const FAIXA = { feminina: [34, 41], masculina: [37, 44], estendida: [34, 44], especial: [44, 48], infantil: [30, 36] };
 const faixaDe = (it, g) => { const f = FAIXA[g]; if (!f) return ""; const mi = numMin(it); const ini = (g === "feminina" || g === "estendida") && mi === 33 ? 33 : f[0]; return `${ini}–${f[1]}`; };
-const GRADE_PADRAO = { feminina: "34–41", masculina: "37–44", infantil: "30–36 · 1-1-1-2-2-2-3", estendida: "34–44", especial: "44–48" };
+// a MUSICAL é a grade que ele DIGITA para o cliente (ele, 19/10 20:3x: "feminino, 34 ao 39, 1-2-3-3-2-1; deixa isso"); a faixa fabricada
+// (33/34–41) é só o campo aberto quando ele quer outra grade. Unissex e especial não têm musical: ele digita.
+const MUSICAL = { feminina: "34–39 · 1-2-3-3-2-1", masculina: "38–43 · 1-2-3-3-2-1", infantil: "30–36 · 1-1-1-2-2-2-3", estendida: null, especial: null };
+const GRADE_PADRAO = { feminina: MUSICAL.feminina, masculina: MUSICAL.masculina, infantil: MUSICAL.infantil, estendida: "34–44", especial: "44–48" };
+// a grade de 6 abre a partir de R$ 299,99 ou na Família Corre (regra dele, 16/10 e 19/10 20:3x: "múltiplos de 12 até 299; acima, opção de 6")
+const abre6De = it => (+it.p || 0) >= 299.99 || /CORRE/i.test(familiaDe(it) || "");
+// a grade por extenso "34–39 · 1-2-3-3-2-1" ↔ {ini, dist[]}
+const lerGradeTx = tx => { const m = String(tx || "").match(/^\s*(\d{2})\s*[–-]\s*(\d{2})\s*·\s*([\d\s-]+)$/); if (!m) return null; const d = m[3].split("-").map(x => +x.trim() || 0); return { ini: +m[1], fim: +m[2], dist: d }; };
+const gradeTxDe = (ini, dist) => { let a = 0, b = dist.length - 1; while (a <= b && !dist[a]) a++; while (b >= a && !dist[b]) b--; if (a > b) return ""; return `${ini + a}–${ini + b} · ${dist.slice(a, b + 1).join("-")}`; };
 const GRADES_OPC = { feminina: ["34–41", "34–39 · 1-2-3-3-2-1"], masculina: ["37–44", "38–43 · 1-2-3-3-2-1", "37–43 · 1-2-2-3-2-1-1", "38–44 · 1-2-3-2-2-1-1"], estendida: [], especial: [], infantil: ["30–36 · 1-1-1-2-2-2-3"] };
 const NOME_GRADE = { feminina: "feminina", masculina: "masculina", estendida: "unissex", especial: "grade especial (44–48)", infantil: "infantil" };
 // PASSO 1 (ele, 17:3x: "primeiro só as opções de grade, por nomenclatura — masculina, feminina, unissex, especial — marquei, já sobe;
@@ -993,13 +1053,13 @@ function perguntarTipos(it){
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro tipos"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}${it.ge ? " · " + esc(it.ge) : ""}</span></div>
       <div class="gq-perg">Em que grade(s)? <span class="mu">marque uma ou mais; os meses e a numeração você acerta depois, no cartão</span></div>
-      <div class="gq-tipos">${opc.map(g => `<label class="gq-tipo${g === padrao ? " on" : ""}"><input type="checkbox" data-g="${g}" ${g === padrao ? "checked" : ""}><b>${esc(NOME_GRADE[g] || g)}</b><small>${esc(faixaDe(it, g))}</small></label>`).join("")}</div>
+      <div class="gq-tipos">${opc.map(g => `<label class="gq-tipo${g === padrao ? " on" : ""}"><input type="checkbox" data-g="${g}" ${g === padrao ? "checked" : ""}><b>${esc(NOME_GRADE[g] || g)}</b><small>${esc(MUSICAL[g] || ("eu digito · " + faixaDe(it, g)))}</small></label>`).join("")}</div>
       <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
     const sobe = luz.querySelector(".gq-sobe"), marcados = () => [...luz.querySelectorAll(".gq-tipos input:checked")].map(i => i.dataset.g);
     const mostra = () => { for (const l of luz.querySelectorAll(".gq-tipo")) l.classList.toggle("on", l.querySelector("input").checked); sobe.disabled = !marcados().length; };
     for (const i of luz.querySelectorAll(".gq-tipos input")) i.onchange = mostra;
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
-    const confirma = () => { if (sobe.disabled) return; const L = marcados().map((g, i) => ({ grade: g, tx: faixaDe(it, g) || (GRADE_PADRAO[g] || null), pm: (i === 0 && sug) ? Object.assign({}, sug.pm) : {}, pm6: {} })); fecha({ grades: L }); };
+    const confirma = () => { if (sobe.disabled) return; const L = marcados().map((g, i) => ({ grade: g, tx: MUSICAL[g] || null, pm: (i === 0 && sug) ? Object.assign({}, sug.pm) : {}, pm6: {} })); fecha({ grades: L }); };
     const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter") confirma(); };
     document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(null); };
     luz.querySelector(".gq-deixa").onclick = () => fecha(null); sobe.onclick = confirma; mostra();
@@ -1009,54 +1069,62 @@ function perguntarTipos(it){
 const gradePadraoDe = it => { const o = GRADES_GTM(it); if (ehInf(it)) return "infantil"; if (o.length === 1) return o[0]; if (ehFem(it) && o.includes("feminina")) return "feminina"; if (ehMasc(it) && o.includes("masculina")) return "masculina"; const auto = ({ fem: "feminina", masc: "masculina", inf: "infantil" })[(MF.passo || "").replace("ua-", "")]; return auto && o.includes(auto) ? auto : null; };
 function perguntarMeses(it, atual){
   atual = atual || {};
-  const k = chaveCor(it), sug = VIT.sug.get(k), opc = GRADES_GTM(it);   // todas as que a numeração permite — inclusive estendida (unissex) e especial (ele, 16:3x: "BEATS PRETO nos três blocos")
-  // regra dele (19/10 14:2x): tudo múltiplo de 12; produto até R$ 300 só grade de 12; acima de 300 abre também a grade de 6
-  const abre6 = (+it.p || 0) > 300;
+  const k = chaveCor(it), sug = VIT.sug.get(k), opc = GRADES_GTM(it);   // os tipos que a numeração permite
+  const abre6 = abre6De(it);
   const redondo = (v, cx) => Math.max(0, Math.round((+v || 0) / cx) * cx);
-  // as OPÇÕES de grade: as padrão que a numeração permite (a masculina com as 3), mais "modificar" e "aberta"; cada uma marcada vira um bloco de meses
-  const opcoes = opc.flatMap(g => [faixaDe(it, g), ...(GRADES_OPC[g] || [])].filter((tx, i, a) => tx && a.indexOf(tx) === i).map(tx => ({ gid: g + "|" + tx, grade: g, tx, rot: (NOME_GRADE[g] || g) + " · " + tx })));
-  opcoes.push({ gid: "propria|", grade: "propria", tx: "", rot: "modificar a grade (eu digito)" }, { gid: "aberta|", grade: "aberta", tx: "grade aberta", rot: "grade aberta" }, { gid: "depois|", grade: null, tx: null, rot: "deixo a grade para depois" });
-  const gidDe = e => e.grade === "propria" ? "propria|" : (e.grade === "aberta" ? "aberta|" : (e.grade ? (e.grade + "|" + (e.tx || GRADE_PADRAO[e.grade] || "")) : "depois|"));
-  // o que já está: a lista dele; se nada, a padrão pelo gênero/numeração com a sugestão do NÚCLEO
-  let entradas = (atual.grades && atual.grades.length) ? atual.grades.map(e => ({ gid: gidDe(e), grade: e.grade, tx: e.tx || "", pm: Object.assign({}, e.pm || {}), pm6: Object.assign({}, e.pm6 || {}) })) : [];
-  if (!entradas.length) { const g = gradePadraoDe(it); entradas = [{ gid: g ? g + "|" + GRADE_PADRAO[g] : "depois|", grade: g, tx: g ? GRADE_PADRAO[g] : null, pm: sug ? Object.assign({}, sug.pm) : {}, pm6: {} }]; }
-  for (const e of entradas) if (!opcoes.some(o => o.gid === e.gid)) opcoes.splice(opcoes.length - 3, 0, { gid: e.gid, grade: e.grade, tx: e.tx, rot: (ROTULO_GRADE[e.grade] || "grade") + " · " + e.tx });
+  const fechaEm = n => n > 0 && (n % CAIXA === 0 || (abre6 && n % CAIXA6 === 0));
+  const faixaNum = g => { const f = (faixaDe(it, g) || "").match(/(\d{2})–(\d{2})/); return f ? [+f[1], +f[2]] : [34, 41]; };
+  // o que já está: um bloco por tipo (grade antiga "propria"/"aberta" vira o tipo padrão com o texto dela)
+  const tipoDe = e => (e.grade && FAIXA[e.grade]) ? e.grade : (gradePadraoDe(it) || opc[0]);
+  let entradas = (atual.grades && atual.grades.length) ? atual.grades.map(e => ({ grade: tipoDe(e), tx: e.tx || "", pm: Object.assign({}, e.pm || {}), pm6: Object.assign({}, e.pm6 || {}) })) : [];
+  if (!entradas.length) { const g = gradePadraoDe(it) || opc[0]; entradas = [{ grade: g, tx: MUSICAL[g] || "", pm: sug ? Object.assign({}, sug.pm) : {}, pm6: {} }]; }
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
-    const blocoHtml = e => `<div class="gq-bloco" data-gid="${esc(e.gid)}"><div class="gq-btit">${esc(e.grade ? (e.grade === "propria" ? "grade MODIFICADA" : (ROTULO_GRADE[e.grade] || e.grade)) : "sem grade (defino depois)")}${e.grade === "propria" ? ` <input type="text" class="gq-texto" placeholder="ex.: 35–40 · 1-2-2-2-2-1" value="${esc(e.tx || "")}">` : (e.tx && e.grade !== "aberta" ? ` <span class="mu">${esc(e.tx)}</span>` : "")}</div>
-      <div class="gq-meses${abre6 ? " seis" : ""}"><div class="gq-cab"><span></span><span>grade de 12</span>${abre6 ? `<span>grade de 6</span>` : ""}<span>total</span></div>${MESES_V.map(m => { const on = m in e.pm, p6 = e.pm6[m] || 0, p12 = Math.max(0, (e.pm[m] || 0) - p6);
+    const linhaTam = (g, tx) => { const [a, b] = faixaNum(g), lido = lerGradeTx(tx), q = {}; if (lido) lido.dist.forEach((v, i) => { q[lido.ini + i] = v; });
+      let h = `<div class="gq-tam">`; for (let n = a; n <= b; n++) h += `<label><small>${n}</small><input type="number" min="0" max="36" step="1" inputmode="numeric" data-n="${n}" value="${q[n] || ""}" placeholder="0"></label>`; return h + `</div><div class="gq-soma"></div>`; };
+    const blocoHtml = e => { const mus = MUSICAL[e.grade], usaMus = !!mus && (!e.tx || e.tx === mus), outra = !usaMus;
+      return `<div class="gq-bloco" data-g="${esc(e.grade)}"><div class="gq-btit">${esc(ROTULO_GRADE[e.grade] || e.grade)}</div>
+      <div class="gq-escolha">${mus ? `<label class="gq-opt${usaMus ? " on" : ""}"><input type="radio" name="gr-${esc(e.grade)}" value="musical" ${usaMus ? "checked" : ""}> musical <b>${esc(mus)}</b></label>` : ""}<label class="gq-opt${outra ? " on" : ""}"><input type="radio" name="gr-${esc(e.grade)}" value="outra" ${outra ? "checked" : ""}> outra grade: eu digito <span class="mu">${esc(faixaDe(it, e.grade))}</span></label></div>
+      <div class="gq-outra${outra ? "" : " oculto"}">${linhaTam(e.grade, outra ? e.tx : "")}</div>
+      <div class="gq-meses${abre6 ? " seis" : ""}"><div class="gq-cab"><span></span><span>grades de 12</span>${abre6 ? `<span>grades de 6</span>` : ""}<span>total</span></div>${MESES_V.map(m => { const on = m in e.pm, p6 = e.pm6[m] || 0, p12 = Math.max(0, (e.pm[m] || 0) - p6);
         const campo = (cx, v) => `<span class="gq-campo"><button type="button" class="cx cx-menos" data-cx="${cx}" title="−${cx} pares">−</button><input type="number" min="0" step="${cx}" inputmode="numeric" data-cx="${cx}" value="${on && v > 0 ? v : ""}" ${on ? "" : "disabled"} placeholder="0"><button type="button" class="cx cx-mais" data-cx="${cx}" title="+${cx} pares">+</button></span>`;
-        return `<div class="gq-mes${on ? " on" : ""}" data-m="${m}"><label class="gm-rot"><input type="checkbox" data-m="${m}" ${on ? "checked" : ""}>${m}</label>${campo(CAIXA, p12)}${abre6 ? campo(CAIXA6, p6) : ""}<b class="gm-tot">${on ? ((p12 + p6) || "—") : ""}</b></div>`; }).join("")}</div></div>`;
-    luz.innerHTML = `<div class="quadro grade-quadro gtm meses"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}${it.ge ? " · " + esc(it.ge) : ""}</span></div>
+        return `<div class="gq-mes${on ? " on" : ""}" data-m="${m}"><label class="gm-rot"><input type="checkbox" data-m="${m}" ${on ? "checked" : ""}>${m}</label>${campo(CAIXA, p12)}${abre6 ? campo(CAIXA6, p6) : ""}<b class="gm-tot">${on ? ((p12 + p6) || "—") : ""}</b></div>`; }).join("")}</div></div>`; };
+    luz.innerHTML = `<div class="quadro grade-quadro gtm meses"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · fabricada " + esc(it.nu) : ""}${it.ge ? " · " + esc(it.ge) : ""}${it.p != null ? " · " + esc(dinheiro(it.p)) : ""}</span></div>
       ${sug && (sug.inicio || sug.motivo) ? `<div class="gq-teto">${sug.inicio ? `início de faturamento <b>${esc(sug.inicio)}</b>` : ""}${sug.inicio && sug.motivo ? " · " : ""}${esc(sug.motivo || "")}</div>` : (it.if ? `<div class="gq-teto">início de faturamento <b>${esc(it.if)}</b></div>` : "")}
-      <div class="gq-perg">Em que grade(s)? <span class="mu">marque mais de uma para dividir: cada grade tem os seus meses e vira um cartão na vitrine</span></div>
-      <div class="gq-opcs">${opcoes.map(o => `<label class="gq-opt"><input type="checkbox" data-gid="${esc(o.gid)}" ${entradas.some(e => e.gid === o.gid) ? "checked" : ""}> ${esc(o.rot)}</label>`).join("")}</div>
-      <div class="gq-perg">Para quais meses? <span class="mu">${sug ? (Object.values(sug.pm).some(v => v > 0) ? "sugestão do NÚCLEO pelo sellout, já preenchida na primeira grade — aceita ou muda" : (sug.inicio ? "lançamento: sem sugestão de pares; a data de início está acima" : "lançamento sem circular: sem data de início e sem sugestão de pares")) : "sem sugestão para esta cor"}</span></div>
+      <div class="gq-perg">Grade(s) <span class="mu">${abre6 ? "a partir de R$ 299,99: fecha em 12 ou em 6" : "até R$ 299,99: tudo fecha em 12"}${opc.length > 1 ? " · marque outro tipo para dividir" : ""}</span></div>
+      ${opc.length > 1 ? `<div class="gq-tipos-mini">${opc.map(g => `<label class="gq-chip${entradas.some(e => e.grade === g) ? " on" : ""}"><input type="checkbox" data-g="${g}" ${entradas.some(e => e.grade === g) ? "checked" : ""}>${esc(NOME_GRADE[g] || g)}</label>`).join("")}</div>` : ""}
       <div class="gq-blocos">${entradas.map(blocoHtml).join("")}</div>
       <div class="gq-pct"></div>
       <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
     const pct = luz.querySelector(".gq-pct"), sobe = luz.querySelector(".gq-sobe"), blocos = luz.querySelector(".gq-blocos");
     const lerMes = l => { let t = 0, t6 = 0; for (const i of l.querySelectorAll("input[type=number]")) { const cx = +i.dataset.cx, v = redondo(i.value, cx); if (cx === CAIXA6) t6 += v; t += v; } return { t, t6 }; };
-    const lerBloco = bl => { const o = opcoes.find(x => x.gid === bl.dataset.gid), pm = {}, pm6 = {}; for (const l of bl.querySelectorAll(".gq-mes")) { const on = l.querySelector("input[type=checkbox]").checked, { t, t6 } = lerMes(l); l.querySelector(".gm-tot").textContent = on ? (t || "—") : ""; if (on) { pm[l.dataset.m] = t; if (t6) pm6[l.dataset.m] = t6; } }
-      const txt = bl.querySelector(".gq-texto"); return { grade: o.grade, tx: o.grade === "propria" ? (txt ? txt.value.trim() : "") : o.tx, pm, pm6 }; };
+    // a grade do bloco: musical, ou a digitada nos numerozinhos (precisa fechar em 12 — ou em 6 acima de 299,99)
+    const lerGrade = bl => { const g = bl.dataset.g, mus = MUSICAL[g], r = bl.querySelector("input[type=radio][value=outra]"), outra = !mus || (r && r.checked);
+      if (!outra) return { tx: mus, ok: true, soma: 12 };
+      const tams = [...bl.querySelectorAll(".gq-tam input")], ini = +tams[0].dataset.n, dist = tams.map(i => Math.max(0, Math.round(+i.value || 0))), soma = dist.reduce((x, y) => x + y, 0);
+      const el = bl.querySelector(".gq-soma"); el.textContent = soma ? `= ${soma} pares${fechaEm(soma) ? "" : (abre6 ? " · precisa fechar em 12 ou em 6" : " · precisa fechar em 12")}` : "digite quantos pares em cada número";
+      el.classList.toggle("passou", soma > 0 && !fechaEm(soma)); return { tx: gradeTxDe(ini, dist), ok: fechaEm(soma), soma }; };
+    const lerBloco = bl => { const pm = {}, pm6 = {}; for (const l of bl.querySelectorAll(".gq-mes")) { const on = l.querySelector("input[type=checkbox]").checked, { t, t6 } = lerMes(l); l.querySelector(".gm-tot").textContent = on ? (t || "—") : ""; if (on) { pm[l.dataset.m] = t; if (t6) pm6[l.dataset.m] = t6; } }
+      const g = lerGrade(bl); return { grade: bl.dataset.g, tx: g.tx, ok: g.ok, pm, pm6 }; };
     const ler = () => [...blocos.querySelectorAll(".gq-bloco")].map(lerBloco);
     const mostra = () => { const L = ler(); const t = somaMeses(L); const nm = new Set(L.flatMap(e => Object.keys(e.pm))).size;
-      pct.textContent = L.length ? `${L.length > 1 ? L.length + " grades · " : ""}${nm ? nm + " mês(es) · " : ""}${t.pares ? t.pares.toLocaleString("pt-BR") + " pares" : "pares a definir depois"}${t.pares6 ? ` · ${t.pares6} em grades de 6` : ""}${abre6 ? "" : " · até R$ 300: só grade de 12"}` : "marque pelo menos uma grade";
-      sobe.disabled = !L.length || L.some(e => e.grade === "propria" && !e.tx); };
+      pct.textContent = L.length ? `${L.length > 1 ? L.length + " grades · " : ""}${nm ? nm + " mês(es) · " : ""}${t.pares ? t.pares.toLocaleString("pt-BR") + " pares" : "pares a definir depois"}${t.pares6 ? ` · ${t.pares6} em grades de 6` : ""}` : "marque pelo menos uma grade";
+      sobe.disabled = !L.length || L.some(e => !e.ok); };
     const ligarBloco = bl => { for (const l of bl.querySelectorAll(".gq-mes")) { const cb = l.querySelector("input[type=checkbox]"), nps = [...l.querySelectorAll("input[type=number]")], np = nps[0];
         cb.onchange = () => { for (const i of nps) i.disabled = !cb.checked; l.classList.toggle("on", cb.checked); if (cb.checked && !(+np.value) && bl === blocos.firstElementChild) { np.value = redondo((sug && sug.pm[cb.dataset.m]) || 0, CAIXA) || ""; } if (cb.checked) { np.focus(); np.select(); } mostra(); };
         for (const i of nps) { i.oninput = mostra; i.onchange = () => { const cx = +i.dataset.cx, v = redondo(i.value, cx); i.value = v || ""; mostra(); }; }
         for (const b of l.querySelectorAll(".cx")) b.onclick = ev => { ev.preventDefault(); if (!cb.checked) { cb.checked = true; cb.onchange(); } const i = b.parentElement.querySelector("input"), cx = +b.dataset.cx; i.value = Math.max(0, redondo(i.value, cx) + (b.classList.contains("cx-mais") ? cx : -cx)) || ""; mostra(); }; }
-      const txt = bl.querySelector(".gq-texto"); if (txt) txt.oninput = mostra; };
+      for (const r of bl.querySelectorAll("input[type=radio]")) r.onchange = () => { const outra = r.value === "outra" ? r.checked : !r.checked; bl.querySelector(".gq-outra").classList.toggle("oculto", !outra); for (const o of bl.querySelectorAll(".gq-opt")) o.classList.toggle("on", o.querySelector("input").checked); mostra(); if (outra) { const i = bl.querySelector(".gq-tam input"); if (i) { i.focus(); i.select(); } } };
+      for (const i of bl.querySelectorAll(".gq-tam input")) { i.oninput = mostra; i.onkeydown = ev => { if (ev.key === "ArrowRight" || ev.key === "Enter") { const n = i.parentElement.nextElementSibling; if (n) { ev.preventDefault(); n.querySelector("input").focus(); n.querySelector("input").select(); } } if (ev.key === "ArrowLeft") { const n = i.parentElement.previousElementSibling; if (n) { ev.preventDefault(); n.querySelector("input").focus(); n.querySelector("input").select(); } } }; } };
     for (const bl of blocos.querySelectorAll(".gq-bloco")) ligarBloco(bl);
-    for (const cb of luz.querySelectorAll(".gq-opcs input[type=checkbox]")) cb.onchange = () => {
-      const gid = cb.dataset.gid, o = opcoes.find(x => x.gid === gid), ja = blocos.querySelector(`.gq-bloco[data-gid="${CSS.escape(gid)}"]`);
-      if (cb.checked && !ja) { const e = { gid, grade: o.grade, tx: o.tx, pm: {}, pm6: {} }; blocos.insertAdjacentHTML("beforeend", blocoHtml(e)); ligarBloco(blocos.lastElementChild); }
+    for (const cb of luz.querySelectorAll(".gq-tipos-mini input[type=checkbox]")) cb.onchange = () => {
+      const g = cb.dataset.g, ja = blocos.querySelector(`.gq-bloco[data-g="${CSS.escape(g)}"]`); cb.parentElement.classList.toggle("on", cb.checked);
+      if (cb.checked && !ja) { blocos.insertAdjacentHTML("beforeend", blocoHtml({ grade: g, tx: MUSICAL[g] || "", pm: {}, pm6: {} })); ligarBloco(blocos.lastElementChild); }
       if (!cb.checked && ja) ja.remove();
       mostra(); };
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
-    const confirma = () => { if (sobe.disabled) return; const L = ler().map(e => ({ grade: e.grade, tx: e.grade === "aberta" ? "grade aberta" : (e.tx || null), pm: e.pm, pm6: Object.keys(e.pm6).length ? e.pm6 : {} })); fecha({ grades: L }); };
-    const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter" && ev.target.tagName !== "BUTTON") { if (ev.target.tagName === "INPUT" && ev.target.type === "number") ev.target.onchange(); confirma(); } };
+    const confirma = () => { if (sobe.disabled) return; const L = ler().map(e => ({ grade: e.grade, tx: e.tx || null, pm: e.pm, pm6: Object.keys(e.pm6).length ? e.pm6 : {} })); fecha({ grades: L }); };
+    const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter" && ev.target.tagName !== "BUTTON" && !(ev.target.closest && ev.target.closest(".gq-tam"))) { if (ev.target.tagName === "INPUT" && ev.target.type === "number") ev.target.onchange && ev.target.onchange(); confirma(); } };
     document.addEventListener("keydown", tecla);
     luz.onclick = ev => { if (ev.target === luz) fecha(null); };
     luz.querySelector(".gq-deixa").onclick = () => fecha(null); sobe.onclick = confirma; mostra();
