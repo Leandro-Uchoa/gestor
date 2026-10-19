@@ -123,6 +123,8 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cliente table.cart td,.cliente table.ped td{white-space:nowrap;vertical-align:top}.cliente table.cart td small,.cliente table.ped td small{display:block;font-size:.64rem;color:var(--mu);white-space:normal;max-width:260px}.cliente table.cart select.dec,.cliente table.cart input.dec{margin:0;padding:3px 6px;font-size:.74rem;width:auto;min-width:0}.cliente table.cart input.dec[data-campo=volume]{width:64px}.cliente table.cart input.dec[data-campo=destinatario]{width:110px}.cliente table.cart input.dec[data-campo=nota]{width:150px}
 .cliente table.cart tr.decidida td:first-child{box-shadow:inset 3px 0 0 var(--amarelo)}.cliente table.cart small.xl.dif{color:var(--amarelo)}
 .cliente table.ped tr.riscada td{text-decoration:line-through;color:var(--mu)}.cliente .chip.conferir{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.cliente table.ped button.orig{width:auto;margin:0 2px 0 0;padding:3px 8px;font-size:.72rem}
+#ia{position:fixed;right:16px;bottom:16px;width:min(520px,calc(100vw - 32px));max-height:75vh;display:flex;flex-direction:column;z-index:50;background:#1a1b1e;border:1px solid var(--amarelo);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#ia.oculto{display:none}#ia .fale-lista{max-height:48vh}.fm.ia span{white-space:pre-wrap}.fm.pensando span{color:var(--mu);font-style:italic}button.sec.ia{border-color:var(--amarelo);color:var(--amarelo);font-weight:800}
+.cliente .cartd.fechada .chips.mini{margin-top:4px}
 #fale{position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));max-height:70vh;display:flex;flex-direction:column;z-index:50;background:#1a1b1e;border:1px solid var(--cinza-escuro);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#fale.oculto{display:none}
 .fale-topo{display:flex;align-items:center;gap:8px}.fale-topo b{color:var(--amarelo)}.fale-topo small{flex:1;font-size:.7rem}.fale-topo button{width:auto;margin:0;padding:2px 8px}
 .fale-lista{flex:1;overflow:auto;min-height:80px;max-height:40vh;margin:8px 0;display:flex;flex-direction:column;gap:6px}.fm{max-width:88%;padding:6px 10px;border-radius:10px;font-size:.84rem;line-height:1.35}.fm span{white-space:pre-wrap}.fm small{display:block;font-size:.62rem;color:var(--mu);margin-top:2px}.fm.eu{align-self:flex-end;background:rgba(46,62,252,.35)}.fm.ti{align-self:flex-start;background:rgba(120,123,134,.25);border-left:3px solid var(--amarelo)}
@@ -465,7 +467,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.60</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.61</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -496,9 +498,14 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
     <button data-aba="trade">Trade</button>
   </div>
   <!-- 19/10, ele: "cada botão abre no próprio local; e dentro do local eu tenho a opção de abrir numa outra janela" -->
-  <div class="tela-topo"><button type="button" id="bt-fale" class="sec" title="escreva para o NÚCLEO (comercial) daqui; a resposta aparece aqui mesmo">fale com o NÚCLEO ✉</button><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
+  <div class="tela-topo"><button type="button" id="bt-ia" class="sec ia" title="pergunte à IA do Gestor: ela lê o banco da aba em que você está e responde aqui">IA ✦</button><button type="button" id="bt-fale" class="sec" title="escreva para o NÚCLEO (comercial) daqui; a resposta aparece aqui mesmo">fale com o NÚCLEO ✉</button><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
   <!-- 19/10, ele: "um campo de conversa dentro do Gestor" — e (20:1x) "é o NÚCLEO, comercial puro: trade, metas, vitrine". É caixa de
        correio pelo banco (gestor_mensagem): o que ele escreve chega ao NÚCLEO (vigia no banco) e a resposta volta aqui. Não é IA dentro da página — isso é outra decisão (custo e chave da API). -->
+  <!-- 19/10 (20:2x), ele: "a de verdade dentro do Gestor pode rodar. Vamos pra cima." A IA roda na função gestor-ia do Supabase (chave da
+       API da Anthropic como segredo lá, nunca aqui); a página manda a pergunta com o contexto (aba, cliente) e mostra a resposta. -->
+  <div id="ia" class="card oculto"><div class="fale-topo"><b>IA do Gestor</b> <small class="mu" id="ia-estado">lê o banco da aba em que você está</small><button type="button" class="sec" id="ia-nova" title="começa outra conversa">nova</button><button type="button" class="sec" id="ia-fecha">×</button></div>
+    <div id="ia-lista" class="fale-lista"></div>
+    <div class="fale-linha"><textarea id="ia-txt" rows="2" placeholder="ex.: qual ação de trade para a Casa Pio? · o que falta na vitrine da Polyélle? · onde foco na meta? (Enter envia)"></textarea><button type="button" id="ia-envia">perguntar</button></div></div>
   <div id="fale" class="card oculto"><div class="fale-topo"><b>Fale com o NÚCLEO</b> <small class="mu" id="fale-estado"></small><button type="button" class="sec" id="fale-fecha">×</button></div>
     <div id="fale-lista" class="fale-lista"></div>
     <div class="fale-linha"><textarea id="fale-txt" rows="2" placeholder="trade, metas, vitrine, cliente: pergunte aqui e aperte Enter (Shift+Enter quebra linha). O NÚCLEO responde aqui mesmo."></textarea><button type="button" id="fale-envia">enviar</button></div></div>
@@ -541,7 +548,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=46"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=3"></script>
-<script src="cliente.js?v=4"></script>
+<script src="cliente.js?v=5"></script>
 <script src="trade.js?v=2"></script>
 <script src="topics.js?v=4"></script>
 <script>
@@ -719,7 +726,7 @@ async function faleLer(){
 }
 const hhmm = t => t ? new Date(t).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
 async function faleAbrir(){
-  FALE.aberta = !FALE.aberta; $("fale").classList.toggle("oculto", !FALE.aberta);
+  FALE.aberta = !FALE.aberta; $("fale").classList.toggle("oculto", !FALE.aberta); if (FALE.aberta && IA.aberta) iaAbrir();
   if (!FALE.aberta) { clearInterval(FALE.timer); return; }
   if (!FALE.esc) { const e = await sb.from("escritorio").select("id").limit(1); FALE.esc = (e.data && e.data[0] && e.data[0].id) || null; }
   await faleLer(); $("fale-txt").focus(); FALE.timer = setInterval(faleLer, 20000);
@@ -731,6 +738,27 @@ async function faleEnviar(){
   if (r.error) { $("fale-estado").textContent = "não foi: " + r.error.message; return; }
   $("fale-txt").value = ""; await faleLer();
 }
+// ---------- IA do Gestor
+const IA = { aberta: false, sessao: null, hist: [], ocupada: false };
+function iaDesenhar(){
+  $("ia-lista").innerHTML = IA.hist.map(m => `<div class="fm eu"><span>${esc(m.p)}</span></div>${m.r != null ? `<div class="fm ti ia"><span>${esc(m.r)}</span><small>${m.custo != null ? "IA · US$ " + m.custo.toFixed(3) + " · " + esc(m.modelo || "") : "IA"}</small></div>` : `<div class="fm ti ia pensando"><span>lendo o banco e pensando…</span></div>`}`).join("") || `<div class="mu">pergunte sobre o cliente, a carteira, o trade, a vitrine, as metas. A resposta vem com os números do banco.</div>`;
+  $("ia-lista").scrollTop = $("ia-lista").scrollHeight;
+}
+function iaAbrir(){ IA.aberta = !IA.aberta; $("ia").classList.toggle("oculto", !IA.aberta); if (IA.aberta) { if (FALE.aberta) faleAbrir(); iaDesenhar(); $("ia-txt").focus(); } }
+async function iaPerguntar(){
+  const t = $("ia-txt").value.trim(); if (!t || IA.ocupada) return;
+  const est = ABA === "cliente" ? (window.Cliente && Cliente.estado()) : ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado()) : null;
+  const item = { p: t, r: null }; IA.hist.push(item); IA.ocupada = true; $("ia-txt").value = ""; iaDesenhar(); $("ia-estado").textContent = "perguntando…";
+  try {
+    const r = await sb.functions.invoke("gestor-ia", { body: { pergunta: t, sessao: IA.sessao, contexto: Object.assign({ aba: ABA }, est || {}) } });
+    const d = r.data || {}; if (r.error && !d.erro) d.erro = r.error.message || String(r.error);
+    if (d.erro) { item.r = "⚠ " + d.erro; } else { item.r = d.resposta; item.custo = d.custo_usd; item.modelo = d.modelo; IA.sessao = d.sessao || IA.sessao; }
+    $("ia-estado").textContent = d.erro ? "não respondeu" : "sessão " + String(IA.sessao || "").slice(0, 8) + " · gasto desta conversa US$ " + IA.hist.reduce((s, m) => s + (m.custo || 0), 0).toFixed(3);
+  } catch (e) { item.r = "⚠ não consegui falar com a função gestor-ia: " + (e.message || e); $("ia-estado").textContent = "não respondeu"; }
+  IA.ocupada = false; iaDesenhar();
+}
+$("bt-ia").onclick = iaAbrir; $("ia-fecha").onclick = iaAbrir; $("ia-envia").onclick = iaPerguntar; $("ia-nova").onclick = () => { IA.sessao = null; IA.hist = []; iaDesenhar(); $("ia-estado").textContent = "nova conversa"; };
+$("ia-txt").onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); iaPerguntar(); } };
 $("bt-fale").onclick = faleAbrir; $("fale-fecha").onclick = faleAbrir; $("fale-envia").onclick = faleEnviar;
 $("fale-txt").onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); faleEnviar(); } };
 function mostrarCobertura(){

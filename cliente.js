@@ -12,7 +12,7 @@ const mesBR = m => m ? MESES[+String(m).slice(5, 7) - 1] + "/" + String(m).slice
 const dmy = d => d ? String(d).slice(8, 10) + "/" + String(d).slice(5, 7) + "/" + String(d).slice(2, 4) : "—";
 const hoje = () => new Date().toISOString().slice(0, 10);
 let LISTA = null, DOCS = {}, EL = null, SB = null, ESC = null;
-const S = { cliente: null, form: false, erro: "", todosTopics: false };
+const S = { cliente: null, form: false, erro: "", todosTopics: false, cartAberta: false };
 const nomeDe = c => { const p = (LISTA || []).find(x => x.cliente === c); return p ? p.nome : c; };
 
 async function abrir(sb, el){
@@ -236,7 +236,7 @@ async function carteiraDoc(cliente, denovo){
 }
 const grupoAcao = a => { const t = String(a || "").toUpperCase(); if (!t) return ""; if (["CASA PIO", "PIO", "LEO", "LÉO", "CMS"].includes(t)) return "MARCADA"; if (/^(FATURADO|OK|AMOSTRA)/.test(t)) return "OK"; if (t.startsWith("CANC")) return "CANCELAR"; if (t.startsWith("TRANSF")) return "TRANSFERIR"; if (t.startsWith("REPASS") || t.startsWith("EM REPASSE") || t.startsWith("PARCIAL REPASSE")) return "REPASSAR"; if (/^(ANALIS|AVALIAR|AGUARDAR|CONFIRMAR|INVESTIGAR|REVER|PENDENTE)/.test(t)) return "ANALISAR"; if (t.startsWith("DISTRIB")) return "DISTRIBUIR"; if (t.startsWith("ANTECIP")) return "ANTECIPAR"; if (t.startsWith("POSTERG")) return "POSTERGAR"; return "OUTRA"; };
 function carteiraDetalhada(d){
-  return `<div class="card larga cartd" id="cl-cart">${tit("Carteira detalhada", "", ir("cg", { cliente: d.cliente }, "abrir a AG"))}<div class="mu">lendo a carteira…</div></div>`;
+  return `<div class="card cartd${S.cartAberta ? " larga" : " fechada"}" id="cl-cart">${tit("Carteira detalhada", "", "")}<div class="mu">lendo a carteira…</div></div>`;
 }
 async function desenharCarteira(corpo, d){
   const box = corpo.querySelector("#cl-cart"); if (!box) return;
@@ -251,7 +251,19 @@ async function desenharCarteira(corpo, d){
   const conta = f => { const m = new Map(); for (const x of vivas) { const k = f(x); m.set(k, (m.get(k) || 0) + 1); } return [...m.entries()].sort(); };
   const chip = (id, sel, lista, rot) => `<div class="linha"><label>${rot}</label><div class="chips" data-f="${id}">${[["", "todos"], ...lista].map(([v, n]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(v === "" ? "todos" : (id === "mes" && v !== "sem prev" ? mesBR(v + "-01") : v))}${n != null ? ` <small>${n}</small>` : ""}</button>`).join("")}</div></div>`;
   const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), porAcao = new Map(); for (const x of lista) { const g = grupoAcao(efetiva(x)) || "(vazia)"; porAcao.set(g, (porAcao.get(g) || 0) + (x.cart || 0)); }
-  box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco`, ir("cg", { cliente: d.cliente }, "abrir a AG")) + `
+  const btExp = `<button type="button" class="sec ir expandir">${S.cartAberta ? "recolher" : "tratar a carteira ›"}</button>`;
+  if (!S.cartAberta) {
+    // o cartão PEQUENO: só o placar; apertar abre a mesa inteira
+    const tot = vivas.reduce((s, x) => s + (x.cart || 0), 0), pa = new Map(); for (const x of vivas) { const g = grupoAcao(efetiva(x)) || "(vazia)"; pa.set(g, (pa.get(g) || 0) + (x.cart || 0)); }
+    const decididas = vivas.filter(x => x.a).length, pend = vivas.filter(x => !efetiva(x)).length;
+    box.className = "card cartd fechada";
+    box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)}`, btExp) + `<div class="num"><div><b>${fmt(tot)}</b><small>pares em carteira</small></div><div><b>${fmt(vivas.length)}</b><small>linhas</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${fmt(decididas)}</b><small>decididas na tela</small></div></div>
+      <div class="chips mini">${[...pa.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([g, n]) => `<span class="chip">${esc(g.toLowerCase())} <b>${fmt(n)}</b></span>`).join("")}</div>`;
+    box.querySelector(".expandir").onclick = () => { S.cartAberta = true; box.className = "card cartd larga"; desenharCarteira(corpo, d); box.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    return;
+  }
+  box.className = "card cartd larga";
+  box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco`, btExp + ir("cg", { cliente: d.cliente }, "abrir a AG")) + `
     <div class="filtros">${chip("mes", CF.mes, conta(mesDe), "prev. fat.")}${chip("marca", CF.marca, conta(x => x.m || ""), "marca")}${chip("porta", CF.porta, conta(x => x.porta || ""), "porta")}${chip("acao", CF.acao, conta(x => grupoAcao(efetiva(x)) || "(vazia)"), "ação")}
       <div class="linha"><label>mostrar</label><div class="chips" data-f="so"><button type="button" data-v="cart" class="${CF.so === "cart" ? "ativa" : ""}">só carteira aberta</button><button type="button" data-v="tudo" class="${CF.so === "tudo" ? "ativa" : ""}">com faturado recente</button></div><input type="search" id="cl-cart-busca" placeholder="referência, descrição, cor, GCI, OC, porta…" value="${esc(CF.busca)}" autocomplete="off"></div></div>
     <div class="num"><div><b>${fmt(cart)}</b><small>pares na tela</small></div><div><b>${fmt(lista.length)}</b><small>linhas</small></div>${[...porAcao.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, n]) => `<div><b>${fmt(n)}</b><small>${esc(g.toLowerCase())}</small></div>`).join("")}</div>
@@ -267,6 +279,7 @@ async function desenharCarteira(corpo, d){
         <td><input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota">${x.q ? `<small class="mu">${esc(x.q.split("@")[0])} · ${dmy(x.em)}</small>` : ""}</td></tr>`; }).join("")}</tbody></table></div>
     ${lista.length > 400 ? `<div class="mu" style="font-size:.74rem">mostrando 400 de ${lista.length} — afine o filtro</div>` : ""}
     <div id="cl-cart-msg"></div>`;
+  box.querySelector(".expandir").onclick = () => { S.cartAberta = false; desenharCarteira(corpo, d); };
   for (const b of box.querySelectorAll(".filtros .chips button")) b.onclick = () => { const f = b.parentElement.dataset.f, v = b.dataset.v; if (f === "so") CF.so = v; else { const sel = CF[f]; if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); } desenharCarteira(corpo, d); };
   box.querySelector("#cl-cart-busca").oninput = ev => { CF.busca = ev.target.value; clearTimeout(desenharCarteira._t); desenharCarteira._t = setTimeout(() => desenharCarteira(corpo, d), 150); };
   for (const el of box.querySelectorAll(".dec")) el.onchange = async () => {
