@@ -329,8 +329,8 @@ function desenharVitrine(){
       <div class="card filtros">
         <label>cliente</label><div class="chips" id="vit-cliente"></div>
         <label>coleção</label><div class="chips" id="vit-colecao"></div>
-        <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div><div class="acoes"><button type="button" id="vit-pdf" class="sec">exportar PDF</button></div></div>
-        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm">todos</button><div class="mu" id="vit-saidas"></div></div>
+        <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div></div>
+        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" id="vit-pdf" class="sec sai">exportar PDF</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm" title="os três arquivos e o PDF">todos</button><div class="mu" id="vit-saidas"></div></div>
         <div class="mu" id="vit-nota"></div>
         <div class="msg erro oculto" id="vit-erro"></div>
       </div>
@@ -338,7 +338,8 @@ function desenharVitrine(){
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
     el.querySelector("#vit-pdf").onclick = () => imprimirVitrine();
-    for (const b of el.querySelectorAll(".saidas .sai")) b.onclick = () => pedirSaida(b.dataset.t.split(","));
+    // "todos" = os três arquivos + o PDF (ele, 19/10 15:3x: "bota exportar PDF junto, e todos — tudo pertinho, senão fica dessincronizado")
+    for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = () => { pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) imprimirVitrine(); };
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
   }
   chipsClientes(el, "vit-cliente");
