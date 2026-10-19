@@ -265,16 +265,18 @@ function montarApresentacao(d){
     <p style="margin:0;font-size:28px">${new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^./, c => c.toUpperCase())}</p></section>`);
   // 2 · posicionamento: venda × estoque, cobertura, regulador
   const faixa = cob == null ? "" : cob < 4 ? "abaixo de 4 meses: ruptura" : cob > 5 ? "acima de 5 meses: excesso" : "entre 4 e 5 meses: saudável";
+  const ideal = ESC.v ? ESC.v * 4 : null;
   pags.push(slide("Posicionamento · " + esc(reg.escopo || "tênis Olympikus"), "O que importa é a razão venda × estoque", "cobertura saudável entre 4 e 5 meses",
-    `<p style="margin:0;font-size:32px;line-height:1.4">A rede vende <b>${n0(ESC.v)} pares/mês</b> no escopo e tem <b>${n0(ESC.e)} pares</b> em estoque: cobertura de <b>${n1(cob)} meses</b>${faixa ? " — " + faixa : ""}. ${reg.total ? "Regulador proposto: <b>" + n0(reg.total) + " pares</b> (" + esc(reg.regra || "") + ")." : ""}</p>
-     <div style="display:flex;flex-direction:row;gap:24px">${cartao(n0(ESC.v), "pares/mês de venda média no escopo")}${cartao(n0(ESC.e), "estoque atual nas lojas")}${cartao(n1(cob) + " m", "cobertura atual (estoque ÷ venda)", true)}${reg.total ? cartao(n0(reg.total), "regulador proposto") : cartao(String(L.length), rede ? "rede (sem visão por loja)" : "lojas ativas")}</div>`));
+    `<p style="margin:0;font-size:32px;line-height:1.4">A rede vende <b>${n0(ESC.v)} pares/mês</b> no escopo e tem <b>${n0(ESC.e)} pares</b> em estoque: cobertura de <b>${n1(cob)} meses</b>${faixa ? " — " + faixa : ""}. Se a venda sobe, o estoque sobe; se cai, reduz: o que importa é a razão.</p>
+     <div style="display:flex;flex-direction:row;gap:24px">${cartao(n0(ESC.v), "pares/mês de venda média no escopo")}${cartao(n0(ESC.e), "estoque atual nas lojas")}${cartao(n1(cob) + " m", "cobertura atual (estoque ÷ venda)", true)}${ideal ? cartao(n0(ideal), "estoque a 4 meses de venda") : cartao(String(L.length), rede ? "rede (sem visão por loja)" : "lojas ativas")}</div>`));
   // 3 · lojas (duas páginas acima de 30)
-  const linhaLoja = l => { const sit = l.dif == null ? "—" : l.dif < 0 ? "pede entrada" : (l.reg && l.e / l.reg > 1.1) ? "acima" : "na faixa";
-    return `<tr style="background:${clTint(l.cluster)}">${rede ? "" : td(esc(l.cluster || ""), "left")}${td(esc(l.loja), "left")}${td(esc(l.nome || ""), "left")}${td(n0(l.v))}${td(pc(l.part))}${td(n0(l.e))}${td(n1(l.cob))}${td(n0(l.reg))}${td((l.dif < 0 ? "−" : "+") + n0(Math.abs(l.dif || 0)))}${td(sit, "center", l.dif < 0 ? "color:" + AZUL : "")}</tr>`; };
-  const cabLoja = `${rede ? "" : th("Cl.", "left", "5%")}${th("Loja", "left", "8%")}${th("Nome", "left", "22%")}${th("Venda/mês")}${th("Partic.")}${th("Estoque")}${th("Cob.")}${th("Regulador")}${th("Diferença")}${th("Situação")}`;
-  const totLoja = `<tr style="background:${CINZA2}">${rede ? "" : td("", "left")}${td("<b>Total</b>", "left")}${td(L.length + " lojas", "left")}${td("<b>" + n0(ESC.v) + "</b>")}${td("100%")}${td("<b>" + n0(ESC.e) + "</b>")}${td("<b>" + n1(cob) + "</b>")}${td(n0(L.reduce((s, l) => s + (l.reg || 0), 0)))}${td("")}${td("")}</tr>`;
+  // sem regulador nem classe (versão de cliente): a situação sai da cobertura da loja (abaixo de 4 pede entrada; acima de 5 excesso)
+  const linhaLoja = l => { const sit = l.cob == null ? "—" : l.cob < 4 ? "pede entrada" : l.cob > 5 ? "acima" : "na faixa";
+    return `<tr style="background:${clTint(l.cluster)}">${rede ? "" : td(esc(l.cluster || ""), "left")}${td(esc(l.loja), "left")}${td(esc(l.nome || ""), "left")}${td(n0(l.v))}${td(pc(l.part))}${td(n0(l.e))}${td(n1(l.cob), "center", l.cob != null && l.cob > 5 ? "font-weight:700" : "")}${td(sit, "center", sit === "pede entrada" ? "color:" + AZUL + ";font-weight:700" : "")}</tr>`; };
+  const cabLoja = `${rede ? "" : th("Cl.", "left", "6%")}${th("Loja", "left", "10%")}${th("Nome", "left", "30%")}${th("Venda/mês")}${th("Partic.")}${th("Estoque")}${th("Cobertura")}${th("Situação")}`;
+  const totLoja = `<tr style="background:${CINZA2}">${rede ? "" : td("", "left")}${td("<b>Total</b>", "left")}${td(L.length + " lojas", "left")}${td("<b>" + n0(ESC.v) + "</b>")}${td("100%")}${td("<b>" + n0(ESC.e) + "</b>")}${td("<b>" + n1(cob) + "</b>")}${td("")}</tr>`;
   const fatias = L.length > 30 ? [L.slice(0, Math.ceil(L.length / 2)), L.slice(Math.ceil(L.length / 2))] : [L];
-  fatias.forEach((f, i) => pags.push(slide("Lojas e clusters · " + esc(reg.escopo || ""), "Estoque por porta" + (fatias.length > 1 ? " " + (i + 1) + "/" + fatias.length : ""), "em pares · cobertura em meses · regulador = estoque oficial × participação",
+  fatias.forEach((f, i) => pags.push(slide("Lojas e clusters · " + esc(reg.escopo || ""), "Estoque por porta" + (fatias.length > 1 ? " " + (i + 1) + "/" + fatias.length : ""), "em pares · cobertura em meses = estoque ÷ venda/mês",
     tabela(cabLoja, f.map(linhaLoja).join("") + (i === fatias.length - 1 ? totLoja : "")))));
   // 4 · categorias (as 8 que mais vendem): tabela por loja + a leitura
   const cats = (d.cats || []).slice().sort((a, b) => ((d.totais[b] || {}).v || 0) - ((d.totais[a] || {}).v || 0)).slice(0, 8);
@@ -318,9 +320,9 @@ function montarApresentacao(d){
   if (d.ponta && d.ponta.itens && d.ponta.itens.length) {
     const its = d.ponta.itens.filter(i => i.situacao === "fora de linha").sort((a, b) => (b.estoque || 0) - (a.estoque || 0)).slice(0, 18);
     const T = d.ponta.totais || {}, fdl = T["fora de linha"] || {};
-    pags.push(slide("Ponta de estoque · fora de linha · giro até " + esc(mmaa((d.ponta.base.giro_ate || "") + "-01")), "Produto parado para rebaixar", n0(fdl.pares) + " pares em " + (fdl.cores || 0) + " cores fora de linha · " + esc(dinheiroCurto(fdl.valor_pdv)) + " em PDV",
-      tabela(th("Modelo", "left", "22%") + th("Ref.", "left") + th("Cor", "left") + th("PDV") + th("Estoque") + th("Venda/mês") + th("Cobertura") + th("Último fat.") + th("Sugestão", "left", "20%"),
-        its.map(i => `<tr>${td(esc(i.desc), "left")}${td(esc(i.ref), "left")}${td(esc(i.cor), "left")}${td(i.pdv == null ? "—" : esc(dinheiro(i.pdv)))}${td("<b>" + n0(i.estoque) + "</b>")}${td(i.venda_mes == null ? "—" : n1(i.venda_mes))}${td(n1(i.cobertura), "center", i.cobertura >= 9 ? "color:" + AZUL + ";font-weight:700" : "")}${td(i.ultimo_fat ? esc(mmaa(i.ultimo_fat + "-01")) : "nunca")}${td(esc(i.sugestao || ""), "left")}</tr>`).join(""))));
+    pags.push(slide("Oportunidade de giro · fora de linha · giro até " + esc(mmaa((d.ponta.base.giro_ate || "") + "-01")), "Oportunidade de giro", n0(fdl.pares) + " pares em " + (fdl.cores || 0) + " cores fora de linha · " + esc(dinheiroCurto(fdl.valor_pdv)) + " em PDV",
+      tabela(th("Modelo", "left", "26%") + th("Ref.", "left") + th("Cor", "left") + th("PDV") + th("Estoque") + th("Venda/mês") + th("Cobertura") + th("Último fat."),
+        its.map(i => `<tr>${td(esc(i.desc), "left")}${td(esc(i.ref), "left")}${td(esc(i.cor), "left")}${td(i.pdv == null ? "—" : esc(dinheiro(i.pdv)))}${td("<b>" + n0(i.estoque) + "</b>")}${td(i.venda_mes == null ? "—" : n1(i.venda_mes))}${td(n1(i.cobertura), "center", i.cobertura >= 9 ? "color:" + AZUL + ";font-weight:700" : "")}${td(i.ultimo_fat ? esc(mmaa(i.ultimo_fat + "-01")) : "sem registro")}</tr>`).join(""))));
   }
   // 8 · a leitura (fecho)
   if (d.leitura && Object.keys(d.leitura).length) {
