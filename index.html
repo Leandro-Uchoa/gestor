@@ -308,6 +308,17 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 /* 19/10: um placar por tipo (tênis, chinelos…), sem total geral — regra dele: chinelo nunca soma com tênis */
 .mont-placar{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}.pl-tipo{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}
 .pl-tipo em{font-style:normal;font-weight:900;font-size:.72rem;letter-spacing:.06em;color:var(--preto);align-self:center;min-width:70px;border-left:3px solid var(--amarelo);padding-left:6px}
+/* a GRADE do unissex (19/10, ordem dele): perguntinha ao subir; o selo no cartão troca a grade; "grade?" = unissex sem resposta */
+.grade-luz{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+.grade-quadro{background:var(--cartao);color:var(--preto);border-radius:14px;padding:18px 20px;max-width:420px;width:100%;font-family:var(--fonte-sans)}
+.gq-nome{font-weight:800;font-size:1rem}.gq-nome .mu{color:var(--cinza-escuro);font-weight:600;font-size:.8rem}.gq-perg{margin:10px 0 12px;font-size:.95rem}
+.gq-botoes{display:grid;gap:8px}.gq-botoes button{margin:0;background:var(--off-white);color:var(--preto);border:1px solid var(--cinza-claro);font-weight:800;padding:12px}.gq-botoes button:hover,.gq-botoes button.ativa{background:var(--amarelo);border-color:var(--amarelo)}
+.grade-quadro .gq-deixa{margin-top:10px;background:transparent;color:var(--cinza-escuro);border:1px dashed var(--cinza-claro)}
+.vcard .selo.grade{display:inline-block;background:var(--azul);color:var(--off-white);border:0;margin:3px 0 0;padding:2px 6px;width:auto;cursor:pointer;text-transform:none;font-size:.58rem;font-weight:800;border-radius:var(--raio-selo);font-family:inherit}.vcard .selo.grade.falta{background:var(--amarelo);color:var(--preto)}
+/* o roteiro da montagem (ordem dele): feminino → masculino → grade especial → infantil → chinelos; "até 48" marca quem cabe na grade especial */
+.chips.roteiro button{background:var(--off-white);border-color:var(--cinza-claro)}.chips.roteiro button.ativa{background:var(--amarelo);border-color:var(--amarelo)}.chips.roteiro button small{background:var(--preto);color:var(--off-white);border-radius:999px;padding:0 6px;margin-left:4px;font-size:.62rem}
+.mcard .selo.ate48{background:var(--azul);color:var(--off-white);text-transform:none;font-size:.6rem;font-weight:800;padding:1px 6px;border-radius:var(--raio-selo);margin-left:6px}
+.vsec.falta{color:var(--azul)}
 /* GTM DISTRIBUIÇÃO (19/10): estrela da Vulcabras, mix dos vendedores e pares sugeridos do mês, na miniatura, no cartão e no placar */
 .pl-tipo.gtm{grid-template-columns:auto repeat(4,minmax(0,1fr))}
 .mgtm{font-size:.6rem;color:var(--cinza-escuro);font-weight:700;text-align:center;margin-top:1px;white-space:nowrap}.mgtm b{color:var(--preto)}.mgtm.estrela{color:var(--preto)}
@@ -358,7 +369,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.21</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.22</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -426,7 +437,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=16"></script>
+<script src="colecao.js?v=17"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script>
