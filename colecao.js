@@ -403,13 +403,15 @@ const PREF = { ler: (k, d) => { try { const v = localStorage.getItem("gestor.vit
 function ligarZoomEDivisor(pg){
   const mont = pg.querySelector(".montador");
   const aplicar = () => {
-    const ze = PREF.ler("zoom.esq", 1), zd = PREF.ler("zoom.dir", 1), fr = PREF.ler("divisor", 0.465);
-    mont.style.setProperty("--z-esq", ze); mont.style.setProperty("--z-dir", zd);
+    // na VITRINE o zoom muda o NÚMERO DE COLUNAS (ele, 19/10 15:4x: "só os textos aumentavam, a imagem não; quero a imagem menor para caber na
+    // tela") — zoom menor = mais cartões por linha = imagem menor. Padrão 80% = 5 por linha. Na coleção (miniaturas de tamanho fixo) o zoom é zoom.
+    const ze = PREF.ler("zoom.esq", 1), zd = PREF.ler("zoom.dir", 0.8), fr = PREF.ler("divisor", 0.465);
+    mont.style.setProperty("--z-esq", ze); mont.style.setProperty("--vcols", Math.min(8, Math.max(2, Math.round(4 / zd))));
     mont.style.setProperty("--esq", fr + "fr"); mont.style.setProperty("--dir", (1 - fr) + "fr");
-    for (const z of mont.querySelectorAll(".mont-zoom")) z.querySelector("b").textContent = Math.round((z.dataset.lado === "esq" ? ze : zd) * 100) + "%";
+    for (const z of mont.querySelectorAll(".mont-zoom")) z.querySelector("b").textContent = z.dataset.lado === "esq" ? Math.round(ze * 100) + "%" : mont.style.getPropertyValue("--vcols") + " por linha";
   };
   for (const z of mont.querySelectorAll(".mont-zoom")) for (const b of z.querySelectorAll("button")) b.onclick = () => {
-    const k = "zoom." + z.dataset.lado, v = Math.min(2, Math.max(0.5, Math.round((PREF.ler(k, 1) + 0.1 * +b.dataset.d) * 10) / 10)); PREF.gravar(k, v); aplicar(); };
+    const k = "zoom." + z.dataset.lado, v = Math.min(2, Math.max(0.5, Math.round((PREF.ler(k, z.dataset.lado === "dir" ? 0.8 : 1) + 0.1 * +b.dataset.d) * 10) / 10)); PREF.gravar(k, v); aplicar(); };
   const div = mont.querySelector(".mont-divisor");
   div.onpointerdown = ev => {
     ev.preventDefault(); div.setPointerCapture(ev.pointerId); div.classList.add("pegando");
