@@ -503,7 +503,7 @@ async function imprimirVitrine(opcoes){
     // a capa: uma linha por tipo (cores · modelos; na programação os pares), nunca somando chinelo com tênis — sem total geral
     const paresDe = it => { const pm = mesesDe(it); return pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; };
     const linhas = PDF_TIPOS.map(([v, r]) => { const its = lista.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const p = grade ? its.reduce((s, it) => s + paresDe(it), 0) : 0;
-      return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${p ? ` · ${p.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : ""}`; }).filter(Boolean);
+      return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${p ? ` · ${p.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : (grade ? " · pares a definir" : "")}`; }).filter(Boolean);   // PICASSO 19/10 21:0x: na programação o tipo sem pares diz "a definir", nunca some nem soma ao tênis
     const tituloDoc = grade ? "PROGRAMAÇÃO" : "VITRINE";
     const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)}` };
     const paginas = [`<div class="pg capa"><h1>${tituloDoc}<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>

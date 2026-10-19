@@ -256,6 +256,11 @@ const bonito = s => String(s == null ? "" : s).trim().split(/\s+/).map((w, i) =>
   return u.charAt(0) + u.slice(1).toLowerCase().replace(/\/(.)/g, (m, c) => "/" + c.toUpperCase()); }).join(" ");
 const lista = arr => arr.length > 1 ? arr.slice(0, -1).join(", ") + " e " + arr[arr.length - 1] : (arr[0] || "");
 const corte = arr => arr.length < 2 ? [arr, []] : [arr.slice(0, Math.ceil(arr.length / 2)), arr.slice(Math.ceil(arr.length / 2))];
+// PICASSO (20/10): nas tabelas por loja a altura da linha = espaço útil ÷ (lojas por coluna + 2), teto TETO_LINHA, e o corpo da letra
+// acompanha (com 29 lojas volta ao compacto do molde). util = o que sobra da página depois do cabeçalho, dos vãos e da leitura.
+const TETO_LINHA = 34, ALT_UTIL = 1_080 - 96 - 160;
+const medida = (porColuna, util, fsMax, extraLinhas) => { const h = Math.max(22, Math.min(TETO_LINHA, Math.floor(util / (porColuna + 2 + (extraLinhas || 0))))); const fs = Math.max(15, Math.min(fsMax || 23, Math.round(h * 0.64))); return { fs, pv: Math.max(1, Math.floor((h - fs * 1.2 - 1) / 2)), h }; };
+const altCabec = 107, altLeitura = (frases, size) => 12 + frases.filter(Boolean).reduce((s, f) => s + Math.ceil(String(f).replace(/<[^>]+>/g, "").length / (W / ((size || 24) * 0.5))) * (size || 24) * 1.35 + 6, 0);
 let NOME_DECK = "";
 const kick = t => `<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${AZUL}">${t}</p>`;
 const cabec = (kicker, titulo, sub) => `<div style="display:flex;flex-direction:column;gap:8px">${kick(kicker)}<div style="display:flex;flex-direction:row;align-items:baseline;gap:24px"><h2 style="font-size:64px;font-weight:700;line-height:1.1;color:${PRETO};white-space:nowrap">${titulo}</h2>${sub ? `<p style="font-size:24px;color:${CINZA}">${sub}</p>` : ""}</div></div>`;
@@ -314,11 +319,14 @@ const rotuloFaixa = k => { const m = /\(([^)]*)\)/.exec(k); return (m ? m[1] : S
 const faixaRS = k => { const t = rotuloFaixa(k); return /^(acima de|até) /.test(t) ? t.replace(/^(acima de|até) /, "$1 R$ ") : "R$ " + t; };
 const nivel = k => /TOPO/i.test(k) ? 3 : /MEIO/i.test(k) ? 2 : /BASE/i.test(k) ? 1 : parseFloat(String(k).replace(",", ".")) || 0;
 const nivelNome = k => /TOPO/i.test(k) ? "topo" : /MEIO/i.test(k) ? "meio" : /BASE/i.test(k) ? "base" : "";
-// "PREÇO · PDV R$": a pirâmide da família em barras azuis, da faixa de cima para a de baixo
-function precoBarras(fx){
+// "PREÇO · PDV R$": a pirâmide da família em barras azuis, da faixa de cima para a de baixo. PICASSO (20/10): a largura é proporcional
+// ao percentual (a maior faixa ocupa a coluna inteira; 0,1% vira um traço), e o rótulo sai para FORA quando a barra é estreita.
+function precoBarras(fx, larg){
   const ent = Object.entries(fx || {}).sort((a, b) => nivel(b[0]) - nivel(a[0])), tot = ent.reduce((s, [, n]) => s + n, 0); if (!tot) return "";
-  const n = ent.length, larg = i => Math.round(380 + 252 * (n > 1 ? i / (n - 1) : 1));
-  return kick("Preço · PDV R$") + `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">${ent.map(([k, v], i) => `<div style="width:${larg(i)}px;background:${AZUL};border-radius:8px;padding:4px 16px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:16px"><p style="font-size:32px;font-weight:800;line-height:1.1;color:${OFF}">${pc1(v / tot)}</p><p style="font-size:24px;font-weight:700;color:${OFF}">${esc(rotuloFaixa(k))}</p></div>`).join("")}</div>`;
+  const LT = larg || 632, maxV = Math.max(...ent.map(([, v]) => v), 1);
+  return kick("Preço · PDV R$") + `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px">${ent.map(([k, v]) => { const w = Math.max(6, Math.round(LT * v / maxV)), dentro = w >= 330;
+    const rot = fg => `<p style="font-size:32px;font-weight:800;line-height:1.1;color:${fg};white-space:nowrap">${pc1(v / tot)}</p><p style="font-size:24px;font-weight:700;color:${fg};white-space:nowrap">${esc(rotuloFaixa(k))}</p>`;
+    return `<div style="display:flex;flex-direction:row;align-items:center;gap:14px;width:${LT}px"><div style="flex:none;width:${w}px;height:44px;background:${AZUL};border-radius:8px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:16px;overflow:hidden">${dentro ? rot(OFF) : ""}</div>${dentro ? "" : `<div style="display:flex;flex-direction:row;align-items:baseline;gap:12px">${rot(PRETO)}</div>`}</div>`; }).join("")}</div>`;
 }
 
 function montarApresentacao(d){
@@ -326,12 +334,12 @@ function montarApresentacao(d){
   const pags = [], ESC = d.escopo || {}, cob = ESC.v ? ESC.e / ESC.v : null;
   const L = (d.lojas || []).slice().sort((a, b) => String(a.cluster || "").localeCompare(String(b.cluster || "")) || (b.v || 0) - (a.v || 0)), nL = L.length;
   const clusters = [...new Set(L.map(l => l.cluster).filter(Boolean))].sort(), temCl = clusters.length > 1;
-  const nomeL = l => esc(bonito(l.nome || l.loja));
+  // a loja para o cliente é o CÓDIGO DELE (l.loja: MA09, 021…), que é como ele a reconhece; l.nome é a descrição e vai ao lado, em
+  // cinza, quando cabe; l.codigo (o da Vulcabras) nunca sai. Nas leituras, só o código dele (o texto do banco já fala nele).
+  const nomeL = l => esc(String(l.loja));
+  const lojaCel = (l, larg, fs) => { const nome = bonito(l.nome || ""), cabe = nome && (String(l.loja).length + 1 + nome.length) * fs * 0.52 <= larg - 16; return `<b>${nomeL(l)}</b>${cabe ? ` <span style="color:${CINZA}">${esc(nome)}</span>` : ""}`; };
   const xc = (l, c) => ((l.cat || {})[c] || {});
-  // a leitura do banco fala em código de loja (o vocabulário interno); o cliente lê o nome
-  const porNome = Object.fromEntries(L.map(l => [l.loja, bonito(l.nome || l.loja)]));
-  const codRe = nL ? new RegExp("\\b(" + L.map(l => String(l.loja).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b", "g") : null;
-  const texto = t => esc(codRe ? String(t || "").replace(codRe, c => porNome[c] || c) : t);
+  const texto = t => esc(t);
   // famílias e categorias: pelo nome, não pela posição
   const cats = d.cats || [], ehOutra = c => /CHINEL|ACESS|MEIA/i.test(c), ehUA = c => /^UA\b/i.test(c);
   const catsTenis = cats.filter(c => !ehOutra(c) && !ehUA(c)), catChi = cats.find(c => /CHINEL/i.test(c)), catAcc = cats.find(c => /ACESS/i.test(c)), catMei = cats.find(c => /MEIA/i.test(c)), catUA = cats.find(ehUA);
@@ -346,9 +354,9 @@ function montarApresentacao(d){
   const janela = jan ? `${jan[1]}–${jan[2]}/${jan[3]}` : "até " + mesBase;
   const mesB = d.base_em ? +d.base_em.slice(5, 7) : 0, preNatal = mesB >= 9 && mesB <= 11;
   const FONTE_LJ = `análise de giro por loja · sellout médio ${janela} · estoque das lojas em ${mesBase} · ${nL} loja${nL === 1 ? "" : "s"}`;
-  const FONTE_RD = ini ? `análise de giro consolidada da rede · sellout ${mmaa(ini)}–${mmaa(fim)}` : FONTE_LJ;
+  const FONTE_RD = ini ? `análise de giro consolidada da rede · sellout ${mmaa(ini)}–${mmaa(fim)} · série desde ${mmaa(ini)}` : FONTE_LJ;   // a série começa onde o banco tem dado
   const KSAZ = ini ? `rede · ${mmaa(ini)}–${mmaa(fim)}` : "rede";
-  const escopoTxt = esc((ESC.regulador || {}).escopo || "tênis Olympikus");
+  const escopoTxt = esc(String((ESC.regulador || {}).escopo || "tênis Olympikus").replace(/\s*\([^)]*\)\s*$/, ""));   // sem o parêntese longo do escopo
   const idxT = ref.meses.length ? idxMes(ref.vals, ref.meses) : [], idxDez = idxT[11];
   // 1 · capa
   const capaTxt = [ini ? `Sellout da rede de ${mesAno(ini)} a ${mesAno(fim)}` : "", nL ? `sellout e estoque ${nL === 1 ? "da rede" : `das ${nL} lojas`} ${jan ? `de ${jan[1]} a ${jan[2]}/20${jan[3]}` : "em " + (d.base_em ? mesAno(d.base_em) : mesBase)}` : "", "Olympikus" + (temUA ? " e Under Armour" : "")].filter(Boolean).join(" · ");
@@ -376,35 +384,38 @@ function montarApresentacao(d){
   }
   // 3 · venda e estoque por porta: as lojas em duas colunas, "Rede" no fim da segunda, leitura embaixo
   if (nL) {
-    const cols = [...(temCl ? [["Cl.", "center"]] : []), ["Loja", "left"], ["Venda/mês", "center"], ["Part.", "center"], ["Estoque", "center"], ["Cob.", "center"]], LG = [...(temCl ? [52] : []), 236, 136, 112, 136, 116];
-    const lin = l => ({ bg: tint(l.cluster), cells: [...(temCl ? [[esc(l.cluster || ""), ""]] : []), [nomeL(l), ""], [n0(l.v), ""], [pc1(l.part), ""], [n0(l.e), ""], [n1(l.cob), l.cob == null ? "" : l.cob < 4 ? `background:${AMARELO};font-weight:800` : l.cob > 8 ? `background:${CINZA2}` : ""]] });
-    const rede = { bg: CINZA2, cells: [...(temCl ? [["", ""]] : []), ["<b>Rede</b>", ""], [`<b>${n0(ESC.v)}</b>`, ""], ["<b>100%</b>", ""], [`<b>${n0(ESC.e)}</b>`, ""], [`<b>${n1(cob)}</b>`, ""]] };
-    const [e1, e2] = corte(L), fs = e1.length <= 16 ? 23 : 19;
+    const cols = [...(temCl ? [["Cl.", "center"]] : []), ["Loja", "left"], ["Venda/mês", "center"], ["Part.", "center"], ["Estoque", "center"], ["Cob.", "center"]], LG = [...(temCl ? [48] : []), 304, 124, 100, 124, 88];
     const secas = L.filter(l => l.cob != null && l.cob < 4), pesadas = L.filter(l => l.cob > 8).sort((a, b) => b.cob - a.cob);
+    const [e1, e2] = corte(L);
     const faixa = c => { const vs = L.filter(l => l.cluster === c).map(l => l.v || 0); return `${n0(Math.min(...vs))} a ${n0(Math.max(...vs))}`; };
     const frCl = temCl ? clusters.map((c, i) => { const ls = L.filter(l => l.cluster === c); return `<b>${i ? "" : "Cluster "}${esc(c)}</b> (${faixa(c)} pares/mês): ${i ? ls.length + " lojas" : lista(ls.map(nomeL))}.`; }).join(" ") : "";
     const frSec = !secas.length ? "Nenhuma loja está abaixo de 4 meses." : secas.length === 1 ? `Só a ${nomeL(secas[0])}${secas[0] === L[0] ? ", a maior loja," : ""} está abaixo de 4 meses (${n1(secas[0].cob)}).` : `${lista(secas.map(l => `${nomeL(l)} (${n1(l.cob)})`))} estão abaixo de 4 meses.`;
     const frPes = !pesadas.length ? "Nenhuma passa de 8 meses." : pesadas.length === 1 ? `A ${nomeL(pesadas[0])} passa de 8 meses (${n1(pesadas[0].cob)}).` : `${lista(pesadas.map(nomeL))} passam de 8 meses; a ${nomeL(pesadas[0])} tem ${n1(pesadas[0].cob)}.`;
-    const corpoT = e2.length ? duas(tabela(cols, e1.map(lin), LG, fs, "4px 8px"), tabela(cols, [...e2.map(lin), rede], LG, fs, "4px 8px")) : tabela(cols, [...e1.map(lin), rede], LG, fs, "4px 8px");
-    pags.push(pagina(cabec("Lojas e clusters · " + escopoTxt, "Venda e estoque por porta", "pares · cobertura em meses · amarelo: abaixo de 4 · cinza: acima de 8") + corpoT + leitura([frCl, frSec + " " + frPes]), FONTE_LJ, 16));
+    const frases = [frCl, frSec + " " + frPes], { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura(frases)), pad = `${pv}px 8px`;
+    const lin = l => ({ bg: tint(l.cluster), cells: [...(temCl ? [[esc(l.cluster || ""), ""]] : []), [lojaCel(l, 304, fs), ""], [n0(l.v), ""], [pc1(l.part), ""], [n0(l.e), ""], [n1(l.cob), l.cob == null ? "" : l.cob < 4 ? `background:${AMARELO};font-weight:800` : l.cob > 8 ? `background:${CINZA2}` : ""]] });
+    const rede = { bg: CINZA2, cells: [...(temCl ? [["", ""]] : []), ["<b>Rede</b>", ""], [`<b>${n0(ESC.v)}</b>`, ""], ["<b>100%</b>", ""], [`<b>${n0(ESC.e)}</b>`, ""], [`<b>${n1(cob)}</b>`, ""]] };
+    const corpoT = e2.length ? duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad)) : tabela(cols, [...e1.map(lin), rede], LG, fs, pad);
+    pags.push(pagina(cabec("Lojas e clusters · " + escopoTxt, "Venda e estoque por porta", "pares · cobertura em meses · amarelo: abaixo de 4 · cinza: acima de 8") + corpoT + leitura(frases), FONTE_LJ, 16));
   }
   // 4 · quanto cada loja leva de cada categoria (mapa de calor: cada coluna soma 100%)
-  const ABVQ = { "CAMINHADA P1": "Cam.<br>P1", "CAMINHADA P2": "Cam.<br>P2", "CORRIDA/TREINO": "Corrida<br>Treino", "CORRE": "Corre", "CLÁSSICOS": "Clás-<br>sicos", "INFANTIL": "Infan-<br>til", "CHINELOS": "Chine-<br>los", "ACESSÓRIOS": "Acess.", "MEIAS": "Meias" };
+  const ABVQ = { "CAMINHADA P1": "Cam.<br>P1", "CAMINHADA P2": "Cam.<br>P2", "CORRIDA/TREINO": "Corrida<br>Treino", "CORRE": "Corre", "CLÁSSICOS": "Clás-<br>sicos", "INFANTIL": "Infan-<br>til", "CHINELOS": "Chine-<br>los", "ACESSÓRIOS": "Acess.", "MEIAS": "Meias", "UA TÊNIS": "UA<br>tênis" };
   const ABV = { "CAMINHADA P1": "P1", "CAMINHADA P2": "P2", "CORRIDA/TREINO": "Corrida", "CORRE": "Corre", "CLÁSSICOS": "Clássicos", "INFANTIL": "Infantil" };
   const ab = c => ABV[String(c).toUpperCase()] || esc(bonito(c));
   if (nL > 1 && cats.length) {
     const partDe = (l, c) => xc(l, c).part || 0, mx = cats.map(c => Math.max(...L.map(l => partDe(l, c))));
     const heat = (p, m) => { const a = m ? 0.04 + 0.96 * Math.pow(p / m, 1.2) : 0; return `background:rgba(46,62,252,${a.toFixed(2)});color:${a > 0.7 ? OFF : PRETO};${m && p === m ? "font-weight:800" : ""}`; };
-    const colw = Math.min(66, Math.floor((W - 24 - 2 * 222) / (2 * cats.length))), fsM = cats.length <= 9 ? 19 : 17;
+    const colw = Math.min(66, Math.floor((W - 24 - 2 * 222) / (2 * cats.length)));
     const cols = [["Cl.", "center"], ["Loja", "left"], ...cats.map(c => [ABVQ[String(c).toUpperCase()] || esc(bonito(c)), "center"])], LG = [34, 188, ...cats.map(() => colw)];
-    const lin = l => ({ bg: "transparent", cells: [[esc(l.cluster || ""), "background:" + tint(l.cluster)], [nomeL(l), "background:" + tint(l.cluster)], ...cats.map((c, j) => [pc1(partDe(l, c)), heat(partDe(l, c), mx[j])])] });
-    const rede = { bg: PRETO, cells: [["", "color:" + OFF], ["<b>Rede</b>", "color:" + OFF], ...cats.map(() => ["<b>100%</b>", "color:" + OFF])] };
     const [e1, e2] = corte(L), A = L.filter(l => l.cluster === clusters[0]), somaA = c => A.reduce((s, l) => s + partDe(l, c), 0);
     const fr1 = temCl ? `As ${A.length} lojas ${esc(clusters[0])} levam ${pc1(A.reduce((s, l) => s + (l.part || 0), 0))} da venda de tênis${catMei ? `; nas meias, ${pc1(somaA(catMei))}` : ""}${catAcc ? `, e nos acessórios, ${pc1(somaA(catAcc))}` : ""}.` : "";
     const top3 = c => lista(L.slice().sort((a, b) => partDe(b, c) - partDe(a, c)).slice(0, 3).map(nomeL));
     const fr2 = catChi ? `O chinelo se concentra em ${top3(catChi)}.` : "";
-    pags.push(pagina(cabec("Lojas e clusters · participação de cada porta", "Quanto cada loja leva de cada categoria", "cada coluna soma 100% · mais escuro = fatia maior") + duas(tabela(cols, e1.map(lin), LG, fsM, "4px 4px"), tabela(cols, [...e2.map(lin), rede], LG, fsM, "4px 4px"), 24)
-      + leitura([`<span style="color:${CINZA}">venda média ${janela} · a participação é da loja dentro de cada categoria</span>`, [fr1, fr2].filter(Boolean).join(" ")]), FONTE_LJ, 14));
+    const frases = [`<span style="color:${CINZA}">venda média ${janela} · a participação é da loja dentro de cada categoria</span>`, [fr1, fr2].filter(Boolean).join(" ")];
+    const { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 28 - altLeitura(frases), cats.length <= 9 ? 19 : 17), pad = `${pv}px 4px`;
+    const lin = l => ({ bg: "transparent", cells: [[esc(l.cluster || ""), "background:" + tint(l.cluster)], [lojaCel(l, 188, fs), "background:" + tint(l.cluster)], ...cats.map((c, j) => [pc1(partDe(l, c)), heat(partDe(l, c), mx[j])])] });
+    const rede = { bg: PRETO, cells: [["", "color:" + OFF], ["<b>Rede</b>", "color:" + OFF], ...cats.map(() => ["<b>100%</b>", "color:" + OFF])] };
+    pags.push(pagina(cabec("Lojas e clusters · participação de cada porta", "Quanto cada loja leva de cada categoria", "cada coluna soma 100% · mais escuro = fatia maior") + duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad), 24)
+      + leitura(frases), FONTE_LJ, 14));
   }
   // o slide de sazonalidade: barras jan–set com o ano embaixo do eixo, "Em amarelo", cartões de semestre e a coluna da direita
   const sazSlide = (fam, titulo, un, kicker, direita, fonte) => {
@@ -478,23 +489,25 @@ function montarApresentacao(d){
     const n = catsTenis.length, cw = Math.min(104, Math.floor((W - 32 - 460) / (2 * n)));
     const abH = c => cw < 110 && ab(c).length > 8 ? ab(c).slice(0, 5) + "." : ab(c);     // "Clássicos" não cabe na coluna estreita: "Cláss."
     const cols = [["Cl.", "center"], ["Loja", "left"], ...catsTenis.map(c => [abH(c), "center"])], LG = [40, 190, ...catsTenis.map(() => cw)];
-    const [e1, e2] = corte(L), fs = e1.length <= 16 ? 23 : 19;
+    const [e1, e2] = corte(L);
     const celIdx = v => { if (v == null) return ["—", `color:${CINZA}`]; if (v >= 110) { const a = Math.min(0.9, 0.25 + (v - 110) / 150); return [String(Math.round(v)), `background:rgba(46,62,252,${a.toFixed(2)});color:${a > 0.5 ? OFF : PRETO};font-weight:700`]; } return [String(Math.round(v)), v <= 70 ? `background:${CINZA2}` : ""]; };
-    const linI = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [nomeL(l), ""], ...catsTenis.map(c => celIdx(xc(l, c).idx))] });
-    const redeI = { bg: CINZA2, cells: [["", ""], ["<b>Rede (pares/mês)</b>", ""], ...catsTenis.map(c => [`<b>${n0((T[c] || {}).v)}</b>`, ""])] };
     const lid = c => L.filter(l => (xc(l, c).idx || 0) >= 110).sort((a, b) => xc(b, c).idx - xc(a, c).idx).slice(0, 2);
     const frI = catsTenis.map(c => { const t = lid(c); return t.length ? `<b>${ab(c)}</b> puxa em ${lista(t.map(l => `${nomeL(l)} (${xc(l, c).idx})`))}` : ""; }).filter(Boolean).join("; ");
+    const frasesI = [frI ? frI + "." : "Nenhuma loja passa de 110 em categoria alguma."], mI = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura(frasesI)), padI = `${mI.pv}px 6px`;
+    const linI = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 190, mI.fs), ""], ...catsTenis.map(c => celIdx(xc(l, c).idx))] });
+    const redeI = { bg: CINZA2, cells: [["", ""], ["<b>Rede (pares/mês)</b>", ""], ...catsTenis.map(c => [`<b>${n0((T[c] || {}).v)}</b>`, ""])] };
     pags.push(pagina(cabec("Tênis por loja · quem vende o quê", "Índice por categoria", "100 = a loja vende a categoria na mesma proporção do seu tênis · azul: 110 ou mais · cinza: 70 ou menos")
-      + duas(tabela(cols, e1.map(linI), LG, fs, "4px 6px"), tabela(cols, [...e2.map(linI), redeI], LG, fs, "4px 6px")) + leitura([frI ? frI + "." : "Nenhuma loja passa de 110 em categoria alguma."]), FONTE_LJ, 16));
-    const celCob = x => !x.v || x.cob == null ? ["—", `color:${CINZA}`] : [n1(x.cob), x.cob < 4 ? `background:${AMARELO};font-weight:800` : x.cob > 10 ? `background:${CINZA2}` : ""];
-    const linC = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [nomeL(l), ""], ...catsTenis.map(c => celCob(xc(l, c)))] });
+      + duas(tabela(cols, e1.map(linI), LG, mI.fs, padI), tabela(cols, [...e2.map(linI), redeI], LG, mI.fs, padI)) + leitura(frasesI), FONTE_LJ, 16));
+    const celCob = x => !x.v || x.cob == null || x.e < 0 ? ["—", `color:${CINZA}`] : [n1(x.cob), x.cob < 4 ? `background:${AMARELO};font-weight:800` : x.cob > 10 ? `background:${CINZA2}` : ""];
     const redeC = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], ...catsTenis.map(c => { const t = T[c] || {}; return [`<b>${n1(t.v ? t.e / t.v : null)}</b>`, ""]; })] };
     const falta = []; for (const l of L) for (const c of catsTenis) { const x = xc(l, c); if (x.v >= 15 && x.cob != null && x.cob < 4) falta.push([l, c, x.cob]); } falta.sort((a, b) => a[2] - b[2]);
     const cobs = catsTenis.map(c => [c, (T[c] || {}).v ? T[c].e / T[c].v : null]).filter(([, v]) => v != null), pesados = cobs.filter(([, v]) => v > 8).sort((a, b) => b[1] - a[1]), leve = cobs.slice().sort((a, b) => a[1] - b[1])[0];
     const frF = falta.length ? `Falta produto onde a venda é alta: ${falta.slice(0, 7).map(([l, c, v]) => `${nomeL(l)} ${ab(c)} (${n1(v)})`).join("; ")}.` : "Nenhuma loja está abaixo de 4 meses numa categoria em que vende 15 pares/mês ou mais.";
     const frP = (pesados.length ? `${lista(pesados.map(([c, v]) => `${esc(bonito(c))} (${n1(v)} meses)`))} ${pesados.length > 1 ? "estão pesados" : "está pesado"} na rede` : "Nenhuma categoria passa de 8 meses na rede") + (leve ? `; a ${esc(bonito(leve[0]))} gira em ${n1(leve[1])}.` : ".");
+    const mC = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura([frF, frP])), padC = `${mC.pv}px 6px`;
+    const linC = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 190, mC.fs), ""], ...catsTenis.map(c => celCob(xc(l, c)))] });
     pags.push(pagina(cabec("Tênis por loja · estoque contra venda", "Cobertura por categoria", "meses de estoque na venda média · amarelo: abaixo de 4 · cinza: acima de 10")
-      + duas(tabela(cols, e1.map(linC), LG, fs, "4px 6px"), tabela(cols, [...e2.map(linC), redeC], LG, fs, "4px 6px")) + leitura([frF, frP]), FONTE_LJ + " · — = sem venda", 16));
+      + duas(tabela(cols, e1.map(linC), LG, mC.fs, padC), tabela(cols, [...e2.map(linC), redeC], LG, mC.fs, padC)) + leitura([frF, frP]), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 16));
   }
   // 11 · chinelos, 12 · acessórios, 13 · meias: sazonalidade + "PREÇO · PDV R$" da pirâmide da família + duas linhas curtas
   const dirPreco = (pirKey, cat, lojasPrimeiro) => (sems, vals, meses) => {
@@ -514,27 +527,29 @@ function montarApresentacao(d){
   if (nL > 1 && OC.length) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ...OC.flatMap(() => [["Venda", "center"], ["Cob.", "center"]])], LG = [40, 216, ...OC.flatMap(() => [96, 88])];
     const grp = [["", 2, "transparent"], ...OC.map(([c, t, bg]) => [`${t} · ${unid(c)}`, 2, bg])];
-    const lin = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [nomeL(l), ""], ...OC.flatMap(([c]) => { const x = xc(l, c), lim = /MEIA/i.test(c) ? 2 : 4;
-      return [[x.v == null ? "—" : x.v < 100 ? n1(x.v) : n0(x.v), ""], !x.v || x.cob == null ? ["—", `color:${CINZA}`] : [n1(x.cob), x.cob < lim ? `background:${AMARELO};font-weight:800` : x.cob > 12 ? `background:${CINZA2}` : ""]]; })] });
-    const rede = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], ...OC.flatMap(([c]) => { const t = T[c] || {}; return [[`<b>${n0(t.v)}</b>`, ""], [`<b>${n1(t.v ? t.e / t.v : null)}</b>`, ""]]; })] };
-    const [e1, e2] = corte(L), fs = e1.length <= 16 ? 21 : 18;
+    const [e1, e2] = corte(L);
     const secasM = catMei ? L.filter(l => xc(l, catMei).v >= 20 && xc(l, catMei).cob != null && xc(l, catMei).cob < 1).sort((a, b) => xc(a, catMei).cob - xc(b, catMei).cob) : [];
     const fr0 = secasM.length ? `Meias: ${lista(secasM.slice(0, 5).map(l => `${nomeL(l)} (${n1(xc(l, catMei).cob)})`))} ${secasM.length > 1 ? "têm" : "tem"} menos de 1 mês de estoque.` : "";
     const frs = e1.length <= 10 ? OC.map(([c, t]) => (d.leitura || {})[c] ? `<b>${t}:</b> ${texto(d.leitura[c])}` : "").filter(Boolean) : [];
+    const fsL = e1.length <= 10 ? 24 : 22, { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 28 - altLeitura([fr0, ...frs], fsL), 21, 1), pad = `${pv}px 5px`;
+    const lin = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 216, fs), ""], ...OC.flatMap(([c]) => { const x = xc(l, c), lim = /MEIA/i.test(c) ? 2 : 4;
+      return [[x.v == null ? "—" : x.v < 100 ? n1(x.v) : n0(x.v), ""], !x.v || x.cob == null || x.e < 0 ? ["—", `color:${CINZA}`] : [n1(x.cob), x.cob < lim ? `background:${AMARELO};font-weight:800` : x.cob > 12 ? `background:${CINZA2}` : ""]]; })] });
+    const rede = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], ...OC.flatMap(([c]) => { const t = T[c] || {}; return [[`<b>${n0(t.v)}</b>`, ""], [`<b>${n1(t.v ? t.e / t.v : null)}</b>`, ""]]; })] };
     pags.push(pagina(cabec("Chinelos, acessórios e meias · por loja", "Venda e cobertura", "venda média/mês · cobertura em meses · amarelo: abaixo de 4 (meias: abaixo de 2) · cinza: acima de 12")
-      + duas(tabela(cols, e1.map(lin), LG, fs, "4px 5px", grp), tabela(cols, [...e2.map(lin), rede], LG, fs, "4px 5px", grp)) + leitura([fr0, ...frs], e1.length <= 10 ? 24 : 22), FONTE_LJ + " · — = sem venda", 14));
+      + duas(tabela(cols, e1.map(lin), LG, fs, pad, grp), tabela(cols, [...e2.map(lin), rede], LG, fs, pad, grp)) + leitura([fr0, ...frs], fsL), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 14));
   }
   // 16 · Under Armour na rede e 17 · onde o UA gira: só quando a família vem no documento
   if (famUA) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(Object.keys(PIR).find(k => /^UA/i.test(k)), catUA, true), FONTE_RD));
   if (catUA && nL > 1) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ["Venda/mês", "center"], ["Estoque", "center"], ["Cob.", "center"], ["Índice", "center"]], LG = [52, 236, 140, 140, 120, 128], t = T[catUA] || {}, cobU = t.v ? t.e / t.v : null;
-    const lin = l => { const x = xc(l, catUA); return { bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [nomeL(l), ""], [n1(x.v), ""], [n0(x.e), ""], !x.v || x.cob == null ? ["—", `color:${CINZA}`] : [n0(x.cob), x.cob > 24 ? `background:${CINZA2}` : ""], [x.idx == null ? "—" : String(x.idx), x.idx >= 110 ? `background:rgba(46,62,252,0.75);color:${OFF};font-weight:700` : ""]] }; };
-    const [e1, e2] = corte(L), fs = e1.length <= 16 ? 23 : 19;
-    const rede = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], [`<b>${n1(t.v)}</b>`, ""], [`<b>${n0(t.e)}</b>`, ""], [`<b>${n0(cobU)}</b>`, ""], ["<b>100</b>", ""]] };
+    const [e1, e2] = corte(L);
     const topU = L.slice().sort((a, b) => (xc(b, catUA).v || 0) - (xc(a, catUA).v || 0)).slice(0, 6), somaTop = topU.reduce((s, l) => s + (xc(l, catUA).v || 0), 0), par = L.filter(l => (xc(l, catUA).v || 0) < 1.5 && (xc(l, catUA).e || 0) >= 40);
+    const frases = [`As ${topU.length} lojas que mais vendem (${topU.map(nomeL).join(", ")}) fazem ${pc(t.v ? somaTop / t.v : null)} da venda de UA.${par.length ? ` ${lista(par.map(nomeL))} quase não ${par.length > 1 ? "vendem" : "vende"} e ${par.length > 1 ? "têm" : "tem"} estoque.` : ""}`];
+    const { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura(frases)), pad = `${pv}px 8px`;
+    const lin = l => { const x = xc(l, catUA); return { bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 236, fs), ""], [n1(x.v), ""], [x.e < 0 ? "—" : n0(x.e), ""], !x.v || x.cob == null || x.e < 0 ? ["—", `color:${CINZA}`] : [n0(x.cob), x.cob > 24 ? `background:${CINZA2}` : ""], [x.idx == null ? "—" : String(x.idx), x.idx >= 110 ? `background:rgba(46,62,252,0.75);color:${OFF};font-weight:700` : ""]] }; };
+    const rede = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], [`<b>${n1(t.v)}</b>`, ""], [`<b>${n0(t.e)}</b>`, ""], [`<b>${n0(cobU)}</b>`, ""], ["<b>100</b>", ""]] };
     pags.push(pagina(cabec("Under Armour · tênis por loja", "Onde o UA gira", "pares · cobertura em meses · índice 100 = proporção do tênis da loja · azul: 110 ou mais · cinza: acima de 24 meses")
-      + duas(tabela(cols, e1.map(lin), LG, fs, "4px 8px"), tabela(cols, [...e2.map(lin), rede], LG, fs, "4px 8px"))
-      + leitura([`As ${topU.length} lojas que mais vendem (${topU.map(nomeL).join(", ")}) fazem ${pc(t.v ? somaTop / t.v : null)} da venda de UA.${par.length ? ` ${lista(par.map(nomeL))} quase não ${par.length > 1 ? "vendem" : "vende"} e ${par.length > 1 ? "têm" : "tem"} estoque.` : ""}`]), FONTE_LJ, 16));
+      + duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad)) + leitura(frases), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 16));
   }
   // 18 · oportunidade de giro: os modelos fora de linha com mais pares (cores agrupadas) e, à direita, o número grande e os totais por família
   const its = ((d.ponta || {}).itens || []).filter(i => i.situacao === "fora de linha" && (i.estoque || 0) > 0);
