@@ -257,6 +257,47 @@ function desenharPagina(){
   EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}` + (VIT.cliente ? ` · vitrine ${nomeCli(VIT.cliente)}: ${contaEscolhidas()} cor(es)` : "");
   ligarPagina(EL, pg, "colecao");
 }
+// o PDF da vitrine (19/10, ele testou duas vezes: "ainda não funcionou baixar o PDF"): imprimir a página inteira dependia de um emaranhado de
+// regras @media print e saía em branco; agora abre uma JANELA PRÓPRIA só com a vitrine (A4 deitado, 6 cartões por linha, título por seção,
+// placar por tipo), espera as fotos e manda imprimir — Chrome: "Salvar como PDF"
+function imprimirVitrine(){
+  if (!VIT.cliente || !DADOS) return;
+  const atual = VIT.vista === "atual" && VIT.atual, gtm = ehGtm(), mes = gtmMes();
+  const lista = atual ? VIT.atual.itens.slice() : escolhidas();
+  if (!lista.length) { alert("A vitrine está vazia: nada para imprimir."); return; }
+  const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col);
+  lista.sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
+  const abs = src => { try { return new URL(src, location.href).href; } catch (e) { return src; } };
+  const hoje = new Date().toLocaleDateString("pt-BR"), T = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000";
+  const placar = TIPOS.filter(([v]) => v && lista.some(it => it.t === v)).map(([v, r]) => { const its = lista.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
+    const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
+    return `<div class="pl"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b> cor(es)</span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b> modelo(s)</span><span><b>${esc(dinheiro(soma))}</b> em PDV</span>${gtm ? `<span><b>${pares.toLocaleString("pt-BR")}</b> pares ${esc(mes)}</span>` : ""}</div>`; }).join("");
+  let html = "", sec = null;
+  for (const it of lista) {
+    const s = secaoDe(it);
+    if (s !== sec) { sec = s; const its = lista.filter(x => secaoDe(x) === s); html += `<h2>${esc(s)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></h2>`; }
+    const src = srcFoto(it), k = chaveCor(it), retirada = atual && M.get(k) === "retirar", g = gtm ? gtmDe(it) : null, p = VIT.pares.get(k), gr = VIT.grades.get(k);
+    html += `<div class="c${retirada ? " ret" : ""}"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
+      <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <i>lanç.</i>` : ""}${it.if ? ` <i>${esc(it.if)}</i>` : ""}</div>
+      ${gr ? `<div class="g">${esc(ROTULO_GRADE[gr] || gr)}</div>` : ""}${g && p != null ? `<div class="g"><b>${p.toLocaleString("pt-BR")}</b> pares${g.vm[mes] ? ` · ${Math.round(p * 100 / g.vm[mes])}% de ${g.vm[mes].toLocaleString("pt-BR")}` : ""}</div>` : ""}
+      <div class="m">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}${retirada ? " · RETIRAR" : ""}</div></div>`;
+  }
+  const doc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Vitrine ${esc(nomeCli(VIT.cliente))} ${esc(col)}</title>
+<style>@page{size:A4 landscape;margin:0}html,body{margin:0;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{padding:8mm}h1{font-size:15pt;font-weight:900;margin:0 0 2px}.sub{font-size:8pt;color:${T("--cinza-escuro")};margin:0 0 6px}
+.placar{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 8px}.pl{display:flex;gap:6px;align-items:center;font-size:8pt}.pl em{font-style:normal;font-weight:900;border-left:3px solid ${T("--amarelo")};padding-left:5px;margin-right:4px}.pl span{background:${T("--off-white")};padding:3px 8px;border-radius:6px}.pl b{font-size:10pt}
+.g6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}h2{grid-column:1/-1;font-size:8.5pt;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:6px 0 0;padding-top:5px;border-top:2px solid ${T("--azul")};break-after:avoid}h2:first-child{border-top:0;margin-top:0;padding-top:0}h2 small{font-weight:600;color:${T("--cinza-escuro")};text-transform:none;letter-spacing:0}
+.c{border:1px solid ${T("--cinza-claro")};border-radius:6px;padding:4px;break-inside:avoid;min-width:0}.f{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;border-radius:5px}.f img{width:100%;height:100%;object-fit:contain}.sem{font-size:6pt;color:${T("--cinza-escuro")}}
+.n{font-weight:800;font-size:7.5pt;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.r{font-size:6.5pt;color:${T("--cinza-escuro")};font-family:Consolas,monospace}.p{font-size:8.5pt;font-weight:800}.p i{font-style:normal;font-size:5.5pt;background:#000;color:#fff;padding:1px 4px;border-radius:3px;vertical-align:middle}
+.g{font-size:6.5pt;font-weight:800;color:${T("--azul")}}.m{font-size:6pt;color:${T("--cinza-escuro")}}.c.ret .f img{opacity:.35}.c.ret .n,.c.ret .r{text-decoration:line-through}.c.ret .m{color:${T("--vermelho-ua")};font-weight:800}</style></head>
+<body><h1>Vitrine ${esc(nomeCli(VIT.cliente))} · ${esc(col)}${atual ? " (atual)" : ""}</h1><div class="sub">${lista.length} cor(es) · ${new Set(lista.map(it => it.m + "|" + it.r)).size} modelo(s) · ${esc(hoje)} · Gestor</div>
+<div class="placar">${placar}</div><div class="g6">${html}</div>
+<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,done=false;function go(){if(done)return;done=true;setTimeout(function(){window.focus();window.print();},150);}
+if(!n){go();return;}imgs.forEach(function(i){if(i.complete){if(--n<=0)go();}else{i.onload=i.onerror=function(){if(--n<=0)go();};}});setTimeout(go,6_000);})();<\/script></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) { alert("O navegador bloqueou a janela do PDF. Libere pop-ups para o Gestor e tente de novo."); return; }
+  w.document.open(); w.document.write(doc); w.document.close();
+}
 const contaEscolhidas = () => [...marcas(DADOS.colecao).values()].filter(v => v === "escolhida").length;
 const contaRetiradas = () => VIT.atual ? [...marcas(VIT.atual.colecao).values()].filter(v => v === "retirar").length : 0;
 
@@ -268,13 +309,15 @@ function desenharVitrine(){
         <label>cliente</label><div class="chips" id="vit-cliente"></div>
         <label>coleção</label><div class="chips" id="vit-colecao"></div>
         <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div><div class="acoes"><button type="button" id="vit-pdf" class="sec">exportar PDF</button></div></div>
+        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm">todos</button><div class="mu" id="vit-saidas"></div></div>
         <div class="mu" id="vit-nota"></div>
         <div class="msg erro oculto" id="vit-erro"></div>
       </div>
       <div class="pagina" id="vit-pagina"></div>
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
-    el.querySelector("#vit-pdf").onclick = () => window.print();
+    el.querySelector("#vit-pdf").onclick = () => imprimirVitrine();
+    for (const b of el.querySelectorAll(".saidas .sai")) b.onclick = () => pedirSaida(b.dataset.t.split(","));
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
   }
   chipsClientes(el, "vit-cliente");
@@ -296,6 +339,26 @@ function desenharVitrine(){
     desenharMontador(pg);
   }
   const er = el.querySelector("#vit-erro"); er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro);
+  mostrarSaidas(el);
+}
+// as SAÍDAS da vitrine (19/10, ordem dele): a página não escreve no OneDrive — o botão anota o pedido no banco (vitrine_saida) e o TI,
+// na máquina dele, gera o arquivo e devolve o caminho; a lista abaixo dos botões mostra o que está na fila e o que ficou pronto
+const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", ebm: "Excel pedido EBM" };
+async function pedirSaida(tipos){
+  if (!VIT.cliente || !VIT.esc || !DADOS) return;
+  const col = VIT.vista === "atual" && VIT.atual ? VIT.atual.colecao : DADOS.colecao;
+  if (!escolhidas().length && VIT.vista !== "atual") { alert("A vitrine está vazia: ponha as cores antes de gerar."); return; }
+  const r = await SB.from("vitrine_saida").insert(tipos.map(t => ({ escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: col, tipo: t })));
+  if (r.error) { VIT.erro = "O banco recusou o pedido: " + r.error.message; } else VIT.erro = "";
+  const er = ELV.querySelector("#vit-erro"); if (er) { er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro); }
+  mostrarSaidas(ELV);
+}
+async function mostrarSaidas(el){
+  const o = el.querySelector("#vit-saidas"); if (!o || !VIT.cliente) { if (o) o.innerHTML = ""; return; }
+  const r = await SB.from("vitrine_saida").select("tipo,pedido_em,atendido_em,arquivo,erro,nota").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
+  if (r.error || !r.data) { o.innerHTML = ""; return; }
+  const hora = s => s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  o.innerHTML = r.data.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}"><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → <code>${esc(x.arquivo || "")}</code>${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — o TI gera e grava na pasta do cliente")}</div>`).join("");
 }
 
 // ---------- o MONTADOR (15/10, orientação dele, ao vivo): "parta a tela no meio: do lado esquerdo os produtos da 1S27 com filtros
@@ -382,7 +445,7 @@ function desenharEsquerda(pg){
   const M = marcas(DADOS.colecao); let html = "", bloco = null, modelos = 0;
   const porModelo = new Map();
   // na DISTRIBUIÇÃO (ele, 19/10 11:2x: "quando vier a ESFERA, vem tudo bloco junto") o modelo é UM bloco só, todas as cores, sem família nem gênero
-  for (const it of lista) { const k = gtm ? chaveModelo(it) : chaveModelo(it) + "|" + familiaDe(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }
+  for (const it of lista) { const k = gtm ? it.m + "|" + it.r : chaveModelo(it) + "|" + familiaDe(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }
   for (const cores of porModelo.values()) {
     const m = cores[0];
     const sec = gtm ? "" : familiaDe(m);
@@ -453,7 +516,7 @@ function desenharDireita(pg){
   // no GTM o placar é a digitação: pares DISTRIBUÍDOS (o que ele respondeu) contra o TETO (soma do volume do mês dos modelos que já têm cor)
   const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = todas.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
     const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
-    const teto = gtm ? [...new Map(its.map(it => [chaveModelo(it), it])).values()].reduce((s, it) => s + (((gtmDe(it) || { vm: {} }).vm[mes]) || 0), 0) : null;
+    const teto = gtm ? [...new Map(its.map(it => [it.m + "|" + it.r, it])).values()].reduce((s, it) => s + (((gtmDe(it) || { vm: {} }).vm[mes]) || 0), 0) : null;
     return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>em PDV</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>`; });
   pg.querySelector("#vf-placar").innerHTML = placar.join("") || `<div class="pl-tipo"><em>—</em><span><b>0</b><small>cor(es)</small></span><span><b>0</b><small>modelo(s)</small></span><span><b>—</b><small>em PDV</small></span></div>`;
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
@@ -526,7 +589,7 @@ const ehMasc = it => /^masc/i.test(it.ge || ""), ehFem = it => /^fem/i.test(it.g
 // numeração "34/44", "38/48" → o maior número; grade ESPECIAL = tênis que digita até o 48 (ordem dele, 19/10: "produtos que têm digitação até o 48")
 const numMax = it => { const m = String(it.nu || "").match(/(\d{2})\s*$/); return m ? +m[1] : null; };
 const grandeEspecial = it => it.t === "TENIS" && (numMax(it) || 0) >= 47;
-const ROTULO_GRADE = { feminina: "grade FEMININA", masculina: "grade MASCULINA", estendida: "grade ESTENDIDA (unissex)", especial: "grade ESPECIAL (até o 48)" };
+const ROTULO_GRADE = { feminina: "grade FEMININA", masculina: "grade MASCULINA", estendida: "grade ESTENDIDA (unissex)", especial: "grade ESPECIAL (até o 48)", infantil: "grade INFANTIL" };
 // o que se pergunta ao subir: unissex → feminina / masculina / estendida (+ especial se chega ao 48); masculino que chega ao 48 → masculina / especial
 const opcoesGrade = it => ehUnissex(it) ? ["feminina", "masculina", "estendida"].concat(grandeEspecial(it) ? ["especial"] : []) : (ehMasc(it) && grandeEspecial(it) ? ["masculina", "especial"] : []);
 // a SEÇÃO da vitrine (ordem dele, 19/10): "Tênis feminino · Tênis masculino · Tênis grade especial · Tênis infantil · e, se houver grade
@@ -564,21 +627,37 @@ function perguntarGrade(it, atualGrade){
 }
 // a DISTRIBUIÇÃO (GTM, ordem dele 19/10 11:1x): todo clique pergunta a grade (qualquer produto: feminina · masculina · estendida; especial se
 // chega ao 48) E a quantidade de pares da cor, com o teto do modelo no mês e o que já foi distribuído nas outras cores à vista
-const GRADES_GTM = it => ["feminina", "masculina", "estendida"].concat(grandeEspecial(it) ? ["especial"] : []);
-const paresDoModelo = (m, menos) => DADOS.itens.filter(it => chaveModelo(it) === chaveModelo(m) && chaveCor(it) !== menos).reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0);
+// as grades que a COR permite, pela numeração fabricada (ele, 19/10 12:0x: "se só for fabricada na grade feminina, só abre o feminino; se começa
+// do 37, só abre o masculino"): feminina pede 34–39; masculina pede 38–43 (na UA, 38–41); unissex (estendida) só quando as duas cabem;
+// infantil quando é infantil ou para no 36; especial quando chega ao 47/48
+const numMin = it => { const m = String(it.nu || "").match(/^\s*(\d{2})/); return m ? +m[1] : null; };
+const GRADES_GTM = it => {
+  const mi = numMin(it), ma = numMax(it);
+  if (mi == null || ma == null) return ["feminina", "masculina", "estendida"].concat(grandeEspecial(it) ? ["especial"] : []);
+  const fem = mi <= 34 && ma >= 39, masc = mi <= 38 && (ma >= 43 || (it.m === "UA" && ma >= 41)), inf = ehInf(it) || ma <= 36;
+  const o = [];
+  if (inf) o.push("infantil");
+  if (fem) o.push("feminina");
+  if (masc) o.push("masculina");
+  if (fem && masc) o.push("estendida");
+  if (grandeEspecial(it)) o.push("especial");
+  return o.length ? o : ["feminina", "masculina", "estendida"];
+};
+const paresDoModelo = (m, menos) => DADOS.itens.filter(it => it.m === m.m && it.r === m.r && chaveCor(it) !== menos).reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0);
 function perguntarGtm(it, atualGrade, atualPares){
   const g = gtmDe(it), mes = gtmMes(), teto = g ? (g.vm[mes] || 0) : 0, outras = paresDoModelo(it, chaveCor(it)), ficam = Math.max(0, teto - outras);
+  const opc = GRADES_GTM(it);
   const sugerido = atualPares != null ? atualPares : Math.floor(Math.min(ficam, (g && g.ps[mes]) || ficam) / CAIXA) * CAIXA;   // em caixas fechadas
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro gtm"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}</span></div>
       <div class="gq-teto">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares no modelo${outras ? ` · já distribuídos nas outras cores <b>${outras.toLocaleString("pt-BR")}</b> · ficam <b>${ficam.toLocaleString("pt-BR")}</b>` : ""}</div>
-      <div class="gq-perg">Em que grade?</div>
-      <div class="gq-botoes">${GRADES_GTM(it).map(v => `<button type="button" data-g="${v}" class="${v === atualGrade ? "ativa" : ""}">${esc(ROTULO_GRADE[v])}</button>`).join("")}</div>
+      <div class="gq-perg">${opc.length === 1 ? `Grade: só a <b>${esc(ROTULO_GRADE[opc[0]])}</b> cabe na numeração ${esc(it.nu || "")}` : `Em que grade? <span class="mu">numeração ${esc(it.nu || "?")}</span>`}</div>
+      <div class="gq-botoes">${opc.map(v => `<button type="button" data-g="${v}" class="${v === (atualGrade || (opc.length === 1 ? opc[0] : null)) ? "ativa" : ""}">${esc(ROTULO_GRADE[v])}</button>`).join("")}</div>
       <div class="gq-perg">Quantos pares desta cor?</div>
       <div class="gq-pares"><button type="button" class="cx cx-menos" title="tira uma caixa (${CAIXA} pares)">−</button><input type="number" min="0" step="${CAIXA}" inputmode="numeric" value="${sugerido}"><button type="button" class="cx cx-mais" title="põe uma caixa (${CAIXA} pares)">+</button><span class="gq-pct"></span></div>
       <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
-    let grade = atualGrade || null;
+    let grade = atualGrade || (opc.length === 1 ? opc[0] : null);
     const inp = luz.querySelector("input"), pct = luz.querySelector(".gq-pct"), sobe = luz.querySelector(".gq-sobe");
     const mostra = () => { const p = +inp.value || 0; pct.textContent = teto ? `${Math.round(p * 100 / teto)}% do modelo · ${Math.floor(p / CAIXA)} cx${p > ficam ? " · passa do teto" : ""}` : ""; pct.classList.toggle("passou", p > ficam); sobe.disabled = !grade; };
     for (const b of luz.querySelectorAll(".gq-pares .cx")) b.onclick = () => { inp.value = Math.max(0, (+inp.value || 0) + (b.classList.contains("cx-mais") ? CAIXA : -CAIXA)); mostra(); };
