@@ -206,6 +206,10 @@ function desenhar(){
 
 // a foto: miniatura local → URL pública → "sem foto"
 const srcFoto = it => it.i ? IMG + it.i + ".jpg" : (it.u || "");
+// o "+" de ver maior (ele, 19/10 21:3x: "todos os produtos da base da vitrine com um mais no canto inferior direito para expandir a imagem;
+// aplica em tudo"): abre a mesma luz do toque na foto, sem pôr nem tirar da vitrine
+const lupa = it => `<button type="button" class="lupa" data-k="${esc(chave(it))}" title="ver maior">+</button>`;
+const ligarLupas = (raiz, dentro, modo) => { for (const b of dentro.querySelectorAll(".lupa")) b.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); abrirLuz(raiz, b.dataset.k, modo); }; };
 // o C de CONTINUIDADE (ele pela IA, 19/10 20:02: "um C amarelo no canto superior esquerdo dos produtos que dá para dar continuidade, na vitrine
 // base, para a gente decidir se sobe"). Regra do NÚCLEO (20/10): o carregador grava `continuidade`; cheio = SUGERIDA, contorno = AVALIAR.
 // Ao passar/tocar: o motivo e os pares sugeridos por mês. Nada sobe sozinho — ele decide produto a produto.
@@ -223,7 +227,7 @@ function verC(el, ev){   // no celular não há "passar o mouse": o toque abre a
 }
 function fotoHtml(it){
   const src = srcFoto(it);
-  const tri = (ehNova(it) ? `<i class="tri" title="cor nova"></i>` : "") + contC(it);
+  const tri = (ehNova(it) ? `<i class="tri" title="cor nova"></i>` : "") + contC(it) + lupa(it);
   if (!src) return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><div class="sem">sem foto</div>${tri}</div>`;
   return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">${tri}<div class="sem oculto">sem foto</div></div>`;
 }
@@ -289,6 +293,7 @@ function montarPagina(lista, modo){
 function ligarPagina(raiz, pg, modo){
   for (const b of pg.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   for (const f of pg.querySelectorAll(".foto")) f.onclick = () => abrirLuz(raiz, f.dataset.k, modo);
+  ligarLupas(raiz, pg, modo);
   for (const b of pg.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); alternar(b.dataset.kc, modo); };
 }
 
@@ -727,21 +732,25 @@ function desenharEsquerda(pg){
   const t = semAcento(MF.busca).split(/\s+/).filter(Boolean);
   // 19/10, ele: "os unissex você traz dentro também — no feminino e no masculino"; o filtro de gênero Feminino/Masculino inclui o unissex
   const casaGen = it => !MF.gen.size || MF.gen.has(it.ge || "") || (ehUnissex(it) && (MF.gen.has("Feminino") || MF.gen.has("Masculino")));
-  const lista = ordenar(base.filter(it => (!MF.bloco.size || MF.bloco.has(familiaDe(it))) && casaGen(it) && (!MF.esp || (grandeEspecial(it) && !ehInf(it)))
+  // ele, 19/10 21:3x: "ELEVADO tem uma cor isolada feminina, as outras masculinas; traz tudo para um bloco só, todas as cores; eu vou
+  // clicando e definindo se é masculino ou feminino" — família, gênero e especial escolhem o MODELO; dentro dele entram todas as cores
+  const chaveMod = it => it.m + "|" + it.r;
+  const modelosOk = new Set(base.filter(it => (!MF.bloco.size || MF.bloco.has(familiaDe(it))) && casaGen(it) && (!MF.esp || (grandeEspecial(it) && !ehInf(it)))).map(chaveMod));
+  const lista = ordenar(base.filter(it => modelosOk.has(chaveMod(it))
     && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, familiaDe(it)].join(" ")).includes(x)))));
   // uma linha por modelo (família oficial → ordem do pacote), as cores como miniaturas clicáveis; o mesmo modelo pode cair em duas famílias conforme a cor
   const M = marcas(DADOS.colecao); let html = "", bloco = null, modelos = 0;
   const porModelo = new Map();
   // na DISTRIBUIÇÃO (ele, 19/10 11:2x: "quando vier a ESFERA, vem tudo bloco junto") o modelo é UM bloco só, todas as cores, sem família nem gênero
-  for (const it of lista) { const k = gtm ? it.m + "|" + it.r : chaveModelo(it) + "|" + familiaDe(it); if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }
+  for (const it of lista) { const k = it.m + "|" + it.r; if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }   // 21:3x: sempre um bloco por modelo
   for (const cores of porModelo.values()) {
     const m = cores[0];
     const sec = gtm ? "" : familiaDe(m);
     if (sec !== bloco || bloco === null) { bloco = sec; html += `<div class="mont-sec">${esc(NOME_TIPO[m.t] || m.t)}${bloco ? " · " + esc(bloco) : ""}</div>`; }
     modelos++;
-    html += `<div class="mcard" data-kc="${esc(chaveCor(m))}"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}${m.nu ? " " + esc(m.nu) : ""}</span>` : ""}${grandeEspecial(m) && !ehInf(m) ? `<span class="selo ate48" title="numeração até o ${numMax(m)}: cabe grade especial">até ${numMax(m)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div>${gtm ? tetoDoModelo(m) : ""}</div>
+    html += `<div class="mcard" data-kc="${esc(chaveCor(m))}"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${(gs => gs.length ? `<span class="mu"> · ${esc(gs.join(" · "))}${m.nu ? " " + esc(m.nu) : ""}</span>` : "")([...new Set(cores.map(c => c.ge).filter(Boolean))])}${grandeEspecial(m) && !ehInf(m) ? `<span class="selo ate48" title="numeração até o ${numMax(m)}: cabe grade especial">até ${numMax(m)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div>${gtm ? tetoDoModelo(m) : ""}</div>
       <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida", g = gtm ? gtmDe(it) : null; const mix = g ? (g.mf != null ? g.mf : g.mx) : 0;
-        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${contC(it)}${g && g.e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
+        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${contC(it)}${lupa(it)}${g && g.e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
     </div>`;
   }
   const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
@@ -749,6 +758,7 @@ function desenharEsquerda(pg){
   const outra = gtm ? (() => { const om = MF.marca === "OLY" ? "UA" : "OLY", oi = DADOS.itens.filter(it => it.m === om && gtmDe(it) && (gtmDe(it).vm[mes] || 0) > 0); return ` · ${om === "OLY" ? "Olympikus" : "Under Armour"}: ${new Set(oi.map(it => it.r)).size} modelo(s) · ${oi.length} cor(es) (toque no chip)`; })() : "";
   pg.querySelector("#mf-conta").textContent = `${gtm ? (MF.marca === "OLY" ? "Olympikus" : "Under Armour") + ": " : ""}${modelos} modelo(s) · ${lista.length} cor(es)${outra} — toque na cor para pôr na vitrine`;
   for (const b of L.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
+  ligarLupas(ELV, L, "montando");
   for (const th of L.querySelectorAll(".mthumb:not(.fora)")) th.onclick = () => { th.classList.add("pulso"); setTimeout(() => th.classList.remove("pulso"), 500); alternar(th.dataset.kc, "montador"); };
   ligarCaixas(L);
 }
@@ -859,7 +869,7 @@ function desenharDireita(pg){
     const gE = e ? e.grade : VIT.grades.get(chaveCor(it)), txE = e ? e.tx : VIT.gradeTx.get(chaveCor(it));
     html += `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}${n > 1 ? " dupla" : ""}" data-kc="${esc(chaveCor(it))}" data-gi="${i}">
       <button type="button" class="mais tira" data-kc="${esc(chaveCor(it))}" data-gi="${i}" title="${n > 1 ? "tirar esta grade da vitrine" : "tirar da vitrine"}">×</button>${n > 1 ? `<i class="vdup" title="esta cor está em ${n} grades">${i + 1}/${n}</i>` : ""}
-      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${contC(it)}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}</div>
+      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${contC(it)}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}${lupa(it)}</div>
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${it.p != null && condDe(it) ? `<span class="vcusto" title="custo: PDV ÷ markup ${condDe(it).markup.toFixed(2)}${condDe(it).prazo ? " · prazo " + condDe(it).prazo + " d" : ""}">custo ${esc(dinheiro(+it.p / condDe(it).markup))}</span>` : ""}${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : (!gtm && VIT.sug.get(chaveCor(it)) && VIT.sug.get(chaveCor(it)).inicio ? `<span class="selo inicio">${esc(VIT.sug.get(chaveCor(it)).inicio)}</span>` : (ehLanc(it) ? `<span class="selo inicio">sem data</span>` : ""))}</div>
@@ -878,6 +888,7 @@ function desenharDireita(pg){
   for (const b of V.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); if (!gtm && entradasDe(b.dataset.kc).length > 1) tirarGrade(b.dataset.kc, +b.dataset.gi); else alternar(b.dataset.kc, "montador"); };
   for (const b of V.querySelectorAll(".selo.grade, .selo.pares")) b.onclick = (ev) => { ev.stopPropagation(); trocarGrade(b.dataset.kc); };
   for (const f of V.querySelectorAll(".vfoto")) f.onclick = () => abrirLuz(ELV, f.dataset.k, "montando");
+  ligarLupas(ELV, V, "montando");
   const nova = V.querySelector(".vcard.nova"); if (nova) { nova.scrollIntoView({ block: "nearest", behavior: "smooth" }); setTimeout(() => nova.classList.remove("nova"), 5_000); }   // 5 s (escrito assim por causa do guarda de números do publicador)
 }
 let NOVA = null;   // a cor que acabou de subir: brilha 5 s e para (animação é evento; estado é repouso)
