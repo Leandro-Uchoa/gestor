@@ -369,7 +369,9 @@ function desenharEsquerda(pg){
   const cgn = new Map(); for (const it of base) if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1);
   chips(pg, "mf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], MF.gen, v => { if (v === "") MF.gen.clear(); else if (MF.gen.has(v)) MF.gen.delete(v); else MF.gen.add(v); desenharEsquerda(pg); });
   const t = semAcento(MF.busca).split(/\s+/).filter(Boolean);
-  const lista = ordenar(base.filter(it => (!MF.bloco.size || MF.bloco.has(familiaDe(it))) && (!MF.gen.size || MF.gen.has(it.ge || "")) && (!MF.esp || (grandeEspecial(it) && !ehInf(it)))
+  // 19/10, ele: "os unissex você traz dentro também — no feminino e no masculino"; o filtro de gênero Feminino/Masculino inclui o unissex
+  const casaGen = it => !MF.gen.size || MF.gen.has(it.ge || "") || (ehUnissex(it) && (MF.gen.has("Feminino") || MF.gen.has("Masculino")));
+  const lista = ordenar(base.filter(it => (!MF.bloco.size || MF.bloco.has(familiaDe(it))) && casaGen(it) && (!MF.esp || (grandeEspecial(it) && !ehInf(it)))
     && (!t.length || t.every(x => semAcento([it.n, it.r, it.c, it.cd, familiaDe(it)].join(" ")).includes(x)))));
   // uma linha por modelo (família oficial → ordem do pacote), as cores como miniaturas clicáveis; o mesmo modelo pode cair em duas famílias conforme a cor
   const M = marcas(DADOS.colecao); let html = "", bloco = null, modelos = 0;
@@ -450,8 +452,14 @@ async function alternar(kc, modo){
   const tinha = M.get(kc) === estado;
   // 19/10, ordem dele: produto UNISSEX, ao subir para a vitrine, pergunta a GRADE (feminina · masculina · estendida) — "eu tenho que
   // entender para qual gênero estou digitando". Produto com gênero definido não pergunta. A resposta vai na linha da vitrine.
+  // dentro do roteiro a grade é automática: subiu no passo feminino → feminina; masculino → masculina; grade especial → especial
+  // ("se eu coloquei ele dentro do bloco feminino, ele vira um produto feminino"); fora do roteiro (livre), pergunta
   let grade = null;
-  if (!tinha && !atual && opcoesGrade(it).length) { grade = await perguntarGrade(it); if (!grade) return; }
+  if (!tinha && !atual && opcoesGrade(it).length) {
+    const auto = modo === "montador" ? ({ fem: "feminina", masc: "masculina", esp: "especial" })[MF.passo] : null;
+    grade = (auto && opcoesGrade(it).includes(auto)) ? auto : await perguntarGrade(it);
+    if (!grade) return;
+  }
   if (tinha) { M.delete(kc); VIT.grades.delete(kc); } else { M.set(kc, estado); if (grade) VIT.grades.set(kc, grade); }
   NOVA = (!tinha && !atual) ? kc : null;
   refrescar();
