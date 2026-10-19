@@ -155,11 +155,13 @@ function atas(d){
 }
 
 // ---------- trade: as ações do cliente (trade_acao) e o que o TOPICS tem de trade sobre ele
-const TIPOS_TRADE = ["campanha", "material", "evento", "verba", "treinamento", "outro"], STATUS_TRADE = ["planejada", "em andamento", "feita", "cancelada"];
+const TIPOS_TRADE = ["campanha", "material", "evento", "verba", "treinamento", "outro"], STATUS_TRADE = ["planejada", "em andamento", "feita", "cancelada", "não usada"];
+const rs = n => n == null ? "—" : "R$ " + fmt(n);
 function trade(d){
   const t = d.trade || {}, acoes = t.acoes || [], tp = t.topics || [];
   return `<div class="card trade">${tit("Ações de trade", acoes.length ? fmt(acoes.length) + " ações" : "", `<button type="button" class="sec ir-form">+ ação</button>`)}
-    ${acoes.length ? `<table class="mini"><thead><tr><th>ação</th><th>tipo</th><th>quando</th><th>status</th><th class="n">verba</th></tr></thead><tbody>${acoes.map(a => `<tr><td><b>${esc(a.titulo)}</b>${a.loja ? ` <span class="mu">${esc(a.loja)}</span>` : ""}${a.nota ? `<small class="mu">${esc(a.nota)}</small>` : ""}</td><td>${esc(a.tipo)}</td><td>${a.inicio ? dmy(a.inicio) : "—"}${a.fim ? " → " + dmy(a.fim) : ""}</td><td><select class="st" data-id="${a.id}">${STATUS_TRADE.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></td><td class="n">${a.verba != null ? "R$ " + fmt(a.verba) : "—"}</td></tr>`).join("")}</tbody></table>` : `<div class="vazio">nenhuma ação de trade registrada para ${esc(nomeDe(d.cliente))}. Trade está adormecido: quando vier de cima, cai aqui.</div>`}
+    ${acoes.length ? `<div class="num">${(() => { const t = k => acoes.reduce((s, a) => s + (Number(a[k]) || 0), 0); const prov = t("provisionado"), ut = t("utilizada"); const rest = acoes.reduce((s, a) => s + (a.restante != null ? Number(a.restante) : (Number(a.provisionado) || 0) - (Number(a.utilizada) || 0)), 0); return `<div><b>${rs(prov)}</b><small>provisionado</small></div><div><b>${rs(ut)}</b><small>utilizada</small></div><div class="${rest > 0 ? "al" : ""}"><b>${rs(rest)}</b><small>restante</small></div>`; })()}</div>
+    <table class="mini"><thead><tr><th>sem.</th><th>ação</th><th class="n">provisionado</th><th class="n">utilizada</th><th class="n">restante</th><th>status</th></tr></thead><tbody>${acoes.map(a => `<tr><td>${esc(a.semestre || (a.inicio ? dmy(a.inicio) : "—"))}</td><td><b>${esc(a.titulo)}</b>${a.tipo && a.tipo !== "outro" ? ` <span class="chip">${esc(a.tipo)}</span>` : ""}${a.loja ? ` <span class="mu">${esc(a.loja)}</span>` : ""}${a.vendedor ? ` <span class="mu">· ${esc(a.vendedor)}${a.portas ? " · " + a.portas + " portas" : ""}</span>` : ""}${a.nota ? `<small class="mu">${esc(a.nota)}</small>` : ""}</td><td class="n">${rs(a.provisionado != null ? a.provisionado : a.verba)}</td><td class="n">${a.utilizada != null ? rs(a.utilizada) : "—"}</td><td class="n c">${a.restante != null ? rs(a.restante) : "—"}</td><td><select class="st" data-id="${a.id}">${STATUS_TRADE.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>` : `<div class="vazio">nenhuma ação de trade registrada para ${esc(nomeDe(d.cliente))} — nem na planilha de verbas, nem lançada aqui.</div>`}
     ${tp.length ? `<div class="sub-tit">no TOPICS</div><div class="lista">${tp.map(i => `<div class="ti${i.feito ? " feito" : ""}">${esc(i.txt)}<small>${esc(i.bloco)} · ${esc(i.sub || "")}</small></div>`).join("")}</div>` : ""}
     <div id="cl-trade-form" class="${S.form ? "" : "oculto"}">${formTrade()}</div>
     <div id="cl-trade-msg"></div>
@@ -186,12 +188,12 @@ function ligarTrade(corpo, d){
     msg.innerHTML = `<div class="msg ok">gravando…</div>`;
     const r = await SB.from("trade_acao").insert(linha);
     if (r.error) { msg.innerHTML = `<div class="msg erro">O banco recusou: ${esc(r.error.message)}</div>`; return; }
-    S.form = false; await doc(d.cliente, true); desenhar();
+    S.form = false; await doc(d.cliente, true); if (window.Trade) Trade.recarregar(); desenhar();
   };
   for (const sel of corpo.querySelectorAll("select.st")) sel.onchange = async () => {
     const r = await SB.from("trade_acao").update({ status: sel.value, atualizado_em: new Date().toISOString() }).match({ id: Number(sel.dataset.id) });
     if (r.error) { msg.innerHTML = `<div class="msg erro">O banco recusou: ${esc(r.error.message)}</div>`; return; }
-    await doc(d.cliente, true);
+    await doc(d.cliente, true); if (window.Trade) Trade.recarregar();
   };
 }
 
