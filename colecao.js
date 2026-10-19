@@ -284,12 +284,20 @@ function imprimirVitrine(){
   const hoje = new Date().toLocaleDateString("pt-BR"), T = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000";
   const placar = TIPOS.filter(([v]) => v && lista.some(it => it.t === v)).map(([v, r]) => { const its = lista.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
     const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
-    return `<div class="pl"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b> cor(es)</span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b> modelo(s)</span><span><b>${esc(dinheiro(soma))}</b> em PDV</span>${gtm ? `<span><b>${pares.toLocaleString("pt-BR")}</b> pares ${esc(mes)}</span>` : ""}</div>`; }).join("");
+    const pmT = {}; if (!gtm) for (const it of its) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const kk of MESES_V) if (m[kk]) pmT[kk] = (pmT[kk] || 0) + m[kk]; }
+    return `<div class="pl"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b> cor(es)</span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b> modelo(s)</span>${gtm || atual ? `<span><b>${esc(dinheiro(soma))}</b> em PDV</span>` : ""}${gtm ? `<span><b>${pares.toLocaleString("pt-BR")}</b> pares ${esc(mes)}</span>` : ""}${!gtm && !atual ? MESES_V.filter(kk => pmT[kk]).map(kk => `<span><b>${pmT[kk].toLocaleString("pt-BR")}</b> ${kk}</span>`).join("") + (Object.keys(pmT).length ? `<span><b>${Object.values(pmT).reduce((a, b) => a + b, 0).toLocaleString("pt-BR")}</b> pares</span>` : "") : ""}</div>`; }).join("");
   let html = "", sec = null;
   for (const it of lista) {
     const s = secaoDe(it);
     if (s !== sec) { sec = s; const its = lista.filter(x => secaoDe(x) === s); html += `<h2>${esc(s)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></h2>`; }
     const src = srcFoto(it), k = chaveCor(it), retirada = atual && M.get(k) === "retirar", g = gtm ? gtmDe(it) : null, p = VIT.pares.get(k), gr = VIT.grades.get(k);
+    const pm = VIT.meses.get(k), sg = VIT.sug.get(k), inicio = it.if || (sg && sg.inicio) || "";
+    if (!gtm && !atual) {   // vitrine de CLIENTE = apresentação ao cliente (NÚCLEO, 19/10): só foto, modelo, cor, data de início e pares por mês — nada interno
+      html += `<div class="c"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
+        <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${inicio ? `<i>início ${esc(inicio)}</i>` : (ehLanc(it) ? `<i>lanç. · sem data</i>` : "")}</div>
+        ${pm && p ? `<div class="g"><b>${p.toLocaleString("pt-BR")}</b> pares · ${MESES_V.filter(m => pm[m] > 0).map(m => `${m} ${pm[m]}`).join(" · ")}</div>` : `<div class="m">pares a definir</div>`}</div>`;
+      continue;
+    }
     html += `<div class="c${retirada ? " ret" : ""}"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
       <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <i>lanç.</i>` : ""}${it.if ? ` <i>${esc(it.if)}</i>` : ""}</div>
       ${gr ? `<div class="g">${esc(ROTULO_GRADE[gr] || gr)}</div>` : ""}${g && p != null ? `<div class="g"><b>${p.toLocaleString("pt-BR")}</b> pares${g.vm[mes] ? ` · ${Math.round(p * 100 / g.vm[mes])}% de ${g.vm[mes].toLocaleString("pt-BR")}` : ""}</div>` : ""}
@@ -556,7 +564,7 @@ function desenharDireita(pg){
       <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}</div>
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
-        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
+        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : (!gtm && VIT.sug.get(chaveCor(it)) && VIT.sug.get(chaveCor(it)).inicio ? `<span class="selo inicio">${esc(VIT.sug.get(chaveCor(it)).inicio)}</span>` : (ehLanc(it) ? `<span class="selo inicio">sem data</span>` : ""))}</div>
         ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · sugerido <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b></div>${g.gr ? `<div class="vgrade">${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}${!(g.vm[mes] || 0) ? `<div class="selo falta vsem">modelo sem volume em ${esc(mes)}</div>` : ""}`)(gtmDe(it)) : (gtm ? `<div class="selo falta vsem">fora do pacote do GTM</div>` : "")}
         ${gtm ? (() => { const p = VIT.pares.get(chaveCor(it)), g = gtmDe(it), teto = g ? (g.vm[mes] || 0) : 0, pct = (p != null && teto) ? Math.round(p * 100 / teto) : null;
           const p6 = VIT.pares6.get(chaveCor(it)) || 0;
@@ -725,7 +733,7 @@ function perguntarMeses(it, atual){
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro gtm meses"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}${it.ge ? " · " + esc(it.ge) : ""}</span></div>
       ${sug && (sug.inicio || sug.motivo) ? `<div class="gq-teto">${sug.inicio ? `início de faturamento <b>${esc(sug.inicio)}</b>` : ""}${sug.inicio && sug.motivo ? " · " : ""}${esc(sug.motivo || "")}</div>` : (it.if ? `<div class="gq-teto">início de faturamento <b>${esc(it.if)}</b></div>` : "")}
-      <div class="gq-perg">Para quais meses? <span class="mu">${sug ? "sugestão do NÚCLEO pelo sellout, já preenchida — aceita ou muda" : "sem sugestão para esta cor"}</span></div>
+      <div class="gq-perg">Para quais meses? <span class="mu">${sug ? (Object.values(sug.pm).some(v => v > 0) ? "sugestão do NÚCLEO pelo sellout, já preenchida — aceita ou muda" : (sug.inicio ? "lançamento: sem sugestão de pares; a data de início está acima" : "lançamento sem circular: sem data de início e sem sugestão de pares")) : "sem sugestão para esta cor"}</span></div>
       <div class="gq-meses">${MESES_V.map(m => `<label class="gq-mes${base[m] > 0 ? " on" : ""}"><input type="checkbox" data-m="${m}" ${base[m] > 0 ? "checked" : ""}><span class="gm-rot">${m}</span><input type="number" min="0" step="1" inputmode="numeric" data-p="${m}" value="${base[m] > 0 ? base[m] : ""}" ${base[m] > 0 ? "" : "disabled"} placeholder="pares"></label>`).join("")}</div>
       <div class="gq-pct"></div>
       <div class="gq-perg">Grade</div>
