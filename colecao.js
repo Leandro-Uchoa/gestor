@@ -442,7 +442,7 @@ function desenharMontador(pg){
       <div class="mont-divisor" title="arraste para mudar a largura dos dois lados"></div>
       <div class="mont-dir"><div class="mont-zoom" data-lado="dir" title="zoom da vitrine"><button type="button" data-d="-1">−</button><b></b><button type="button" data-d="1">+</button></div>
         <div class="mont-cab">
-          <div class="mont-tit" id="vf-tit"></div>
+          <div class="mont-tit" id="vf-tit"></div><div class="vf-confere"><button type="button" class="sec" id="vf-reler" title="relê o que está gravado no banco">↻ conferir no banco</button><span class="mu" id="vf-lido"></span></div>
           <div class="mont-placar" id="vf-placar"></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
           <div class="frow"><span class="fl">gênero</span><div class="chips" id="vf-gen"></div></div>
@@ -453,6 +453,8 @@ function desenharMontador(pg){
     </div>`;
     pg.querySelector("#mf-busca").oninput = (ev) => { MF.busca = ev.target.value; clearTimeout(desenharMontador._t); desenharMontador._t = setTimeout(() => desenharEsquerda(pg), 120); };
     ligarZoomEDivisor(pg);
+    // "um botão para eu conferir que você está salvando o que eu oriento" (ele, 19/10 15:5x): relê o banco e diz o que achou
+    pg.querySelector("#vf-reler").onclick = async () => { const o = pg.querySelector("#vf-lido"); o.textContent = "lendo…"; await relerVitrine(); const its = escolhidas(), p = its.reduce((a, it) => a + (VIT.pares.get(chaveCor(it)) || 0), 0); const o2 = ELV.querySelector("#vf-lido"); if (o2) o2.textContent = `lido do banco às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}: ${its.length} cor(es) · ${p.toLocaleString("pt-BR")} pares`; };
     for (const b of pg.querySelectorAll(".mont-troca button")) b.onclick = () => { PAINEL = b.dataset.p; pg.querySelector(".montador").dataset.painel = PAINEL; for (const x of pg.querySelectorAll(".mont-troca button")) x.classList.toggle("ativa", x === b); };
   }
   pg.querySelector(".montador").dataset.painel = PAINEL;
@@ -596,7 +598,7 @@ function desenharDireita(pg){
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : (!gtm && VIT.sug.get(chaveCor(it)) && VIT.sug.get(chaveCor(it)).inicio ? `<span class="selo inicio">${esc(VIT.sug.get(chaveCor(it)).inicio)}</span>` : (ehLanc(it) ? `<span class="selo inicio">sem data</span>` : ""))}</div>
-        ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · sugerido <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b></div>${g.gr ? `<div class="vgrade">${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}${!(g.vm[mes] || 0) ? `<div class="selo falta vsem">modelo sem volume em ${esc(mes)}</div>` : ""}`)(gtmDe(it)) : (gtm ? `<div class="selo falta vsem">fora do pacote do GTM</div>` : "")}
+        ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · sugerido <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b></div>${g.gr && !VIT.grades.get(chaveCor(it)) ? `<div class="vgrade">sugestão: ${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}${!(g.vm[mes] || 0) ? `<div class="selo falta vsem">modelo sem volume em ${esc(mes)}</div>` : ""}`)(gtmDe(it)) : (gtm ? `<div class="selo falta vsem">fora do pacote do GTM</div>` : "")}
         ${gtm ? (() => { const p = VIT.pares.get(chaveCor(it)), g = gtmDe(it), teto = g ? (g.vm[mes] || 0) : 0, pct = (p != null && teto) ? Math.round(p * 100 / teto) : null;
           const p6 = VIT.pares6.get(chaveCor(it)) || 0;
           return `<button type="button" class="selo pares${p == null ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="mudar os pares desta cor">${p == null ? "pares?" : `<b>${p.toLocaleString("pt-BR")}</b> pares${p6 ? ` (${Math.floor((p - p6) / CAIXA)}×12 + ${Math.floor(p6 / CAIXA6)}×6)` : ""}${pct != null ? ` · ${pct}% de ${teto.toLocaleString("pt-BR")}` : ""}`}</button>`; })() : ""}

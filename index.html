@@ -304,7 +304,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .montador{display:grid;grid-template-columns:minmax(0,var(--esq,1fr)) 10px minmax(0,var(--dir,1.15fr));gap:12px;align-items:start;min-width:0;font-family:var(--fonte-sans);color:var(--preto)}
 /* a barra de arrastar entre os dois lados e o zoom por bloco (ele, 19/10): barra fina, mão de redimensionar; zoom meio opaco no canto, acende ao passar */
 .mont-divisor{align-self:stretch;width:10px;border-radius:5px;background:var(--cinza-claro);cursor:col-resize;opacity:.45;touch-action:none;position:relative}.mont-divisor:hover,.mont-divisor.pegando{opacity:1;background:var(--azul)}.mont-divisor::after{content:"";position:absolute;top:50%;left:3px;width:4px;height:28px;margin-top:-14px;border-left:1px solid var(--cartao);border-right:1px solid var(--cartao)}
-.mont-esq,.mont-dir{position:relative}.mont-zoom{position:absolute;top:6px;right:8px;z-index:3;display:flex;align-items:center;gap:2px;opacity:.35;transition:opacity .2s}.mont-zoom:hover,.mont-zoom:focus-within{opacity:1}.mont-zoom button{width:22px;height:22px;padding:0;margin:0;border-radius:var(--raio-selo);background:var(--off-white);color:var(--preto);border:1px solid var(--cinza-claro);font-weight:900;font-size:.9rem;line-height:1}.mont-zoom b{font-size:.6rem;min-width:30px;text-align:center;color:var(--cinza-escuro);white-space:nowrap}
+.mont-esq,.mont-dir{position:relative}.vf-confere{display:flex;align-items:center;gap:8px;margin:2px 0 6px}.vf-confere button{width:auto;margin:0;padding:4px 10px;font-size:.7rem;border-radius:999px}.vf-confere .mu{font-size:.7rem}.mont-zoom{position:absolute;top:6px;right:8px;z-index:3;display:flex;align-items:center;gap:2px;opacity:.35;transition:opacity .2s}.mont-zoom:hover,.mont-zoom:focus-within{opacity:1}.mont-zoom button{width:22px;height:22px;padding:0;margin:0;border-radius:var(--raio-selo);background:var(--off-white);color:var(--preto);border:1px solid var(--cinza-claro);font-weight:900;font-size:.9rem;line-height:1}.mont-zoom b{font-size:.6rem;min-width:30px;text-align:center;color:var(--cinza-escuro);white-space:nowrap}
 .mont-lista{zoom:var(--z-esq,1)}
 @media (max-width:860px){.mont-divisor{display:none}.mont-lista{zoom:1}}
 @media print{.mont-divisor,.mont-zoom{display:none!important}}
@@ -420,7 +420,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.43</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.44</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -484,7 +484,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=35"></script>
+<script src="colecao.js?v=36"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script src="topics.js?v=3"></script>
