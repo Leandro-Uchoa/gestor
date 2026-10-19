@@ -276,11 +276,13 @@ function desenharPagina(){
 // o PDF da vitrine (19/10, ele testou duas vezes: "ainda não funcionou baixar o PDF"): imprimir a página inteira dependia de um emaranhado de
 // regras @media print e saía em branco; agora abre uma JANELA PRÓPRIA só com a vitrine (A4 deitado, 6 cartões por linha, título por seção,
 // placar por tipo), espera as fotos e manda imprimir — Chrome: "Salvar como PDF"
-function imprimirVitrine(){
+async function imprimirVitrine(){
   if (!VIT.cliente || !DADOS) return;
   const atual = VIT.vista === "atual" && VIT.atual, gtm = ehGtm(), mes = gtmMes();
-  const lista = atual ? VIT.atual.itens.slice() : escolhidas();
-  if (!lista.length) { alert("A vitrine está vazia: nada para imprimir."); return; }
+  const f = (!atual && !gtm) ? filtroDaTela() : null;
+  const lista = atual ? VIT.atual.itens.slice() : (f ? cartoesFiltrados() : escolhidas());
+  if (!lista.length) { alert(f ? "Com esse filtro não sobra nenhuma cor para o PDF." : "A vitrine está vazia: nada para imprimir."); return; }
+  if (f && !(await confirmar("PDF com o filtro da tela", `Deseja realmente imprimir apenas ${f.texto} — ${lista.length} cor(es) de ${escolhidas().length}?`))) return;
   const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col);
   lista.sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   const abs = src => { try { return new URL(src, location.href).href; } catch (e) { return src; } };
@@ -293,8 +295,9 @@ function imprimirVitrine(){
   for (const it of lista) {
     const s = secaoDe(it);
     if (s !== sec) { sec = s; const its = lista.filter(x => secaoDe(x) === s); html += `<h2>${esc(s)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></h2>`; }
-    const src = srcFoto(it), k = chaveCor(it), retirada = atual && M.get(k) === "retirar", g = gtm ? gtmDe(it) : null, p = VIT.pares.get(k), gr = VIT.grades.get(k);
-    const pm = VIT.meses.get(k), sg = VIT.sug.get(k), inicio = it.if || (sg && sg.inicio) || "";
+    const src = srcFoto(it), k = chaveCor(it), retirada = atual && M.get(k) === "retirar", g = gtm ? gtmDe(it) : null, gr = VIT.grades.get(k); let p = VIT.pares.get(k);
+    const pm0 = VIT.meses.get(k), pm = (pm0 && f && f.mes) ? { [f.mes]: pm0[f.mes] || 0 } : pm0, sg = VIT.sug.get(k), inicio = it.if || (sg && sg.inicio) || "";
+    if (pm && f && f.mes) p = pm[f.mes] || 0;
     if (!gtm && !atual) {   // vitrine de CLIENTE = apresentação ao cliente (NÚCLEO, 19/10): só foto, modelo, cor, data de início e pares por mês — nada interno
       html += `<div class="c"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
         <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${inicio ? `<i>início ${esc(inicio)}</i>` : (ehLanc(it) ? `<i>lanç. · sem data</i>` : "")}</div>
@@ -318,10 +321,11 @@ body{padding:8mm}h1{font-size:15pt;font-weight:900;margin:0 0 2px}.sub{font-size
 <div class="placar">${placar}</div><div class="g6">${html}</div>
 <script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,done=false;function go(){if(done)return;done=true;setTimeout(function(){window.focus();window.print();},150);}
 if(!n){go();return;}imgs.forEach(function(i){if(i.complete){if(--n<=0)go();}else{i.onload=i.onerror=function(){if(--n<=0)go();};}});setTimeout(go,6_000);})();<\/script></body></html>`;
-  const w = window.open("", "_blank");
+  const w = JANELA_PDF || window.open("", "_blank"); JANELA_PDF = null;
   if (!w) { alert("O navegador bloqueou a janela do PDF. Libere pop-ups para o Gestor e tente de novo."); return; }
   w.document.open(); w.document.write(doc); w.document.close();
 }
+let JANELA_PDF = null;   // aberta no clique (antes da pergunta), senão o navegador bloqueia o pop-up
 const contaEscolhidas = () => [...marcas(DADOS.colecao).values()].filter(v => v === "escolhida").length;
 const contaRetiradas = () => VIT.atual ? [...marcas(VIT.atual.colecao).values()].filter(v => v === "retirar").length : 0;
 
@@ -340,9 +344,9 @@ function desenharVitrine(){
       <div class="pagina" id="vit-pagina"></div>
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
-    el.querySelector("#vit-pdf").onclick = () => imprimirVitrine();
+    el.querySelector("#vit-pdf").onclick = () => { if (!ehGtm() && VIT.vista !== "atual" && filtroDaTela()) { JANELA_PDF = window.open("", "_blank"); if (JANELA_PDF) JANELA_PDF.document.write("<p style=\"font-family:Arial;padding:20px\">Confirme na outra janela…</p>"); } imprimirVitrine().then(() => { if (JANELA_PDF) { JANELA_PDF.close(); JANELA_PDF = null; } }); };
     // "todos" = os três arquivos + o PDF (ele, 19/10 15:3x: "bota exportar PDF junto, e todos — tudo pertinho, senão fica dessincronizado")
-    for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = () => { pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) imprimirVitrine(); };
+    for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = async () => { await pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) el.querySelector("#vit-pdf").onclick(); };
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
   }
   chipsClientes(el, "vit-cliente");
@@ -369,11 +373,31 @@ function desenharVitrine(){
 // as SAÍDAS da vitrine (19/10, ordem dele): a página não escreve no OneDrive — o botão anota o pedido no banco (vitrine_saida) e o TI,
 // na máquina dele, gera o arquivo e devolve o caminho; a lista abaixo dos botões mostra o que está na fila e o que ficou pronto
 const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", ebm: "Excel pedido EBM" };
+// o FILTRO da tela (ele, 19/10 16:5x: "o Excel e o PDF do cliente saem de acordo com o que estou filtrando — e você pergunta antes:
+// deseja subir apenas tênis Olympikus de janeiro?"). Vazio = a vitrine inteira. O GTM não pergunta (é uma vez por semestre).
+const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v) f.mes = VF_MES.v; if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) f.gen = [...VF.gen]; if (VF.bloco.size) f.familia = [...VF.bloco];
+  const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen) partes.push(f.gen.map(g => g.toLowerCase()).join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes);
+  f.texto = partes.length ? partes.join(" · ") : ""; return Object.keys(f).length > 1 || f.texto ? f : null; };
+const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && (!f.gen || f.gen.includes(it.ge || "")) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes in (e.pm || {}))))); };
+function confirmar(titulo, texto){
+  return new Promise(resolve => {
+    const luz = document.createElement("div"); luz.className = "luz grade-luz";
+    luz.innerHTML = `<div class="quadro grade-quadro"><div class="gq-nome">${esc(titulo)}</div><div class="gq-perg">${esc(texto)}</div><div class="gq-acoes"><button type="button" class="gq-sobe">sim, só isso</button><button type="button" class="sec gq-deixa">não, deixa</button></div></div>`;
+    const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
+    const tecla = ev => { if (ev.key === "Escape") fecha(false); if (ev.key === "Enter") fecha(true); };
+    document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(false); };
+    luz.querySelector(".gq-sobe").onclick = () => fecha(true); luz.querySelector(".gq-deixa").onclick = () => fecha(false);
+    document.body.appendChild(luz); luz.querySelector(".gq-sobe").focus();
+  });
+}
 async function pedirSaida(tipos){
   if (!VIT.cliente || !VIT.esc || !DADOS) return;
   const col = VIT.vista === "atual" && VIT.atual ? VIT.atual.colecao : DADOS.colecao;
   if (!escolhidas().length && VIT.vista !== "atual") { alert("A vitrine está vazia: ponha as cores antes de gerar."); return; }
-  const r = await SB.from("vitrine_saida").insert(tipos.map(t => ({ escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: col, tipo: t })));
+  const f = filtroDaTela();
+  if (f) { const n = cartoesFiltrados().length; if (!n) { alert("Com esse filtro não sobra nenhuma cor. Mude o filtro ou volte para 'total'."); return; }
+    if (!(await confirmar("Gerar com o filtro da tela", `Deseja realmente subir apenas ${f.texto} — ${n} cor(es) de ${escolhidas().length}? O resto da vitrine fica de fora deste arquivo.`))) return; }
+  const r = await SB.from("vitrine_saida").insert(tipos.map(t => ({ escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: col, tipo: t, filtro: f })));
   if (r.error) { VIT.erro = "O banco recusou o pedido: " + r.error.message; } else VIT.erro = "";
   const er = ELV.querySelector("#vit-erro"); if (er) { er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro); }
   mostrarSaidas(ELV);
