@@ -136,7 +136,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cliente table.cart td,.cliente table.ped td{white-space:nowrap;vertical-align:top}.cliente table.cart td small,.cliente table.ped td small{display:block;font-size:.64rem;color:var(--mu);white-space:normal;max-width:260px}.cliente table.cart select.dec,.cliente table.cart input.dec{margin:0;padding:3px 6px;font-size:.74rem;width:auto;min-width:0}.cliente table.cart input.dec[data-campo=volume]{width:64px}.cliente table.cart input.dec[data-campo=destinatario]{width:110px}.cliente table.cart input.dec[data-campo=nota]{width:150px}
 .cliente table.cart tr.decidida td:first-child{box-shadow:inset 3px 0 0 var(--amarelo)}.cliente table.cart small.xl.dif{color:var(--amarelo)}
 .cliente table.ped tr.riscada td{text-decoration:line-through;color:var(--mu)}.cliente .chip.conferir{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.cliente table.ped button.orig{width:auto;margin:0 2px 0 0;padding:3px 8px;font-size:.72rem}
-#ia{position:fixed;right:16px;bottom:16px;width:min(520px,calc(100vw - 32px));max-height:75vh;display:flex;flex-direction:column;z-index:50;background:var(--preto);border:1px solid var(--amarelo);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#ia.oculto{display:none}#ia .fale-lista{max-height:48vh}.fm.ia span{white-space:pre-wrap}.fm.pensando span{color:var(--mu);font-style:italic}button.sec.ia{border-color:var(--amarelo);color:var(--amarelo);font-weight:800}
+#ia{position:fixed;right:16px;bottom:16px;width:min(520px,calc(100vw - 32px));max-height:75vh;display:flex;flex-direction:column;z-index:50;background:var(--preto);border:1px solid var(--amarelo);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#ia.oculto{display:none}#ia .fale-lista{max-height:48vh}.fm.ia .md{font-size:.86rem;line-height:1.4}.fm.ia .md p{margin:0 0 6px}.fm.ia .md table{border-collapse:collapse;margin:6px 0;font-size:.8rem;width:100%}.fm.ia .md th,.fm.ia .md td{border:1px solid var(--cinza-escuro);padding:3px 7px;text-align:left;white-space:nowrap}.fm.ia .md th{background:var(--preto);color:var(--amarelo)}.fm.ia .md td:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}.fm.ia .md strong{color:var(--amarelo)}.fm.ia .md ul,.fm.ia .md ol{margin:4px 0 6px 18px;padding:0}.fm.ia .md h1,.fm.ia .md h2,.fm.ia .md h3{font-size:.9rem;margin:6px 0 4px;color:var(--amarelo)}.fm.ia .md pre{white-space:pre-wrap}#ia{width:min(640px,calc(100vw - 32px))}.fm.pensando span{color:var(--mu);font-style:italic}button.sec.ia{border-color:var(--amarelo);color:var(--amarelo);font-weight:800}
 .cliente .cartd.fechada .chips.mini{margin-top:4px}
 #fale{position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));max-height:70vh;display:flex;flex-direction:column;z-index:50;background:var(--preto);border:1px solid var(--cinza-escuro);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#fale.oculto{display:none}
 .fale-topo{display:flex;align-items:center;gap:8px}.fale-topo b{color:var(--amarelo)}.fale-topo small{flex:1;font-size:.7rem}.fale-topo button{width:auto;margin:0;padding:2px 8px}
@@ -485,7 +485,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.69</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.70</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -768,7 +768,7 @@ async function iaHistorico(){
   IA.carregada = true;
 }
 function iaDesenhar(){
-  $("ia-lista").innerHTML = IA.hist.map(m => `<div class="fm eu"><span>${esc(m.p)}</span></div>${m.r != null ? `<div class="fm ti ia"><span>${esc(m.r)}</span><small>${m.custo != null ? "IA · US$ " + m.custo.toFixed(3) + " · " + esc(m.modelo || "") : "IA"}</small></div>` : `<div class="fm ti ia pensando"><span>lendo o banco e pensando…</span></div>`}`).join("") || `<div class="mu">pergunte sobre o cliente, a carteira, o trade, a vitrine, as metas. A resposta vem com os números do banco.</div>`;
+  $("ia-lista").innerHTML = IA.hist.map(m => `<div class="fm eu"><span>${esc(m.p)}</span></div>${m.r != null ? `<div class="fm ti ia"><div class="md">${(window.Atas && Atas.md2html) ? Atas.md2html(m.r) : esc(m.r)}</div><small>${m.custo != null ? "IA · US$ " + m.custo.toFixed(3) + " · " + esc(m.modelo || "") : "IA"}</small></div>` : `<div class="fm ti ia pensando"><span>lendo o banco e pensando…</span></div>`}`).join("") || `<div class="mu">pergunte sobre o cliente, a carteira, o trade, a vitrine, as metas. A resposta vem com os números do banco.</div>`;
   $("ia-lista").scrollTop = $("ia-lista").scrollHeight;
 }
 async function iaAbrir(){ IA.aberta = !IA.aberta; $("ia").classList.toggle("oculto", !IA.aberta); if (IA.aberta) { if (FALE.aberta) faleAbrir(); iaDesenhar(); await iaHistorico(); iaDesenhar(); $("ia-txt").focus(); } }
