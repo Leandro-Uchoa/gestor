@@ -381,8 +381,11 @@ async function mostrarSaidas(el){
   if (r.error || !r.data) { o.innerHTML = ""; return; }
   const hora = s => s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   // enquanto houver pedido na fila, a lista se relê sozinha a cada 20 s (ele, 19/10 15:0x: "só apareceu uma informação" — o pronto não chegava sem F5)
-  clearTimeout(mostrarSaidas._t); if (r.data.some(x => !x.atendido_em)) mostrarSaidas._t = setTimeout(() => mostrarSaidas(el), 20_000);
-  o.innerHTML = r.data.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}"><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → <code>${esc(x.arquivo || "")}</code>${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min, na pasta do cliente (esta lista se atualiza sozinha)")}</div>`).join("");
+  // e a linha SOME depois (ele, 15:5x: "aparece e depois some, senão ocupa espaço"): pronto fica 10 min na tela, erro 30 min, na fila até sair
+  const agora = Date.now(), vivo = x => !x.atendido_em || (agora - new Date(x.atendido_em).getTime()) < (x.erro ? 30 : 10) * 60_000;
+  const lista = r.data.filter(vivo);
+  clearTimeout(mostrarSaidas._t); if (lista.length) mostrarSaidas._t = setTimeout(() => mostrarSaidas(el), lista.some(x => !x.atendido_em) ? 20_000 : 60_000);
+  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}"><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → <code>${esc(x.arquivo || "")}</code>${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min, na pasta do cliente (esta lista se atualiza sozinha)")}</div>`).join("");
 }
 
 // ---------- o MONTADOR (15/10, orientação dele, ao vivo): "parta a tela no meio: do lado esquerdo os produtos da 1S27 com filtros
