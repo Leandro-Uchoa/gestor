@@ -204,6 +204,12 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .raiox .partes div,.raiox .pir .faixa{display:grid;grid-template-columns:150px 1fr 110px;gap:10px;align-items:center;margin:4px 0;font-size:.82rem}.raiox .pb{height:16px;background:rgba(120,123,134,.14);border-radius:4px;overflow:hidden}.raiox .pb i{display:block;height:100%;width:var(--w);background:rgba(46,62,252,.7)}
 .raiox .faixa.topo .pb i{background:var(--acc)}.raiox .faixa.meio .pb i{background:rgba(46,62,252,.8)}.raiox .faixa.base .pb i{background:rgba(120,123,134,.6)}.raiox .partes .p,.raiox .pir .p{text-align:right;font-variant-numeric:tabular-nums}.raiox .r{font-weight:700;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .raiox .pirs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px}
+/* ponta de estoque (19/10) */
+.raiox .placar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 10px}.raiox .placar span{background:rgba(120,123,134,.14);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;min-width:0}
+.raiox .placar span.ativa{border-color:var(--acc);background:rgba(255,255,26,.08)}.raiox .placar b{font-size:1.25rem;font-weight:900;line-height:1.1}.raiox .placar small{color:var(--mu);font-size:.68rem;font-weight:600}
+.raiox table.ponta{min-width:900px}.raiox table.ponta .sit{display:inline-block;padding:2px 7px;border-radius:999px;font-size:.68rem;font-weight:800;border:1px solid var(--bd)}.raiox tr.fora .sit{background:var(--acc);color:#000;border-color:var(--acc)}.raiox tr.linha .sit{background:#2E3EFC;color:#F6F5F0;border-color:#2E3EFC}.raiox tr.duvida .sit{color:var(--mu)}
+.raiox table.ponta .obs{background:rgba(120,123,134,.25);padding:1px 6px;border-radius:4px;font-size:.72rem;font-weight:700}.raiox table.ponta .sug{font-weight:700;white-space:normal;min-width:150px}.raiox tr.linha .sug{color:var(--mu)}
+@media (max-width:700px){.raiox .placar{grid-template-columns:1fr}}
 @media (max-width:700px){.raiox .duas,.raiox .pirs{grid-template-columns:1fr}.raiox .grafico{height:150px}.raiox .grafico .v{display:none}.raiox .partes div,.raiox .pir .faixa{grid-template-columns:110px 1fr 90px}}
 @media print{.raiox .filtros{display:none}.raiox .card{background:#fff;color:#000;border:1px solid #ddd;break-inside:avoid}.raiox table.rx td,.raiox table.rx th{color:#000}.raiox td.pede,.raiox .sec-tit{color:#000}.raiox .cl-A{background:#ddd;color:#000}}
 /* ---- ATAS (14/10): uma linha por reunião; toque abre a ata inteira ---- */
@@ -316,8 +322,10 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 /* impressão (PICASSO, 15/10): só Arial — a Segoe UI / system-ui dava "Font Capture" no Acrobat; e o PDF sai inteiro, sem caixa de rolagem */
 @media print{body,body *{font-family:Arial,Helvetica,sans-serif!important}html,body{height:auto!important;overflow:visible!important}}
 /* PDF da vitrine (19/10, ele: "os PDFs ainda estão ruins"): A4 deitado, 6 cartões por linha, título e placar no alto, um título por tipo, sem botões */
-@media print{@page{size:A4 landscape;margin:8mm}.mont-esq,.mont-troca,.mont-cab .chips,.mont-cab .frow,.vcard .mais,.colecao.vitrine .filtros label,.colecao.vitrine .filtros .chips,.colecao.vitrine .acoes,#vit-nota,#vit-erro{display:none!important}
-  .montador{display:block}.mont-dir{background:#fff;padding:0;box-shadow:none}.mont-cab{display:block}.mont-tit{font-size:15pt;font-weight:900;margin:0 0 4px}
+/* margem 0 na @page = o Chrome não imprime cabeçalho/rodapé (data, URL) — eles saem na fonte do sistema (Segoe UI Variable), que faz o Acrobat
+   abrir com "Font Capture: Erro de Aplicativo" (ele, 19/10: "aparece uma mensagem, eu queria que evitasse"); a margem volta como padding */
+@media print{@page{size:A4 landscape;margin:0}.mont-esq,.mont-troca,.mont-cab .chips,.mont-cab .frow,.vcard .mais,.colecao.vitrine .filtros label,.colecao.vitrine .filtros .chips,.colecao.vitrine .acoes,#vit-nota,#vit-erro{display:none!important}
+  .montador{display:block}.mont-dir{background:#fff;padding:8mm;box-shadow:none}.mont-cab{display:block}.mont-tit{font-size:15pt;font-weight:900;margin:0 0 4px}
   .mont-placar{display:flex;gap:8px;margin:0 0 6px}.mont-placar span{background:#F6F5F0;padding:4px 10px;border-radius:6px}.mont-placar b{font-size:11pt}.mont-placar .curto{display:none}.mont-placar .cheio{display:block}.mont-tipos{font-size:8pt}
   .mont-vitrine{max-height:none;overflow:visible;background:#E6E7E8;padding:6px;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .vsec{font-size:8.5pt;padding-top:5px;break-after:avoid}.vcard{break-inside:avoid;border:1px solid #ddd;box-shadow:none;padding:4px}.vfoto{aspect-ratio:4/3}.vnome{font-size:7.5pt}.vpdv{font-size:8.5pt}.vcard .ref,.vcor{font-size:6.5pt}.vcard .mu{font-size:6pt}.vcard .selo{font-size:5.5pt}
@@ -337,7 +345,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.14</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.15</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -399,7 +407,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="catalogo.js?v=2"></script>
 <script src="colecao.js?v=13"></script>
 <script src="atas.js?v=1"></script>
-<script src="raiox.js?v=1"></script>
+<script src="raiox.js?v=2"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);

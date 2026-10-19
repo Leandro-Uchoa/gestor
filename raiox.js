@@ -11,7 +11,11 @@ const pct = x => x == null ? "—" : (x * 100).toFixed(0) + "%";
 const dec = x => x == null ? "—" : x.toFixed(1).replace(".", ",");
 const mesBR = m => MESES[+m.slice(5, 7) - 1] + "/" + m.slice(2, 4);
 const dmy = d => d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(2, 4) : "";
-const VISTAS = [["lojas", "lojas"], ["cat", "categorias"], ["saz", "sazonalidade"], ["pir", "pirâmide de PDV"]];
+const VISTAS = [["lojas", "lojas"], ["cat", "categorias"], ["saz", "sazonalidade"], ["pir", "pirâmide de PDV"], ["ponta", "ponta de estoque"]];
+// 19/10, ordem dele: PONTA DE ESTOQUE = produtos antigos (último faturamento há 6 meses ou mais, com estoque); fora de linha → rebaixa,
+// em linha → não rebaixa. Vem de raio_x.ponta (carga_ponta.py, da AG do cliente). As vistas de lojas só existem quando o documento as tem.
+const vistasDe = d => VISTAS.filter(([v]) => v === "ponta" ? !!(d && d.ponta) : !!(d && d.lojas));
+const PF = { sit: "fora de linha", marca: "", busca: "" };
 // o jsonb do banco devolve as chaves de um objeto em ordem própria (tamanho, depois alfabética) — a ordem de exibição é esta
 const ORD_FAM = ["TÊNIS", "CHINELOS", "ACESSÓRIOS", "MEIAS"], ORD_SUB = ["FEMININO", "MASCULINO", "INFANTIL", "UNISSEX", "BASE", "MEIO", "TOPO"];
 const ordenar = (chaves, ordem) => chaves.slice().sort((a, b) => { const i = ordem.findIndex(o => a.toUpperCase().startsWith(o)), j = ordem.findIndex(o => b.toUpperCase().startsWith(o)); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || a.localeCompare(b); });
@@ -59,17 +63,59 @@ async function desenhar(){
     </div>`;
   }
   chips("rx-cli", LISTA.map(c => [c.cliente, c.nome]), S.cliente, v => { S.cliente = v; S.cat = null; S.fam = null; S.sub = ""; desenhar(); });
-  chips("rx-vista", VISTAS, S.vista, v => { S.vista = v; desenhar(); });
   const corpo = el.querySelector("#rx-corpo");
   let d;
   try { d = await doc(S.cliente); } catch (e) { corpo.innerHTML = `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
   if (!d) { corpo.innerHTML = `<div class="card mu">Sem raio-x para este cliente.</div>`; return; }
-  el.querySelector("#rx-base").innerHTML = `<b>${esc(d.nome)}</b> · ${d.base.lojas_ativas} lojas ativas · fonte: ${esc(d.base.fonte)} · lojas e categorias: ${esc(d.base.lojas)} · sazonalidade e pirâmide: ${esc(d.base.serie)} · carregado em ${esc(dmy(d.atualizado_em))}`;
+  const vistas = vistasDe(d); if (!vistas.some(([v]) => v === S.vista)) S.vista = (vistas[0] || [""])[0];
+  chips("rx-vista", vistas, S.vista, v => { S.vista = v; desenhar(); });
+  el.querySelector("#rx-base").innerHTML = d.lojas
+    ? `<b>${esc(d.nome)}</b> · ${d.base.lojas_ativas} lojas ativas · fonte: ${esc(d.base.fonte)} · lojas e categorias: ${esc(d.base.lojas)} · sazonalidade e pirâmide: ${esc(d.base.serie)} · carregado em ${esc(dmy(d.atualizado_em))}`
+    : `<b>${esc(d.nome)}</b> · só ponta de estoque por enquanto (o raio-x de lojas vem quando o NÚCLEO calcular)`;
   if (S.vista === "lojas") corpo.innerHTML = vistaLojas(d);
   else if (S.vista === "cat") vistaCat(d, corpo);
   else if (S.vista === "saz") vistaSaz(d, corpo);
+  else if (S.vista === "ponta") vistaPonta(d, corpo);
   else corpo.innerHTML = vistaPir(d);
 }
+
+// ---- PONTA DE ESTOQUE: uma linha por referência + cor; fora de linha primeiro; a marca dele (OBS da AG) ao lado da sugestão
+function vistaPonta(d, corpo){
+  const P = d.ponta, T = P.totais, its = P.itens;
+  const sits = ["fora de linha", "em linha", "status a conferir"].filter(s => T[s] && T[s].cores);
+  const marcas = [...new Set(its.map(i => i.marca).filter(Boolean))].sort();
+  corpo.innerHTML = `<div class="card filtros">
+      <div class="placar">${sits.map(s => `<span class="${s === PF.sit ? "ativa" : ""}" data-s="${esc(s)}"><b>${fmt(T[s].pares)}</b><small>${esc(s)} · ${T[s].modelos} modelo(s) · ${T[s].cores} cor(es) · ${esc(dinheiroCurto(T[s].valor_pdv))} em PDV</small></span>`).join("")}</div>
+      <label>situação</label><div class="chips" id="rx-pf-sit"></div>
+      ${marcas.length > 1 ? `<label>marca · família</label><div class="chips" id="rx-pf-marca"></div>` : ""}
+      <input type="search" id="rx-pf-busca" placeholder="buscar: modelo, referência, cor, sua marca (PONTA, QUEIMAR…)" autocomplete="off" value="${esc(PF.busca)}" style="padding:9px 12px;margin-top:8px">
+      <div class="mu" id="rx-pf-conta"></div>
+    </div>
+    <div class="card"><div class="sec-tit">PONTA DE ESTOQUE <small>${esc(P.base.regra)} · giro até ${esc(mesBR(P.base.giro_ate + "-01"))} · lido em ${esc(dmy(P.base.lido_em))}</small></div>
+      <div class="rolagem"><table class="rx ponta"><thead><tr><th>situação</th><th>modelo</th><th>ref.</th><th>cor</th><th>marca</th><th class="n">PDV</th><th class="n">estoque</th><th class="n">venda/mês</th><th class="n">cobertura</th><th>último fat.</th><th class="n">parado</th><th>sua marca (AG)</th><th>sugestão</th></tr></thead><tbody id="rx-pf-linhas"></tbody></table></div>
+      <div class="legenda mu">último fat. = último mês com entrada (carteira + faturado por previsão) na AG; "nunca" = sem entrada desde ${esc(mesBR(P.base.carteira_desde + "-01"))} · em linha / fora de linha = a coluna STATUS da AG (LINHA · FDL) · sua marca = a coluna OBS do último mês</div>
+    </div>`;
+  for (const sp of corpo.querySelectorAll(".placar span")) sp.onclick = () => { PF.sit = sp.dataset.s; vistaPonta(d, corpo); };
+  chips("rx-pf-sit", [["", "todas"], ...sits.map(s => [s, s, T[s].cores])], PF.sit, v => { PF.sit = v; vistaPonta(d, corpo); });
+  if (marcas.length > 1) chips("rx-pf-marca", [["", "todas"], ...marcas.map(m => [m, m, its.filter(i => i.marca === m).length])], PF.marca, v => { PF.marca = v; vistaPonta(d, corpo); });
+  corpo.querySelector("#rx-pf-busca").oninput = ev => { PF.busca = ev.target.value; clearTimeout(vistaPonta._t); vistaPonta._t = setTimeout(() => linhasPonta(d, corpo), 120); };
+  linhasPonta(d, corpo);
+}
+function linhasPonta(d, corpo){
+  const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+  const t = semAcento(PF.busca).split(/\s+/).filter(Boolean);
+  const lista = d.ponta.itens.filter(i => (!PF.sit || i.situacao === PF.sit) && (!PF.marca || i.marca === PF.marca)
+    && (!t.length || t.every(x => semAcento([i.desc, i.ref, i.cor, i.obs, i.grupo, i.genero].join(" ")).includes(x))));
+  const pares = lista.reduce((s, i) => s + (i.estoque || 0), 0), valor = lista.reduce((s, i) => s + (i.valor_pdv || 0), 0);
+  corpo.querySelector("#rx-pf-conta").innerHTML = `<b>${lista.length}</b> cor(es) · <b>${new Set(lista.map(i => i.ref)).size}</b> modelo(s) · <b>${fmt(pares)}</b> pares · <b>${esc(dinheiroCurto(valor))}</b> em PDV`;
+  corpo.querySelector("#rx-pf-linhas").innerHTML = lista.map(i => `<tr class="${i.situacao === "fora de linha" ? "fora" : i.situacao === "em linha" ? "linha" : "duvida"}">
+      <td><span class="sit">${esc(i.situacao)}</span></td><td class="loja">${esc(i.desc)}</td><td>${esc(i.ref)}</td><td>${esc(i.cor)}</td><td class="nome">${esc(i.marca)}${i.genero ? `<span class="mu cod">${esc(i.genero)}${i.grupo ? " · " + esc(i.grupo) : ""}</span>` : ""}</td>
+      <td class="n">${i.pdv == null ? "—" : esc(dinheiro(i.pdv))}</td><td class="n"><b>${fmt(i.estoque)}</b></td><td class="n">${i.venda_mes == null ? "—" : dec(i.venda_mes)}</td><td class="n ${i.cobertura != null && i.cobertura >= 9 ? "pesado" : ""}">${dec(i.cobertura)}</td>
+      <td>${i.ultimo_fat ? esc(mesBR(i.ultimo_fat + "-01")) : "nunca"}</td><td class="n">${i.meses_parado == null ? "—" : i.meses_parado + " m"}</td><td>${i.obs ? `<span class="obs">${esc(i.obs)}</span>` : ""}</td><td class="sug">${esc(i.sugestao)}</td></tr>`).join("")
+    || `<tr><td colspan="13" class="mu">Nada com esses filtros.</td></tr>`;
+}
+const dinheiro = v => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dinheiroCurto = v => !v ? "R$ 0" : v >= 1e6 ? "R$ " + (v / 1e6).toFixed(2).replace(".", ",") + " mi" : v >= 1e3 ? "R$ " + (v / 1e3).toFixed(0) + " mil" : dinheiro(v);
 
 // ---- LOJAS: uma linha por porta, cluster, regulador e a diferença estoque − regulador
 function vistaLojas(d){
