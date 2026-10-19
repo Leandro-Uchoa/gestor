@@ -232,22 +232,22 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cat .chips small{opacity:.6;font-weight:500;margin-left:2px}.cat .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .cat .acoes button{width:auto;margin:0;padding:8px 12px;border-radius:999px;font-size:.85rem}.cat .acoes button.ativa{background:var(--acc);color:var(--preto);border-color:var(--acc)}
 .cat .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
-.cat .item{position:relative;background:var(--card);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.cat .item{position:relative;background:var(--card);border-radius:var(--raio-cartao);overflow:hidden;display:flex;flex-direction:column}
 .cat .foto{aspect-ratio:1/1;background:rgba(120,123,134,.22);display:flex;align-items:center;justify-content:center;cursor:zoom-in}.cat .foto img{width:100%;height:100%;object-fit:contain}
 .cat .foto .sem{font-size:2rem;font-weight:800;color:var(--cinza-escuro)}
 .cat .tx{padding:10px 12px 12px}.cat .nome{font-weight:700;font-size:.92rem;line-height:1.2;margin-bottom:4px}.cat .tx .mu{font-size:.74rem}
 .cat .preco{margin-top:6px;font-weight:800;color:var(--acc);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.cat .selo{font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.02em}.cat .selo.lanc{background:var(--azul);color:var(--off-white)}.cat .selo.nova{background:var(--amarelo);color:var(--preto)}
+.cat .selo{font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:var(--raio-selo);text-transform:uppercase;letter-spacing:.02em}.cat .selo.lanc{background:var(--azul);color:var(--off-white)}.cat .selo.nova{background:var(--amarelo);color:var(--preto)}
 .cat .fav{position:absolute;top:8px;right:8px;width:34px;height:34px;margin:0;padding:0;border-radius:50%;background:rgba(0,0,0,.7);color:var(--cinza-escuro);border:0;font-size:1.1rem}.cat .fav.on{color:var(--amarelo)}
 .cat .cores{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.cat .cor{font-size:.62rem;padding:2px 6px;border-radius:6px;background:rgba(120,123,134,.3);color:var(--mu);cursor:pointer}.cat .cor.esta{background:var(--acc);color:var(--preto);font-weight:700}
 .cat .luz{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}.cat .luz.oculto{display:none}
 .cat .quadro{position:relative;background:var(--card);border-radius:16px;max-width:900px;width:100%;max-height:92vh;overflow:auto;padding:16px}
 .cat .quadro .fecha{position:absolute;top:8px;right:8px;width:36px;height:36px;margin:0;padding:0;border-radius:50%;background:rgba(120,123,134,.3);color:var(--ink);border:0;font-size:1.2rem}
-.cat .angulos{display:flex;gap:8px;overflow-x:auto}.cat .angulos img{height:min(60vh,520px);max-width:100%;object-fit:contain;background:rgba(120,123,134,.22);border-radius:10px}
+.cat .angulos{display:flex;gap:8px;overflow-x:auto}.cat .angulos img{height:min(60vh,520px);max-width:100%;object-fit:contain;background:rgba(120,123,134,.22);border-radius:var(--raio-cartao)}
 /* ---- COLEÇÃO (14/10): o visual aprovado por ele nos PDFs do PICASSO — página cinza claro (cinza claro da paleta a 30% sobre branco),
    foto ORIGINAL sem recorte num cartão branco, uma coluna por modelo com cabeçalho de altura fixa, cores embaixo; Arial; referência
    em azul copiável; LANÇAMENTO amarelo com texto preto; COR NOVA = triângulo azul no canto da foto ---- */
-.colecao .pagina{background:var(--pagina);color:var(--preto);border-radius:14px;padding:14px;font-family:Arial,Helvetica,sans-serif}
+.colecao .pagina{background:var(--pagina);color:var(--preto);border-radius:14px;padding:14px;font-family:var(--fonte-sans)}
 .colecao .bloco{margin-bottom:18px}.colecao .bloco:last-child{margin-bottom:0}
 .colecao .sec-tit{font-weight:800;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--preto);margin:0 0 8px;padding:2px 0 2px 10px;border-left:3px solid var(--azul)}.colecao .sec-tit small{color:var(--cinza-escuro);font-weight:600;letter-spacing:0;text-transform:none}
 .colecao .colunas{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:start}
@@ -258,18 +258,18 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .colecao .nome{flex:none;font-weight:700;font-size:.8rem;line-height:1.15;text-wrap:balance;min-height:3.45em;max-height:3.45em;overflow:hidden;margin:0}
 .colecao .linha{flex:none;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap}.colecao .pdv{font-weight:800;font-size:.78rem;color:var(--preto)}
 .colecao .selos{flex:none;display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:auto;overflow:hidden;max-height:1.6em}.colecao .selos .mu{color:var(--cinza-escuro);font-size:.66rem;white-space:nowrap}
-.colecao .ref{display:inline-block;width:auto;margin:0;padding:1px 6px;border:0;border-radius:5px;background:transparent;color:var(--azul);font-size:.76rem;font-weight:800;cursor:copy;font-family:inherit;letter-spacing:.01em;user-select:all}
+.colecao .ref{display:inline-block;width:auto;margin:0;padding:1px 6px;border:0;border-radius:var(--raio-selo);background:transparent;color:var(--azul);font-size:.76rem;font-weight:800;cursor:copy;font-family:var(--fonte-mono);letter-spacing:.01em;user-select:all}
 .colecao .ref.copiado{background:var(--amarelo);color:var(--preto)}
-.colecao .selo{font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}.colecao .selo.lanc{background:var(--amarelo);color:var(--preto)}.colecao .selo.conv{background:var(--cinza-claro);color:var(--preto)}.colecao .selo.nova{background:var(--azul);color:var(--off-white)}
+.colecao .selo{font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:var(--raio-selo);text-transform:uppercase;letter-spacing:.03em}.colecao .selo.lanc{background:var(--amarelo);color:var(--preto)}.colecao .selo.conv{background:var(--cinza-claro);color:var(--preto)}.colecao .selo.nova{background:var(--azul);color:var(--off-white)}
 .colecao .cores{padding:6px 0 0}.colecao .cor{padding:4px 0 8px}
-.colecao .foto{position:relative;background:var(--cartao);border-radius:7px;box-shadow:0 1px 3px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;cursor:zoom-in;overflow:hidden}
+.colecao .foto{position:relative;background:var(--cartao);border-radius:var(--raio-cartao);box-shadow:var(--sombra-cartao);display:flex;align-items:center;justify-content:center;cursor:zoom-in;overflow:hidden}
 .colecao .foto.deitada{aspect-ratio:4/3}.colecao .foto.empe{aspect-ratio:3/4}
 .colecao .foto img{width:100%;height:100%;object-fit:contain;display:block}.colecao .foto img.oculto{display:none}.colecao .foto .sem{color:var(--cinza-escuro);font-size:.7rem}.colecao .foto .sem.oculto{display:none}
 .colecao .foto .tri{position:absolute;top:0;right:0;width:0;height:0;border-top:22px solid var(--azul);border-left:22px solid transparent}
 .colecao .cod{font-weight:800;font-size:.72rem;margin-top:4px;color:var(--preto)}.colecao .desc{font-size:.64rem;color:var(--cinza-escuro);line-height:1.15}
 /* VITRINE (15/10): o "+" no canto do cartão da cor; escolhida = contorno azul e "✓"; fora da vitrine = foto a 40% e a linha em cinza */
 .colecao .cor{position:relative}
-.colecao .mais{position:absolute;top:8px;left:4px;z-index:2;width:28px;height:28px;margin:0;padding:0;border-radius:50%;border:2px solid var(--azul);background:var(--cartao);color:var(--azul);font-size:1.05rem;font-weight:800;line-height:1;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.colecao .mais{position:absolute;top:8px;left:4px;z-index:2;width:28px;height:28px;margin:0;padding:0;border-radius:50%;border:2px solid var(--azul);background:var(--cartao);color:var(--azul);font-size:1.05rem;font-weight:800;line-height:1;cursor:pointer;box-shadow:var(--sombra-cartao)}
 .colecao .mais.on{background:var(--azul);color:var(--off-white)}.colecao .mais.tira{border-color:var(--cinza-escuro);color:var(--preto)}
 .colecao .cor.sel .foto{outline:2px solid var(--azul);outline-offset:-2px}
 .colecao .cor.fora .foto img{opacity:.4}.colecao .fora-txt{font-size:.62rem;color:var(--cinza-escuro);margin-top:3px;font-weight:700}
@@ -281,10 +281,10 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
    do cliente dos mais caros aos mais baratos; "mais bonito, mais visual, gamificar" — animação é evento (sobe e brilha 5 s), estado é repouso ---- */
 /* o montador inteiro é CLARO (revisão do PICASSO, 15/10: nada de texto branco ou amarelo sobre cinza claro): página cinza, painéis
    brancos, chips brancos com borda cinza e texto preto (ativo = amarelo com texto preto), PDV azul, placar preto sobre branco */
-.montador{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start;min-width:0;font-family:Arial,Helvetica,sans-serif;color:var(--preto)}
+.montador{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start;min-width:0;font-family:var(--fonte-sans);color:var(--preto)}
 .montador *,.montador *::before,.montador *::after{box-sizing:border-box}
 .mont-troca{display:none;gap:6px;margin-bottom:8px}.mont-troca button{width:auto;margin:0;padding:8px 14px;border-radius:999px;background:var(--cartao);color:var(--preto);border:1px solid var(--cinza-claro);font-family:inherit;font-weight:800}.mont-troca button.ativa{background:var(--amarelo);border-color:var(--amarelo)}.mont-troca b{margin-left:4px}
-.mont-esq,.mont-dir{background:var(--cartao);border-radius:14px;padding:10px;min-width:0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.mont-esq,.mont-dir{background:var(--cartao);border-radius:14px;padding:10px;min-width:0;box-shadow:var(--sombra-cartao)}
 .montador input[type=search]{width:100%;padding:9px 12px;border:1px solid var(--cinza-claro);border-radius:10px;background:var(--cartao);color:var(--preto);font:inherit;font-size:.9rem}.montador input[type=search]::placeholder{color:var(--cinza-escuro)}
 .frow{display:flex;align-items:center;gap:8px;margin-top:6px;min-width:0}.fl{flex:none;width:56px;font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--cinza-escuro)}
 .frow .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:0;padding-bottom:3px;min-width:0;scrollbar-width:thin}
@@ -293,14 +293,14 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .montador .mu{color:var(--cinza-escuro)}#mf-conta{margin-top:8px;font-size:.74rem}
 .mont-lista{max-height:72vh;overflow:auto;margin-top:8px;padding-right:4px}
 .mont-sec{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--preto);margin:12px 2px 4px;padding-left:8px;border-left:3px solid var(--amarelo)}
-.mcard{background:var(--off-white);border-radius:12px;padding:8px 10px;margin:6px 0}
+.mcard{background:var(--off-white);border-radius:var(--raio-cartao);padding:8px 10px;margin:6px 0}
 .mnome{font-weight:800;font-size:.9rem;line-height:1.15}.mref{font-size:.74rem;color:var(--cinza-escuro);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.mpdv{color:var(--azul);font-weight:800}
-.mcard .ref{background:transparent;color:var(--azul);font-size:.76rem;padding:1px 4px;border-radius:5px;border:0;margin:0;width:auto;cursor:copy;font-weight:800;font-family:inherit;user-select:all}.mcard .ref.copiado{background:var(--amarelo);color:var(--preto)}
+.mcard .ref{background:transparent;color:var(--azul);font-size:.76rem;padding:1px 4px;border-radius:var(--raio-selo);border:0;margin:0;width:auto;cursor:copy;font-weight:800;font-family:var(--fonte-mono);user-select:all}.mcard .ref.copiado{background:var(--amarelo);color:var(--preto)}
 .mthumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.mthumb{width:76px;position:relative;text-align:center;cursor:pointer}.mthumb img{width:76px;height:76px;object-fit:contain;background:var(--cartao);border-radius:9px;display:block;box-shadow:0 1px 3px rgba(0,0,0,.12)}
-.mthumb .sem{width:76px;height:76px;border-radius:9px;background:var(--cartao);display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--cinza-escuro)}
+.mthumb{width:76px;position:relative;text-align:center;cursor:pointer}.mthumb img{width:76px;height:76px;object-fit:contain;background:var(--cartao);border-radius:var(--raio-cartao);display:block;box-shadow:var(--sombra-cartao)}
+.mthumb .sem{width:76px;height:76px;border-radius:var(--raio-cartao);background:var(--cartao);display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--cinza-escuro)}
 .mthumb.sel img{outline:3px solid var(--azul);outline-offset:-3px}.mthumb.fora{opacity:.4;cursor:not-allowed}
-.mthumb .ok{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--azul);color:var(--off-white);font-style:normal;font-weight:800;font-size:.75rem;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mthumb .ok{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--azul);color:var(--off-white);font-style:normal;font-weight:800;font-size:.75rem;display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra-cartao)}
 .mcod{font-size:.62rem;color:var(--preto);margin-top:3px;font-weight:700}
 @keyframes pulso{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}.mthumb.pulso img{animation:pulso .5s ease-out}
 .mont-tit{font-weight:800;font-size:1.05rem}
@@ -310,14 +310,14 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .mont-vitrine{background:var(--pagina);border-radius:10px;padding:8px;margin-top:8px;max-height:72vh;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-content:start}
 .vsec{grid-column:1/-1;font-weight:800;font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;color:var(--preto);padding:6px 2px 0;border-top:2px solid var(--azul);margin-top:4px}.vsec:first-child{border-top:0;margin-top:0;padding-top:0}.vsec small{font-weight:600;color:var(--cinza-escuro);text-transform:none;letter-spacing:0}
 .mont-tipos{grid-column:1/-1;font-size:.72rem;color:var(--cinza-escuro);font-weight:600;margin-top:-2px}.mont-tipos b{color:var(--preto);font-size:.8rem}
-.vcard{position:relative;background:var(--cartao);border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:6px;min-width:0}
-.vfoto{position:relative;aspect-ratio:4/3;width:100%;background:var(--cartao);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:zoom-in}.vfoto img{width:100%;height:100%;object-fit:contain;display:block}.vfoto img.oculto{display:none}
+.vcard{position:relative;background:var(--cartao);border-radius:var(--raio-cartao);box-shadow:var(--sombra-cartao);padding:6px;min-width:0}
+.vfoto{position:relative;aspect-ratio:4/3;width:100%;background:var(--cartao);border-radius:var(--raio-cartao);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:zoom-in}.vfoto img{width:100%;height:100%;object-fit:contain;display:block}.vfoto img.oculto{display:none}
 .vfoto .sem{color:var(--cinza-escuro);font-size:.62rem}.vfoto .tri{position:absolute;top:0;right:0;width:0;height:0;border-top:16px solid var(--azul);border-left:16px solid transparent}
 .vtx{min-width:0;margin-top:4px}.vnome{font-weight:800;font-size:.74rem;line-height:1.1;padding-right:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vlinha{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:2px;min-width:0}.vcor{font-size:.62rem;color:var(--cinza-escuro);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vpdv{font-weight:900;font-size:.88rem;color:var(--azul);letter-spacing:-.01em}
-.vcard .ref{background:transparent;color:var(--azul);font-weight:800;font-size:.64rem;padding:0 2px;border:0;border-radius:4px;margin:0;width:auto;cursor:copy;user-select:all;font-family:inherit}.vcard .ref.copiado{background:var(--amarelo);color:var(--preto)}
-.vcard .mu{color:var(--cinza-escuro);font-size:.58rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vcard .selo{font-size:.52rem;font-weight:800;padding:1px 4px;border-radius:3px;text-transform:uppercase}.vcard .selo.lanc{background:var(--amarelo);color:var(--preto)}.vcard .selo.inicio{background:var(--cinza-claro);color:var(--preto);text-transform:none}
+.vcard .ref{background:transparent;color:var(--azul);font-weight:800;font-size:.64rem;padding:0 2px;border:0;border-radius:var(--raio-selo);margin:0;width:auto;cursor:copy;user-select:all;font-family:var(--fonte-mono)}.vcard .ref.copiado{background:var(--amarelo);color:var(--preto)}
+.vcard .mu{color:var(--cinza-escuro);font-size:.58rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vcard .selo{font-size:.52rem;font-weight:800;padding:1px 4px;border-radius:var(--raio-selo);text-transform:uppercase}.vcard .selo.lanc{background:var(--amarelo);color:var(--preto)}.vcard .selo.inicio{background:var(--cinza-claro);color:var(--preto);text-transform:none}
 .vcard .mais.tira{top:4px;right:4px;left:auto;width:20px;height:20px;font-size:.8rem;border-color:var(--cinza-escuro);color:var(--preto);z-index:2}
 @media (max-width:1180px){.mont-vitrine{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @keyframes sobe{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
@@ -325,7 +325,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .vvazia{grid-column:1/-1;padding:42px 16px;text-align:center;color:var(--cinza-escuro);font-weight:800;font-size:1rem}.vvazia small{display:block;margin-top:8px;font-weight:600;font-size:.8rem}
 @media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:repeat(2,minmax(0,1fr))}.colecao .pagina{padding:10px}.mont-placar{grid-template-columns:minmax(0,.7fr) minmax(0,1fr) minmax(0,1.6fr);gap:6px}.mont-placar span{padding:6px 8px}.mont-placar b{font-size:.95rem}}
 /* impressão (PICASSO, 15/10): só Arial — a Segoe UI / system-ui dava "Font Capture" no Acrobat; e o PDF sai inteiro, sem caixa de rolagem */
-@media print{body,body *{font-family:Arial,Helvetica,sans-serif!important}html,body{height:auto!important;overflow:visible!important}}
+@media print{body,body *{font-family:var(--fonte-sans)!important}html,body{height:auto!important;overflow:visible!important}}
 /* PDF da vitrine (19/10, ele: "os PDFs ainda estão ruins"): A4 deitado, 6 cartões por linha, título e placar no alto, um título por tipo, sem botões */
 /* margem 0 na @page = o Chrome não imprime cabeçalho/rodapé (data, URL) — eles saem na fonte do sistema (Segoe UI Variable), que faz o Acrobat
    abrir com "Font Capture: Erro de Aplicativo" (ele, 19/10: "aparece uma mensagem, eu queria que evitasse"); a margem volta como padding */
@@ -341,7 +341,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .colecao .mais.txt{width:auto;height:auto;border-radius:999px;padding:4px 9px;font-size:.64rem;letter-spacing:.02em;text-transform:uppercase}
 .colecao .cor.retirada .foto img{opacity:.4}.colecao .cor.retirada .cod{text-decoration:line-through;color:var(--cinza-escuro)}.colecao .cor.retirada .desc{text-decoration:line-through}
 @media print{.colecao .mais{display:none}.colecao .bloco{break-before:page}.colecao .bloco:first-child{break-before:auto}.colecao .cor.retirada .foto img{opacity:.4}.colecao .cor.retirada .cod,.colecao .cor.retirada .desc{text-decoration:line-through}}
-.colecao .quadro{background:var(--cartao);color:var(--preto);font-family:Arial,Helvetica,sans-serif}.colecao .quadro .fecha{color:var(--preto)}.colecao .quadro .mu{color:var(--cinza-escuro)}
+.colecao .quadro{background:var(--cartao);color:var(--preto);font-family:var(--fonte-sans)}.colecao .quadro .fecha{color:var(--preto)}.colecao .quadro .mu{color:var(--cinza-escuro)}
 .colecao .angulos img{background:var(--cartao)}.colecao .quadro .preco{color:var(--preto);margin-top:6px;font-weight:800}
 @media print{.colecao .pagina{background:var(--pagina);-webkit-print-color-adjust:exact;print-color-adjust:exact}.colecao .colunas{grid-template-columns:repeat(4,minmax(0,1fr))}.colecao .modelo{break-inside:avoid}}
 @media (max-width:480px){.cat .grade{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -350,7 +350,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.17</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.18</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
