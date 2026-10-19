@@ -363,8 +363,8 @@ function desenharVitrine(){
   }
   chipsClientes(el, "vit-cliente");
   const vistas = [];
-  if (VIT.atual) vistas.push(["atual", VIT.atual.colecao + " (atual)"]);
-  vistas.push(["montando", (DADOS.colecao || "?") + " (montando)"]);
+  if (VIT.atual) vistas.push(["atual", VIT.atual.colecao]);   // ele, 19/10 17:5x: "esquece o (atual)/(montando): só 2S26, 1S27"
+  vistas.push(["montando", DADOS.colecao || "?"]);
   if (!vistas.some(([v]) => v === VIT.vista)) VIT.vista = vistas[0][0];
   chips(el, "vit-colecao", vistas, new Set([VIT.vista]), v => { VIT.vista = v; desenharVitrine(); });
   const pg = el.querySelector("#vit-pagina"), nota = el.querySelector("#vit-nota");

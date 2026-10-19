@@ -239,6 +239,10 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 @media print{.raiox .filtros{display:none}.raiox .card{background:#fff;color:#000;border:1px solid #ddd;break-inside:avoid}.raiox table.rx td,.raiox table.rx th{color:#000}.raiox td.pede,.raiox .sec-tit{color:#000}.raiox .cl-A{background:#ddd;color:#000}}
 /* ---- ATAS (14/10): uma linha por reunião; toque abre a ata inteira ---- */
 .atas .lista{display:flex;flex-direction:column;gap:8px}.atas .ata{background:var(--card);border-radius:12px;padding:10px 14px;cursor:pointer}.atas .ata:hover{background:rgba(120,123,134,.22)}
+/* ATAS (19/10): seletores tipo Power BI, versão geral x cliente, PDF e encaminhar */
+.atas .seletores{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.atas .seletor{position:relative;min-width:150px}.atas .sel-bt{width:100%;margin:0;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:10px;background:var(--cartao);color:var(--preto);border:1px solid var(--cinza-claro);font:inherit;font-size:.8rem;text-align:left}.atas .sel-rot{font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--cinza-escuro)}.atas .sel-val{font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atas .sel-val small{color:var(--cinza-escuro)}.atas .sel-seta{color:var(--cinza-escuro)}.atas .sel-bt.recente{width:auto;min-width:150px}.atas .sel-bt.recente.ativa{background:var(--amarelo);border-color:var(--amarelo)}
+.atas .sel-lista{position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:260px;max-width:360px;background:var(--cartao);color:var(--preto);border:1px solid var(--cinza-claro);border-radius:10px;box-shadow:var(--sombra-cartao);padding:8px}.atas .sel-lista.oculto{display:none}.atas .sel-lista input[type=search]{width:100%;padding:6px 10px;margin-bottom:6px;border:1px solid var(--cinza-claro);border-radius:8px;font:inherit;font-size:.8rem;background:var(--off-white);color:var(--preto)}.atas .sel-itens{max-height:280px;overflow:auto;display:grid;gap:2px}.atas .sel-item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;font-size:.82rem;cursor:pointer}.atas .sel-item:hover{background:var(--off-white)}.atas .sel-item.todos{font-weight:800;border-bottom:1px solid var(--cinza-claro);margin-bottom:4px}.atas .sel-item.oculto{display:none}.atas .sel-item small{margin-left:auto;color:var(--cinza-escuro)}.atas .sel-item input{margin:0}
+.atas .selo-cli{font-size:.6rem;font-weight:800;background:var(--azul);color:var(--off-white);padding:1px 6px;border-radius:999px;text-transform:none}.atas .versoes{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.atas .versoes button{width:auto;margin:0;padding:6px 12px;border-radius:999px;background:var(--off-white);color:var(--preto);border:1px solid var(--cinza-claro);font:inherit;font-size:.78rem;font-weight:800}.atas .versoes button.ativa{background:var(--amarelo);border-color:var(--amarelo)}.atas .versoes button.acao{background:var(--azul);color:var(--off-white);border-color:var(--azul);margin-left:auto}.atas .versoes button.acao + .acao{margin-left:0}.atas .quadro .msg{background:var(--off-white);color:var(--preto);border-left:3px solid var(--amarelo);padding:8px 10px;border-radius:6px;font-size:.84rem;margin-bottom:10px}
 .atas .cab{display:flex;gap:10px;align-items:baseline;font-size:.78rem}.atas .data{font-weight:800;color:var(--acc)}.atas .pasta{font-weight:700;color:var(--off-white)}.atas .fmt{font-size:.7rem}
 .atas .titulo{font-weight:700;margin:2px 0}.atas .part{font-size:.76rem}.atas .dec{font-size:.8rem;color:var(--cinza-claro);margin-top:4px}
 .atas .luz{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}.atas .luz.oculto{display:none}
@@ -424,7 +428,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.53</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.54</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -488,8 +492,8 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=45"></script>
-<script src="atas.js?v=1"></script>
+<script src="colecao.js?v=46"></script>
+<script src="atas.js?v=2"></script>
 <script src="raiox.js?v=3"></script>
 <script src="topics.js?v=3"></script>
 <script>
