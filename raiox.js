@@ -57,7 +57,7 @@ async function desenhar(){
   if (!el.querySelector(".raiox")) {
     el.innerHTML = `<div class="raiox">
       <div class="card filtros">
-        <div class="linha-sel"><div id="rx-cli"></div><button type="button" class="sec" id="rx-apres" title="monta a apresentação do raio-x deste cliente numa janela: imprimir = PDF">gerar apresentação ⎙</button></div>
+        <div class="linha-sel"><div id="rx-cli"></div><button type="button" class="sec" id="rx-apres" title="gera o PDF da apresentação deste cliente, já nomeado; no celular abre o compartilhar">gerar apresentação PDF ⎙</button></div>
         <label>vista</label><div class="chips" id="rx-vista"></div>
         <div class="mu" id="rx-base"></div>
       </div>
@@ -220,40 +220,72 @@ function vistaPir(d){
   return `<div class="card"><div class="sec-tit">PIRÂMIDE DE PDV <small>${esc(d.periodo_piramide || d.base.serie)}</small></div><div class="pirs">${fams.map(bloco).join("")}</div>
     <div class="legenda mu">tênis nas faixas dele: base 189,99 a 229,99 · meio 249,99 a 299,99 · topo acima de 299,99 — as outras famílias pelos pontos de preço</div></div>`;
 }
-// ---- A APRESENTAÇÃO (ele, 19/10 20:3x: "o botão de gerar apresentação, como geramos para a Polyélle — para o cliente, para a Companhia,
-// para quem for"): uma janela com uma página por vista — capa, lojas, cada categoria, sazonalidade por família, pirâmide, ponta —
-// no visual da casa (paleta oficial), paisagem; imprimir = PDF. Monta com as mesmas funções das vistas, num palco escondido.
-async function apresentacao(){
-  const w = window.open("", "_blank"); if (!w) { alert("o navegador bloqueou a janela; libere pop-ups para o Gestor"); return; }
-  let d; try { d = await doc(S.cliente); } catch (e) { w.close(); alert("O banco recusou: " + e.message); return; }
-  if (!d || !d.lojas) { w.close(); alert("este cliente ainda não tem o raio-x de lojas (o NÚCLEO calcula pela AG PORTA)."); return; }
-  try {
+// ---- A APRESENTAÇÃO (ele, 19/10 20:3x: "o botão de gerar apresentação, como geramos para a Polyélle"; e 23:5x, pelo NÚCLEO: "é ruim de
+// salvar; quero gerar pelo celular; já poderia vir nomeado"): um toque = ARQUIVO PDF já com o nome da casa (MM,AA CLIENTE - RAIO-X.pdf),
+// gerado no próprio navegador (html2pdf, carregado na hora de uma CDN fixa); no celular abre o compartilhar (WhatsApp, Arquivos); sem
+// compartilhar, baixa. Uma página por vista: capa, lojas, cada categoria, sazonalidade por família, pirâmide, ponta, leitura.
+// as duas bibliotecas (versões fixas, cdnjs), carregadas na hora: html2canvas fotografa UMA página por vez (o documento inteiro num canvas
+// só passa do limite de altura do navegador e sai em branco — medido em 19/10), e o jsPDF monta o arquivo
+const CDN_CANVAS = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", CDN_JSPDF = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+const carregaScript = src => new Promise((ok, falha) => { const sc = document.createElement("script"); sc.src = src; sc.onload = () => ok(); sc.onerror = () => falha(new Error("não carreguei " + src.split("/").slice(-2)[0] + " (sem internet?)")); document.head.appendChild(sc); });
+async function carregarPdfLib(){ if (!window.html2canvas) await carregaScript(CDN_CANVAS); if (!(window.jspdf && window.jspdf.jsPDF)) await carregaScript(CDN_JSPDF); }
+function montarApresentacao(d){
   const palco = document.createElement("div"); palco.className = "raiox"; palco.style.cssText = "position:absolute;left:-9999px;top:0;width:1400px"; document.body.appendChild(palco);
   const guardado = { cat: S.cat, fam: S.fam, sub: S.sub, pf: Object.assign({}, PF) };
   const limpa = html => html.replace(/<div class="card filtros">[\s\S]*?<\/div>\s*(?=<div id=|<div class="card">|$)/g, "");
   const paginas = []; RAIZ = palco;
-  const pag = (titulo, html) => paginas.push(`<section class="pg"><div class="pg-cab"><b>${esc(d.nome)}</b> · raio-x · ${esc(titulo)}</div>${html}</section>`);
-  paginas.push(`<section class="pg capa"><div><small>RAIO-X DO CLIENTE</small><h1>${esc(d.nome)}</h1><p>${d.base.lojas_ativas} lojas ativas · ${esc(d.base.fonte)}<br>${esc(d.base.lojas)}<br>${esc(d.base.serie)}</p><p class="mu">gerado em ${new Date().toLocaleDateString("pt-BR")} pelo Gestor</p></div></section>`);
-  pag("resumo por loja", vistaLojas(d));
-  for (const c of d.cats) { S.cat = c; vistaCat(d, palco); pag("categoria · " + c, palco.querySelector("#rx-cat-corpo").innerHTML); }
-  for (const f of ordenar(Object.keys(d.sazonal || {}), ORD_FAM)) { S.fam = f; S.sub = ""; vistaSaz(d, palco); pag("sazonalidade · " + f, palco.querySelector("#rx-saz-corpo").innerHTML); }
-  if (d.piramide) pag("pirâmide de PDV", vistaPir(d));
-  if (d.ponta) { PF.sit = "fora de linha"; PF.marca = ""; PF.busca = ""; vistaPonta(d, palco); pag("ponta de estoque · fora de linha", limpa(palco.innerHTML)); }
-  if (d.leitura && Object.keys(d.leitura).length) pag("a leitura", `<div class="card">${Object.entries(d.leitura).map(([k, v]) => `<div class="leitura"><b>${esc(k)}</b> ${esc(v)}</div>`).join("")}</div>`);
-  S.cat = guardado.cat; S.fam = guardado.fam; S.sub = guardado.sub; Object.assign(PF, guardado.pf); palco.remove(); RAIZ = null;
-  const css = [...document.querySelectorAll("style")].map(s => s.textContent).join("\n");
-  w.document.open(); w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(d.nome)} · raio-x</title><style>${css}
-    @page{size:A4 landscape;margin:10mm} html,body{background:#000;color:#F6F5F0;margin:0;font-family:Arial,Helvetica,sans-serif}
-    .pg{page-break-after:always;min-height:180mm;padding:14px 18px;box-sizing:border-box}.pg:last-child{page-break-after:auto}
+  try {
+    const pag = (titulo, html) => paginas.push(`<section class="pg"><div class="pg-cab"><b>${esc(d.nome)}</b> · raio-x · ${esc(titulo)}</div>${html}</section>`);
+    paginas.push(`<section class="pg capa"><div><small>RAIO-X DO CLIENTE</small><h1>${esc(d.nome)}</h1><p>${d.base.lojas_ativas} lojas ativas · ${esc(d.base.fonte)}<br>${esc(d.base.lojas)}<br>${esc(d.base.serie)}</p><p class="mu">gerado em ${new Date().toLocaleDateString("pt-BR")} pelo Gestor</p></div></section>`);
+    pag("resumo por loja", vistaLojas(d));
+    for (const c of d.cats) { S.cat = c; vistaCat(d, palco); pag("categoria · " + c, palco.querySelector("#rx-cat-corpo").innerHTML); }
+    for (const f of ordenar(Object.keys(d.sazonal || {}), ORD_FAM)) { S.fam = f; S.sub = ""; vistaSaz(d, palco); pag("sazonalidade · " + f, palco.querySelector("#rx-saz-corpo").innerHTML); }
+    if (d.piramide) pag("pirâmide de PDV", vistaPir(d));
+    if (d.ponta) { PF.sit = "fora de linha"; PF.marca = ""; PF.busca = ""; vistaPonta(d, palco); pag("ponta de estoque · fora de linha", limpa(palco.innerHTML)); }
+    if (d.leitura && Object.keys(d.leitura).length) pag("a leitura", `<div class="card">${Object.entries(d.leitura).map(([k, v]) => `<div class="leitura"><b>${esc(k)}</b> ${esc(v)}</div>`).join("")}</div>`);
+  } finally { S.cat = guardado.cat; S.fam = guardado.fam; S.sub = guardado.sub; Object.assign(PF, guardado.pf); palco.remove(); RAIZ = null; }
+  const css = [...document.querySelectorAll("style")].map(s => s.textContent).join("\n") + `
+    html,body{background:#000;color:#F6F5F0;margin:0;font-family:Arial,Helvetica,sans-serif}
+    .pg{page-break-after:always;break-after:page;min-height:180mm;padding:14px 18px;box-sizing:border-box;background:#000}.pg:last-child{page-break-after:auto;break-after:auto}
     .pg-cab{font-size:.78rem;color:#ADAEB3;letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid #787B86}.pg-cab b{color:#FFFF1A}
-    .capa{display:flex;align-items:center;justify-content:center;text-align:center}.capa small{color:#FFFF1A;letter-spacing:.2em;font-weight:900}.capa h1{font-size:3.2rem;margin:10px 0}.capa p{color:#ADAEB3;font-size:1rem;line-height:1.5}
+    .capa{display:flex;align-items:center;justify-content:center;text-align:center;min-height:180mm}.capa small{color:#FFFF1A;letter-spacing:.2em;font-weight:900}.capa h1{font-size:3.2rem;margin:10px 0}.capa p{color:#ADAEB3;font-size:1rem;line-height:1.5}
     .raiox .card{background:rgba(120,123,134,.14)}.raiox .filtros{display:none}.rolagem{overflow:visible}table.rx{min-width:0;width:100%}
-    .barra-imprimir{position:fixed;right:12px;top:12px}@media print{.barra-imprimir{display:none}}
-  </style></head><body class="raiox"><button class="barra-imprimir" onclick="window.print()">imprimir / salvar PDF</button>${paginas.join("")}</body></html>`); w.document.close();
-  } catch (e) { RAIZ = null; const p = document.querySelector(".raiox > div[style]"); if (p) p.remove(); w.close(); alert("não montei a apresentação: " + (e.message || e)); }
+    .barra-imprimir{position:fixed;right:12px;top:12px}@media print{.barra-imprimir{display:none}}`;
+  const mes = new Date(); const nomeArq = (String(mes.getMonth() + 1).padStart(2, "0") + "," + String(mes.getFullYear()).slice(2) + " " + String(d.nome).toUpperCase() + " - RAIO-X").replace(/[\/:*?"<>|]+/g, "-");
+  return { css, paginas, nomeArq };
+}
+async function apresentacao(){
+  const bt = EL.querySelector("#rx-apres"); const antes = bt ? bt.textContent : "";
+  const avisa = t => { if (bt) bt.textContent = t; };
+  try {
+    let d; try { d = await doc(S.cliente); } catch (e) { alert("O banco recusou: " + e.message); return; }
+    if (!d || !d.lojas) { alert("este cliente ainda não tem o raio-x de lojas (o NÚCLEO calcula pela AG PORTA)."); return; }
+    avisa("montando…"); await carregarPdfLib();
+    const { css, paginas, nomeArq } = montarApresentacao(d);
+    // o documento inteiro num quadro escondido, do tamanho de uma página paisagem; o html2pdf fotografa página a página
+    const q = document.createElement("div"); q.className = "raiox"; q.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:1123px;background:#000;color:#F6F5F0;pointer-events:none"; q.innerHTML = `<style>${css}</style>${paginas.join("")}`; document.body.appendChild(q);
+    avisa("gerando o PDF…");
+    const pgs = [...q.querySelectorAll(".pg")], pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+    const LW = 297, LH = 210;
+    for (let k = 0; k < pgs.length; k++) {
+      avisa("gerando o PDF… " + (k + 1) + "/" + pgs.length);
+      const cv = await window.html2canvas(pgs[k], { scale: 1.3, backgroundColor: "#000", useCORS: true, logging: false });
+      let w = LW, h = LW * cv.height / cv.width; if (h > LH) { h = LH; w = LH * cv.width / cv.height; }
+      if (k) pdf.addPage("a4", "landscape");
+      pdf.setFillColor(0, 0, 0); pdf.rect(0, 0, LW, LH, "F");
+      pdf.addImage(cv.toDataURL("image/jpeg", 0.8), "JPEG", (LW - w) / 2, 0, w, h);
+    }
+    const blob = pdf.output("blob");
+    q.remove();
+    const arquivo = new File([blob], nomeArq + ".pdf", { type: "application/pdf" });
+    // no celular: compartilhar (WhatsApp, Arquivos); senão, baixa já nomeado
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) { try { await navigator.share({ files: [arquivo], title: nomeArq }); avisa("compartilhado ✓"); setTimeout(() => avisa(antes), 2.5e3); return; } catch (e) { if (e && e.name === "AbortError") { avisa(antes); return; } } }
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = nomeArq + ".pdf"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30e3);
+    avisa("baixado: " + nomeArq + ".pdf"); setTimeout(() => avisa(antes), 4e3);
+  } catch (e) { avisa(antes); alert("não montei a apresentação: " + (e.message || e)); }
 }
 const nivel = k => /TOPO/i.test(k) ? 3 : /MEIO/i.test(k) ? 2 : /BASE/i.test(k) ? 1 : parseFloat(String(k).replace(",", ".")) || 0;
 const nivelNome = k => /TOPO/i.test(k) ? "topo" : /MEIO/i.test(k) ? "meio" : /BASE/i.test(k) ? "base" : "";
 
-window.RaioX = { abrir, estado: () => ({ cliente: S.cliente, vista: S.vista }), ir: (c, v) => { if (c) S.cliente = c; if (v) S.vista = v; S.cat = null; S.fam = null; } };
+window.RaioX = { abrir, montarApresentacao, doc, estado: () => ({ cliente: S.cliente, vista: S.vista }), ir: (c, v) => { if (c) S.cliente = c; if (v) S.vista = v; S.cat = null; S.fam = null; } };
 })();
