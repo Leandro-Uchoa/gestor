@@ -46,7 +46,7 @@ function seletor(id, rotulo, opcoes, sel, nomeDe){
   busca.oninput = () => { const q = semAcento(busca.value); for (const it of lista.querySelectorAll(".sel-item:not(.todos)")) it.classList.toggle("oculto", !!q && !semAcento(it.textContent).includes(q)); };
   for (const cb of lista.querySelectorAll("input[type=checkbox]")) cb.onchange = () => { const v = cb.dataset.v; if (v === "") sel.clear(); else if (cb.checked) sel.add(v); else sel.delete(v); desenhar(true); };
 }
-document.addEventListener("click", () => { if (EL) for (const l of EL.querySelectorAll(".sel-lista")) l.classList.add("oculto"); });
+if (typeof document !== "undefined") document.addEventListener("click", () => { if (EL) for (const l of EL.querySelectorAll(".sel-lista")) l.classList.add("oculto"); });
 
 function desenhar(manterAberto){
   const el = EL;
@@ -90,6 +90,19 @@ function desenharLista(){
 }
 
 let ATA = null, VERSAO = "geral";
+// a VERSÃO DO CLIENTE só leva a data da reunião e o texto_cliente (BOSS, 19/10: o `titulo` interno da ata de 22/09 tem "(cancelamentos)";
+// participantes, arquivo, tags e hora interna também ficam de fora). O título é a 1ª linha "# …" do texto_cliente; o corpo vem sem ela.
+const tituloCliente = a => { const m = /^\s*#{1,3}\s+(.+?)\s*$/m.exec(String(a.texto_cliente || "")); return m ? m[1].replace(/[*_`]/g, "").trim() : "Ata da reunião"; };
+const corpoCliente = a => String(a.texto_cliente || "").replace(/^\s*#{1,3}\s+.+?(\n|$)/, "");
+const nomeArquivoCliente = a => (tituloCliente(a) + " " + dmy(a.data)).replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim();
+function pdfHtmlCliente(a, cor){
+  const T = cor || (n => "#000");
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(nomeArquivoCliente(a))}</title>
+<style>@page{size:A4;margin:0}html,body{margin:0;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}body{padding:16mm 18mm}
+h1{font-size:16pt;margin:0 0 4px}.sub{font-size:9pt;color:${T("--cinza-escuro")};margin-bottom:14px}h2,h3,h4{font-size:11pt;margin:14px 0 4px;color:${T("--azul")}}p,li{font-size:10.5pt;line-height:1.45}table{border-collapse:collapse;margin:8px 0;font-size:9.5pt}th,td{border:1px solid ${T("--cinza-claro")};padding:4px 8px;text-align:left;vertical-align:top}th{background:${T("--off-white")}}blockquote{border-left:3px solid ${T("--amarelo")};margin:8px 0;padding:2px 10px;color:${T("--cinza-escuro")}}</style></head>
+<body><h1>${esc(tituloCliente(a))}</h1><div class="sub">${esc(dmy(a.data))}</div>${md2html(corpoCliente(a))}
+<script>setTimeout(function(){window.focus();window.print();},200);<\/script></body></html>`;
+}
 async function abrirAta(id){
   const luz = EL.querySelector("#atas-luz");
   luz.innerHTML = `<div class="quadro"><button type="button" class="fecha">×</button><div class="mu">abrindo…</div></div>`;
@@ -103,12 +116,12 @@ function desenharAta(){
   const a = ATA, q = EL.querySelector("#atas-luz .quadro"), cli = VERSAO === "cliente";
   const texto = cli ? a.texto_cliente : a.texto;
   q.innerHTML = `<button type="button" class="fecha">×</button>
-    <div class="cab"><span class="data">${dmy(a.data)}</span><span class="pasta">${esc(a.pasta)}</span><span class="mu">${esc(a.arquivo)}</span></div>
-    <h2>${esc(a.titulo)}</h2>
+    <div class="cab"><span class="data">${dmy(a.data)}</span>${cli ? "" : `<span class="pasta">${esc(a.pasta)}</span><span class="mu">${esc(a.arquivo)}</span>`}</div>
+    <h2>${esc(cli && a.texto_cliente ? tituloCliente(a) : a.titulo)}</h2>
     <div class="versoes"><button type="button" class="${cli ? "" : "ativa"}" data-v="geral">versão geral</button><button type="button" class="${cli ? "ativa" : ""}" data-v="cliente" ${a.texto_cliente ? "" : 'title="a sala ATA ainda não escreveu a versão do cliente desta ata"'}>versão do cliente${a.texto_cliente ? "" : " <small>(a fazer)</small>"}</button>
       ${cli ? `<button type="button" class="acao" id="ata-pdf">gerar PDF</button><button type="button" class="acao" id="ata-enviar">encaminhar…</button>` : ""}</div>
     ${cli && !a.texto_cliente ? `<div class="msg">Esta ata ainda não tem a versão do cliente. A sala ATA escreve a partir da versão geral, sem o que é interno (quem fez o quê na casa, números do nosso lado). Peça à ATA ou ao BOSS; aparece aqui quando pronta.</div>` : ""}
-    <div class="texto">${texto ? (a.formato === "md" || cli ? md2html(texto) : `<pre>${esc(texto)}</pre>`) : ""}</div>
+    <div class="texto">${cli ? (a.texto_cliente ? md2html(corpoCliente(a)) : "") : (texto ? (a.formato === "md" ? md2html(texto) : `<pre>${esc(texto)}</pre>`) : "")}</div>
     <div class="mu" id="ata-envios"></div>`;
   for (const b of q.querySelectorAll(".versoes button[data-v]")) b.onclick = () => { VERSAO = b.dataset.v; desenharAta(); };
   const pdf = q.querySelector("#ata-pdf"); if (pdf) pdf.onclick = () => imprimirAta();
@@ -121,11 +134,7 @@ function fecharLuz(){ EL.querySelector("#atas-luz").classList.add("oculto"); }
 function imprimirAta(){
   const a = ATA; if (!a || !a.texto_cliente) { alert("Esta ata ainda não tem a versão do cliente."); return; }
   const T = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000";
-  const doc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(a.titulo)}</title>
-<style>@page{size:A4;margin:0}html,body{margin:0;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}body{padding:16mm 18mm}
-h1{font-size:16pt;margin:0 0 4px}.sub{font-size:9pt;color:${T("--cinza-escuro")};margin-bottom:14px}h2,h3,h4{font-size:11pt;margin:14px 0 4px;color:${T("--azul")}}p,li{font-size:10.5pt;line-height:1.45}table{border-collapse:collapse;margin:8px 0;font-size:9.5pt}th,td{border:1px solid ${T("--cinza-claro")};padding:4px 8px;text-align:left;vertical-align:top}th{background:${T("--off-white")}}blockquote{border-left:3px solid ${T("--amarelo")};margin:8px 0;padding:2px 10px;color:${T("--cinza-escuro")}}</style></head>
-<body><h1>${esc(a.titulo)}</h1><div class="sub">${esc(a.pasta)} · ${esc(dmy(a.data))}</div>${md2html(a.texto_cliente)}
-<script>setTimeout(function(){window.focus();window.print();},200);<\/script></body></html>`;
+  const doc = pdfHtmlCliente(a, T);
   const w = window.open("", "_blank"); if (!w) { alert("O navegador bloqueou a janela do PDF. Libere pop-ups para o Gestor."); return; }
   w.document.open(); w.document.write(doc); w.document.close();
 }
@@ -133,7 +142,7 @@ h1{font-size:16pt;margin:0 0 4px}.sub{font-size:9pt;color:${T("--cinza-escuro")}
 function pedirEnvio(){
   const a = ATA; if (!a || !a.texto_cliente) { alert("Esta ata ainda não tem a versão do cliente."); return; }
   const luz = document.createElement("div"); luz.className = "luz grade-luz";
-  luz.innerHTML = `<div class="quadro grade-quadro"><div class="gq-nome">Encaminhar a versão do cliente</div><div class="gq-perg">${esc(a.titulo)}</div>
+  luz.innerHTML = `<div class="quadro grade-quadro"><div class="gq-nome">Encaminhar a versão do cliente</div><div class="gq-perg">${esc(tituloCliente(a))} · ${esc(dmy(a.data))}</div>
     <div class="gq-grade"><label class="gq-opt"><input type="radio" name="canal" value="whatsapp" checked> WhatsApp</label><label class="gq-opt"><input type="radio" name="canal" value="email"> e-mail</label><label class="gq-opt"><input type="radio" name="canal" value="ambos"> os dois</label></div>
     <div class="gq-perg">Para quem? <span class="mu">nome como está no WhatsApp, ou o e-mail</span></div><input type="text" class="gq-texto" placeholder="ex.: Helinho Polyélle · helio@…">
     <div class="gq-acoes"><button type="button" class="gq-sobe">pedir o envio</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
@@ -179,5 +188,5 @@ function md2html(src){
   return out;
 }
 
-window.Atas = { abrir };
+window.Atas = { abrir, tituloCliente, corpoCliente, nomeArquivoCliente, pdfHtmlCliente, md2html };
 })();
