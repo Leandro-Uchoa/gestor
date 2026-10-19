@@ -133,5 +133,5 @@ async function marcar(id){
 async function responder(id, resposta){
   if (await gravar(id, { resposta: resposta || null })) { desenharAgora(); desenharCorpo(); }
 }
-window.Topics = { abrir, estado: () => ({ bloco: S.bloco }), ir: b => { if (b) { S.bloco = b; S.vista = "pendentes"; S.agora = "fechado"; S.busca = ""; if (D && !D.blocos.some(x => x.nome === b)) return; try { localStorage.setItem("gestor.topics.bloco", b); } catch (e) {} } } };
+window.Topics = { abrir, estado: () => ({ bloco: S.bloco }), recarregar: () => { D = null; }, ir: b => { if (b) { S.bloco = b; S.vista = "pendentes"; S.agora = "fechado"; S.busca = ""; if (D && !D.blocos.some(x => x.nome === b)) return; try { localStorage.setItem("gestor.topics.bloco", b); } catch (e) {} } } };
 })();

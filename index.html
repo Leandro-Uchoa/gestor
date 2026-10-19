@@ -116,6 +116,13 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cliente .sub-tit{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:10px 0 2px}.cliente .colecao+.colecao{margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)}
 .cliente form.trade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.cliente form.trade input,.cliente form.trade select{margin:0;padding:7px 9px;font-size:.84rem;width:100%}.cliente form.trade .larga{grid-column:1/-1}.cliente form.trade button{width:auto;margin:0 6px 0 0;padding:8px 14px}
 .cliente select.st{margin:0;padding:3px 6px;font-size:.76rem;width:auto}
+.cliente .grade .card.larga{grid-column:1/-1}.cliente .rolagem{overflow-x:auto}
+.cliente .pend .ti{display:flex;gap:8px;align-items:flex-start}.cliente .pend .ti .corpo{flex:1;min-width:0}.cliente .pend .marca{flex:none;width:22px;height:22px;margin:1px 0 0;padding:0;border-radius:5px;border:1.5px solid var(--cinza-claro);background:transparent;color:var(--preto);font-weight:900;line-height:1}.cliente .pend .marca:hover{background:var(--amarelo);border-color:var(--amarelo)}
+.cliente .pend .resposta{margin-top:4px;min-height:1.2em;font-size:.82rem;color:var(--ink);border-left:3px solid var(--azul);padding:1px 0 1px 8px;outline:none}.cliente .pend .resposta:empty::before{content:"responder aqui e apertar Enter";color:var(--mu);opacity:.6}.cliente .pend .resposta:focus{background:rgba(46,62,252,.12)}.cliente .pend .ver-mais{width:auto;margin:8px 0 0;padding:6px 12px;font-size:.76rem}
+.cliente .filtros .linha{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 6px}.cliente .filtros .linha label{margin:0;min-width:70px;font-size:.7rem}.cliente .filtros .chips button{padding:5px 10px;font-size:.76rem}.cliente .filtros input[type=search]{flex:1;min-width:200px;margin:0;padding:7px 10px;font-size:.82rem}.cliente .filtros .risc{width:auto;margin:0;padding:5px 10px;font-size:.74rem}.cliente .filtros .risc.ativa{border-color:var(--amarelo);color:var(--amarelo)}
+.cliente table.cart td,.cliente table.ped td{white-space:nowrap;vertical-align:top}.cliente table.cart td small,.cliente table.ped td small{display:block;font-size:.64rem;color:var(--mu);white-space:normal;max-width:260px}.cliente table.cart select.dec,.cliente table.cart input.dec{margin:0;padding:3px 6px;font-size:.74rem;width:auto;min-width:0}.cliente table.cart input.dec[data-campo=volume]{width:64px}.cliente table.cart input.dec[data-campo=destinatario]{width:110px}.cliente table.cart input.dec[data-campo=nota]{width:150px}
+.cliente table.cart tr.decidida td:first-child{box-shadow:inset 3px 0 0 var(--amarelo)}.cliente table.cart small.xl.dif{color:var(--amarelo)}
+.cliente table.ped tr.riscada td{text-decoration:line-through;color:var(--mu)}.cliente .chip.conferir{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.cliente table.ped button.orig{width:auto;margin:0 2px 0 0;padding:3px 8px;font-size:.72rem}
 .tradeaba .filtros .linha{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 8px}.tradeaba .filtros label{margin:0;min-width:70px}.tradeaba .filtros input{margin:4px 0 0;padding:9px 12px}
 .tradeaba table.tr td{vertical-align:top}.tradeaba td.estr{position:relative;min-width:220px;white-space:normal}.tradeaba td.estr .barra{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:rgba(46,62,252,.18);pointer-events:none}.tradeaba td.estr>*:not(.barra){position:relative}
 .tradeaba td .nota{display:block;color:var(--mu);font-size:.7rem;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}.tradeaba td .nota.aberta{white-space:normal}
@@ -453,7 +460,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.57</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.58</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -524,9 +531,9 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=46"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=3"></script>
-<script src="cliente.js?v=2"></script>
+<script src="cliente.js?v=3"></script>
 <script src="trade.js?v=1"></script>
-<script src="topics.js?v=3"></script>
+<script src="topics.js?v=4"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
