@@ -85,6 +85,8 @@ async function carregarVitrine(sb){
     const nomes = new Set([...(cob.data || []).map(r => r.cliente), ...(cg.data || []).map(r => r.cliente), ...(vc.data || []).map(r => r.cliente)].filter(Boolean));
     VIT.clientes = [...nomes].sort();
     VIT.bloq = new Set((bl.data || []).map(r => r.cliente + "|" + r.marca + "|" + r.referencia));
+    const h = new URLSearchParams(location.hash.slice(1));            // 19/10: #cliente=…&vista=montando abre a vitrine certa de cara
+    if (!VIT.cliente && h.get("cliente") && VIT.clientes.includes(h.get("cliente"))) { VIT.cliente = h.get("cliente"); VIT.vistaPedida = h.get("vista") || null; }
     if (!VIT.cliente) VIT.cliente = VIT.clientes.includes("POLYELLE") ? "POLYELLE" : (VIT.clientes[0] || null);
   }
   if (VIT.cliente && VIT.carregadoPara !== VIT.cliente) {
@@ -94,7 +96,7 @@ async function carregarVitrine(sb){
     for (const x of r.data) marcas(x.colecao).set(x.marca + "|" + x.referencia + "|" + x.cor, x.estado || "escolhida");
     VIT.atual = (!a.error && a.data && a.data.n > 0) ? a.data : null;
     VIT.carregadoPara = VIT.cliente; VIT.erro = a.error ? "não consegui ler a coleção atual: " + a.error.message : "";
-    VIT.vista = VIT.atual ? "atual" : "montando";
+    VIT.vista = VIT.vistaPedida === "montando" ? "montando" : (VIT.atual ? "atual" : "montando"); VIT.vistaPedida = null;
   }
 }
 
@@ -369,8 +371,9 @@ function desenharDireita(pg){
   chips(pg, "vf-tipo", [["", "tudo"], ...TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => [v, r, ct.get(v)])], VF.tipo, v => { if (v === "") VF.tipo.clear(); else if (VF.tipo.has(v)) VF.tipo.delete(v); else VF.tipo.add(v); desenharDireita(pg); });
   chips(pg, "vf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], VF.gen, v => { if (v === "") VF.gen.clear(); else if (VF.gen.has(v)) VF.gen.delete(v); else VF.gen.add(v); desenharDireita(pg); });
   chips(pg, "vf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], VF.bloco, v => { if (v === "") VF.bloco.clear(); else if (VF.bloco.has(v)) VF.bloco.delete(v); else VF.bloco.add(v); desenharDireita(pg); });
+  // 19/10: por TIPO (tênis, chinelos, meias…) e dentro do tipo do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const lista = todas.filter(it => (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
-    .sort((a, b) => ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
+    .sort((a, b) => (tipoIdx(a.t) - tipoIdx(b.t)) || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   const modelos = new Set(todas.map(it => it.m + "|" + it.r)).size, soma = todas.reduce((s, it) => s + (+it.p || 0), 0);
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
   // o valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
@@ -382,14 +385,20 @@ function desenharDireita(pg){
     + (porTipo.length > 1 ? `<div class="mont-tipos mu">${porTipo.join(" · ")}</div>` : "");
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
-  V.innerHTML = lista.length ? lista.map(it => `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">
+  // cartão PEQUENO (19/10, ele: "está muito grande, um formato ruim; preciso ver a composição da vitrine") e um título por tipo
+  let tipoAtual = null, html = "";
+  for (const it of lista) {
+    if (it.t !== tipoAtual) { tipoAtual = it.t; const its = lista.filter(x => x.t === it.t); html += `<div class="vsec">${esc(NOME_TIPO[it.t] || it.t)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></div>`; }
+    html += `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">
       <button type="button" class="mais tira" data-kc="${esc(chaveCor(it))}" title="tirar da vitrine">×</button>
       <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}</div>
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
-        <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}${it.cd && it.cd !== it.c ? " · " + esc(it.cd) : ""}</span></div>
-        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lançamento</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
-        <div class="mu">${esc(it.ge || "")}${it.nu ? " · " + esc(it.nu) : ""}${familiaDe(it) ? " · " + esc(titulo(familiaDe(it))) : ""}</div></div>
-    </div>`).join("") : `<div class="vvazia">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} está vazia.<br><small>Toque numa cor da coleção, à esquerda, e ela sobe para cá.</small>` : "Escolha o cliente."}</div>`;
+        <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
+        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
+        <div class="mu">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}</div></div>
+    </div>`;
+  }
+  V.innerHTML = lista.length ? html : `<div class="vvazia">${VIT.cliente ? `A vitrine ${esc(nomeCli(VIT.cliente))} está vazia.<br><small>Toque numa cor da coleção, à esquerda, e ela sobe para cá.</small>` : "Escolha o cliente."}</div>`;
   for (const b of V.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   for (const b of V.querySelectorAll(".mais")) b.onclick = (ev) => { ev.stopPropagation(); alternar(b.dataset.kc, "montador"); };
   for (const f of V.querySelectorAll(".vfoto")) f.onclick = () => abrirLuz(ELV, f.dataset.k, "montando");
