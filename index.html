@@ -472,7 +472,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.65</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.66</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -492,7 +492,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <div id="tela-pergunta" class="oculto">
   <div class="abas">
     <button data-aba="cliente">Cliente</button>
-    <button data-aba="cg" class="ativa">Carteira e giro</button>
+    <button data-aba="cg" class="ativa">Análise de giro</button>
     <button data-aba="metas">Metas</button>
     <button data-aba="catalogo">Catálogo</button>
     <button data-aba="colecao">Coleção</button>
@@ -610,7 +610,7 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 const ABAS = {
   cliente: { subtitulo: "· cliente", rodape: "Tudo do cliente numa tela: assuntos pendentes, carteira e giro, raio-x, vitrine, atas e ações de trade. Cada painel tem o botão que abre a aba inteira já nele. Mora no banco, atrás do login." },
   trade: { subtitulo: "· trade", rodape: "As ações de trade de todos os clientes: a planilha de verbas (VERBAS TRADE CMS, 1S26 e 2S26) carregada no banco, mais o que for lançado na aba Cliente. Toque no cliente para abrir a aba dele." },
-  cg:    { subtitulo: "· carteira e giro", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em amarelo (amarelo cheio = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
+  cg:    { subtitulo: "· análise de giro (AG)", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em amarelo (amarelo cheio = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
   metas: { subtitulo: "· metas", rodape: "" },
   atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
@@ -744,12 +744,20 @@ async function faleEnviar(){
   $("fale-txt").value = ""; await faleLer();
 }
 // ---------- IA do Gestor
-const IA = { aberta: false, sessao: null, hist: [], ocupada: false };
+// a conversa sobrevive ao F5 (ele, 19/10 22:5x: "não decora o que perguntei um segundo antes"): a sessão fica neste aparelho e o histórico vem do banco
+const IA = { aberta: false, sessao: null, hist: [], ocupada: false, carregada: false };
+try { IA.sessao = localStorage.getItem("gestor.ia.sessao") || null; } catch (e) {}
+async function iaHistorico(){
+  if (IA.carregada || !IA.sessao) { IA.carregada = true; return; }
+  const r = await sb.from("gestor_ia_conversa").select("pergunta,resposta,custo_usd,modelo,erro").eq("sessao", IA.sessao).order("em", { ascending: true }).limit(40);
+  if (!r.error && r.data) IA.hist = r.data.map(m => ({ p: m.pergunta, r: m.resposta != null ? m.resposta : "⚠ " + (m.erro || "sem resposta"), custo: m.custo_usd != null ? Number(m.custo_usd) : null, modelo: m.modelo }));
+  IA.carregada = true;
+}
 function iaDesenhar(){
   $("ia-lista").innerHTML = IA.hist.map(m => `<div class="fm eu"><span>${esc(m.p)}</span></div>${m.r != null ? `<div class="fm ti ia"><span>${esc(m.r)}</span><small>${m.custo != null ? "IA · US$ " + m.custo.toFixed(3) + " · " + esc(m.modelo || "") : "IA"}</small></div>` : `<div class="fm ti ia pensando"><span>lendo o banco e pensando…</span></div>`}`).join("") || `<div class="mu">pergunte sobre o cliente, a carteira, o trade, a vitrine, as metas. A resposta vem com os números do banco.</div>`;
   $("ia-lista").scrollTop = $("ia-lista").scrollHeight;
 }
-function iaAbrir(){ IA.aberta = !IA.aberta; $("ia").classList.toggle("oculto", !IA.aberta); if (IA.aberta) { if (FALE.aberta) faleAbrir(); iaDesenhar(); $("ia-txt").focus(); } }
+async function iaAbrir(){ IA.aberta = !IA.aberta; $("ia").classList.toggle("oculto", !IA.aberta); if (IA.aberta) { if (FALE.aberta) faleAbrir(); iaDesenhar(); await iaHistorico(); iaDesenhar(); $("ia-txt").focus(); } }
 async function iaPerguntar(){
   const t = $("ia-txt").value.trim(); if (!t || IA.ocupada) return;
   const est = ABA === "cliente" ? (window.Cliente && Cliente.estado()) : ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado()) : null;
@@ -757,7 +765,7 @@ async function iaPerguntar(){
   try {
     const r = await sb.functions.invoke("gestor-ia", { body: { pergunta: t, sessao: IA.sessao, contexto: Object.assign({ aba: ABA }, est || {}) } });
     const d = r.data || {}; if (r.error && !d.erro) d.erro = r.error.message || String(r.error);
-    if (d.erro) { item.r = "⚠ " + d.erro; } else { item.r = d.resposta; item.custo = d.custo_usd; item.modelo = d.modelo; IA.sessao = d.sessao || IA.sessao; }
+    if (d.erro) { item.r = "⚠ " + d.erro; } else { item.r = d.resposta + (d.aviso ? String.fromCharCode(10, 10) + "⚠ " + d.aviso : ""); item.custo = d.custo_usd; item.modelo = d.modelo; IA.sessao = d.sessao || IA.sessao; try { localStorage.setItem("gestor.ia.sessao", IA.sessao || ""); } catch (e) {} }
     $("ia-estado").textContent = d.erro ? "não respondeu" : "sessão " + String(IA.sessao || "").slice(0, 8) + " · gasto desta conversa US$ " + IA.hist.reduce((s, m) => s + (m.custo || 0), 0).toFixed(3);
   } catch (e) { item.r = "⚠ não consegui falar com a função gestor-ia: " + (e.message || e); $("ia-estado").textContent = "não respondeu"; }
   IA.ocupada = false; iaDesenhar();
@@ -778,7 +786,7 @@ function ligarMic(idBotao, idCampo){
   };
 }
 ligarMic("ia-mic", "ia-txt"); ligarMic("fale-mic", "fale-txt");
-$("bt-ia").onclick = iaAbrir; $("ia-fecha").onclick = iaAbrir; $("ia-envia").onclick = iaPerguntar; $("ia-nova").onclick = () => { IA.sessao = null; IA.hist = []; iaDesenhar(); $("ia-estado").textContent = "nova conversa"; };
+$("bt-ia").onclick = iaAbrir; $("ia-fecha").onclick = iaAbrir; $("ia-envia").onclick = iaPerguntar; $("ia-nova").onclick = () => { IA.sessao = null; IA.hist = []; IA.carregada = true; try { localStorage.removeItem("gestor.ia.sessao"); } catch (e) {} iaDesenhar(); $("ia-estado").textContent = "nova conversa"; };
 $("ia-txt").onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); iaPerguntar(); } };
 $("bt-fale").onclick = faleAbrir; $("fale-fecha").onclick = faleAbrir; $("fale-envia").onclick = faleEnviar;
 $("fale-txt").onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); faleEnviar(); } };
