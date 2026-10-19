@@ -51,11 +51,12 @@ async function desenhar(){
   const el = EL;
   if (!el.querySelector(".cliente")) {
     el.innerHTML = `<div class="cliente">
-      <div class="card filtros"><label>cliente</label><div class="chips" id="cl-cli"></div></div>
+      <div class="card filtros"><div class="linha-sel"><div id="cl-cli"></div><span class="mu" id="cl-conta"></span></div></div>
       <div id="cl-corpo"></div>
     </div>`;
   }
-  chips("cl-cli", LISTA.map(c => [c.cliente, c.nome]), S.cliente, v => { S.cliente = v; S.form = false; desenhar(); });
+  window.GestorLib.seletor(el.querySelector("#cl-cli"), "cliente", LISTA.map(c => [c.cliente, c.nome]), { v: S.cliente }, v => { S.cliente = v; S.form = false; S.cartAberta = false; desenhar(); }, { unico: true, nomeDe });
+  el.querySelector("#cl-conta").textContent = LISTA.length + " clientes";
   const corpo = el.querySelector("#cl-corpo");
   corpo.innerHTML = `<div class="card mu">lendo ${esc(nomeDe(S.cliente))}…</div>`;
   let d;
@@ -251,7 +252,7 @@ async function desenharCarteira(corpo, d){
   const conta = f => { const m = new Map(); for (const x of vivas) { const k = f(x); m.set(k, (m.get(k) || 0) + 1); } return [...m.entries()].sort(); };
   const chip = (id, sel, lista, rot) => `<div class="linha"><label>${rot}</label><div class="chips" data-f="${id}">${[["", "todos"], ...lista].map(([v, n]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(v === "" ? "todos" : (id === "mes" && v !== "sem prev" ? mesBR(v + "-01") : v))}${n != null ? ` <small>${n}</small>` : ""}</button>`).join("")}</div></div>`;
   const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), porAcao = new Map(); for (const x of lista) { const g = grupoAcao(efetiva(x)) || "(vazia)"; porAcao.set(g, (porAcao.get(g) || 0) + (x.cart || 0)); }
-  const btExp = `<button type="button" class="sec ir expandir">${S.cartAberta ? "recolher" : "tratar a carteira ›"}</button>`;
+  const btExp = `<button type="button" class="sec expandir">${S.cartAberta ? "recolher ▴" : "tratar a carteira ›"}</button>`;
   if (!S.cartAberta) {
     // o cartão PEQUENO: só o placar; apertar abre a mesa inteira
     const tot = vivas.reduce((s, x) => s + (x.cart || 0), 0), pa = new Map(); for (const x of vivas) { const g = grupoAcao(efetiva(x)) || "(vazia)"; pa.set(g, (pa.get(g) || 0) + (x.cart || 0)); }
