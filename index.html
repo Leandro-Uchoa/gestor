@@ -358,7 +358,9 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .colecao.vitrine .saidas{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}.colecao.vitrine .saidas .fl{width:auto;margin-right:2px}.colecao.vitrine .saidas .sai{width:auto;margin:0;padding:6px 10px;font-size:.72rem}.colecao.vitrine .saidas .sai.todos{background:var(--azul);color:var(--off-white);border-color:var(--azul)}
 #vit-saidas{flex-basis:100%;display:grid;gap:3px;margin-top:2px}.sai-item{font-size:.68rem;padding:3px 8px;border-left:3px solid var(--cinza-claro);background:var(--cartao);color:var(--preto)}.sai-item.pronto{border-color:var(--azul)}.sai-item.erro{border-color:var(--vermelho-ua)}.sai-item.fila{border-color:var(--amarelo)}.sai-item code{font-family:var(--fonte-mono);font-size:.64rem;word-break:break-all}
 @media print{.colecao.vitrine .saidas{display:none!important}}
-.mthumb .gcl{position:absolute;top:2px;left:2px;z-index:2}.vcard .vsem{display:inline-block;background:var(--amarelo);color:var(--preto);font-size:.56rem;font-weight:800;padding:1px 5px;border-radius:var(--raio-selo);margin-top:2px;text-transform:none}.vgrade{font-size:.6rem;color:var(--preto);font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mthumb .gcl{position:absolute;top:2px;left:2px;z-index:2}
+/* a estrela da Vulcabras no alto da imagem (ele, 19/10 12:5x: "deixa uma estrelinha no topo da imagem, na vitrine, para a gente entender") */
+.estrela-v{position:absolute;top:2px;right:2px;z-index:2;font-style:normal;font-size:.95rem;line-height:1;color:var(--amarelo);text-shadow:0 0 2px var(--preto),0 0 1px var(--preto)}.vfoto .estrela-v{top:3px;right:4px;font-size:1.1rem}.vfoto .tri + .estrela-v{right:18px}.vcard .vsem{display:inline-block;background:var(--amarelo);color:var(--preto);font-size:.56rem;font-weight:800;padding:1px 5px;border-radius:var(--raio-selo);margin-top:2px;text-transform:none}.vgrade{font-size:.6rem;color:var(--preto);font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mont-placar span{background:var(--off-white);border-radius:10px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;align-items:flex-start}.mont-placar b{color:var(--preto);font-size:1.15rem;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.mont-placar small{color:var(--cinza-escuro);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 /* 19/10, ele: cartão PEQUENO para ver a composição da vitrine — 4 por linha no computador, 3 em tela média, 2 no celular; um título por tipo */
 .mont-vitrine{background:var(--pagina);border-radius:10px;padding:8px;margin-top:8px;max-height:72vh;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-content:start}
@@ -404,7 +406,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.31</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.32</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -468,7 +470,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=23"></script>
+<script src="colecao.js?v=24"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script src="topics.js?v=3"></script>

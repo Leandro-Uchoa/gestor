@@ -112,6 +112,17 @@ async function carregarVitrine(sb){
   }
 }
 
+// reler a vitrine do cliente no banco (duas abas / dois aparelhos mexendo na mesma vitrine): a cada volta ao foco e quando o banco diz "duplicada"
+async function relerVitrine(){
+  if (!SB || !VIT.cliente) return;
+  VIT.carregadoPara = null; VIT.vistaPedida = VIT.vista;            // mantém a vista em que ele está (montando / atual)
+  await carregarVitrine(SB);
+  VIT.erro = "";
+  if (ELV && ELV.querySelector(".cat")) desenharVitrine();
+  else refrescar();
+}
+let RELENDO = 0;
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && VIT.cliente && Date.now() - RELENDO > 3_000) { RELENDO = Date.now(); relerVitrine(); } });
 async function abrir(sb, el){
   SB = sb; EL = el;
   if (!(await carregarDados(sb, el))) return;
@@ -453,7 +464,7 @@ function desenharEsquerda(pg){
     modelos++;
     html += `<div class="mcard" data-kc="${esc(chaveCor(m))}"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}${m.nu ? " " + esc(m.nu) : ""}</span>` : ""}${grandeEspecial(m) && !ehInf(m) ? `<span class="selo ate48" title="numeração até o ${numMax(m)}: cabe grade especial">até ${numMax(m)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div>${gtm ? tetoDoModelo(m) : ""}</div>
       <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida", g = gtm ? gtmDe(it) : null; const mix = g ? (g.mf != null ? g.mf : g.mx) : 0;
-        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${g && g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "classe " + g.cl)}">${esc(g.cl)}</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
+        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${g && g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "classe " + g.cl)}">${esc(g.cl)}</i>` : ""}${g && g.e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
     </div>`;
   }
   const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
@@ -528,7 +539,7 @@ function desenharDireita(pg){
     if (sec !== secAtual) { secAtual = sec; const its = lista.filter(x => secaoDe(x) === sec); html += `<div class="vsec${/grade\?/.test(sec) ? " falta" : ""}">${esc(sec)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></div>`; }
     html += `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">
       <button type="button" class="mais tira" data-kc="${esc(chaveCor(it))}" title="tirar da vitrine">×</button>
-      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}</div>
+      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}</div>
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
@@ -578,6 +589,9 @@ async function alternar(kc, modo){
   const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(Object.assign({ estado, estado_anterior: atual ? (it.st || null) : null, grade, pares }, linha));
   if (r.error) {
     if (tinha) M.set(kc, estado); else { M.delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); }
+    // 19/10 (ele, com duas abas abertas: "a ALGDNA não sobe"): a cor já estava no banco, posta pela outra aba — "chave duplicada". Não é
+    // recusa: esta aba estava desatualizada. Relê a vitrine do banco e redesenha, sem erro na tela.
+    if (/duplicate key|vitrine_pkey/i.test(r.error.message || "")) { await relerVitrine(); return; }
     VIT.erro = "O banco recusou a vitrine: " + r.error.message; refrescar();
     const raiz = modo === "colecao" ? EL : ELV, e = raiz && raiz.querySelector(modo === "colecao" ? "#col-erro" : "#vit-erro"); if (e) { e.textContent = VIT.erro; e.classList.remove("oculto"); }
     return;
