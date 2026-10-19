@@ -675,7 +675,7 @@ function desenharDireita(pg){
           const p6 = VIT.pares6.get(chaveCor(it)) || 0;
           return `<button type="button" class="selo pares${p == null ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="mudar os pares desta cor">${p == null ? "pares?" : `<b>${p.toLocaleString("pt-BR")}</b> pares${p6 ? ` (${Math.floor((p - p6) / CAIXA)}×12 + ${Math.floor(p6 / CAIXA6)}×6)` : ""}${pct != null ? ` · ${pct}% de ${teto.toLocaleString("pt-BR")}` : ""}`}</button>`; })() : ""}
         ${!gtm ? (() => { const pm = pmE, tot = totE; const ms = pm ? MESES_V.filter(m => m in pm) : [];
-          return `<button type="button" class="selo pares${!pm ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="meses e pares desta cor">${pm ? `${tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · ` : ""}${ms.map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ") || "sem mês"}${!tot ? " · pares a definir" : ""}${p6E ? ` · ${p6E} em gr. 6` : ""}` : "meses?"}</button>`; })() : ""}
+          return `<button type="button" class="selo pares${!pm ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="meses e pares desta cor">${pm && ms.length ? `${tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · ` : ""}${ms.map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!tot ? " · pares a definir" : ""}${p6E ? ` · ${p6E} em gr. 6` : ""}` : "meses? toque para definir"}</button>`; })() : ""}
         ${gE ? `<button type="button" class="selo grade" data-kc="${esc(chaveCor(it))}" title="trocar a grade">${esc(txE && gE !== "aberta" ? ((ROTULO_GRADE[gE] || "grade") + " · " + txE) : (ROTULO_GRADE[gE] || "grade " + gE))}</button>` : `<button type="button" class="selo grade falta" data-kc="${esc(chaveCor(it))}" title="definir a grade">grade?</button>`}
         <div class="mu">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}</div></div>
     </div>`;
@@ -711,7 +711,7 @@ async function alternar(kc, modo){
     const resp = await perguntarGtm(it); if (!resp) return; grade = resp.grade; pares = resp.pares; pares6 = resp.pares6;
     campos = { grade, pares, pares6: pares6 || null };
   } else if (!tinha && !atual) {
-    const resp = await perguntarMeses(it); if (!resp) return; campos = linhaDeEntradas(resp.grades);
+    const resp = await perguntarTipos(it); if (!resp) return; campos = linhaDeEntradas(resp.grades);
   }
   if (tinha) { M.delete(kc); limparEntradas(kc); }
   else { M.set(kc, estado); if (campos.grades) guardarEntradas(kc, campos.grades); else { if (grade) VIT.grades.set(kc, grade); if (pares != null) VIT.pares.set(kc, pares); if (pares6) VIT.pares6.set(kc, pares6); } }
@@ -836,8 +836,35 @@ function perguntarGtm(it, atualGrade, atualPares, atualPares6){
 // a VITRINE DE CLIENTE por mês (ele via NÚCLEO, 19/10): quais meses, quantos pares em cada um (sugestão do NÚCLEO pré-preenchida), e a grade:
 // padrão da casa (pelo gênero/numeração da cor), modificada (ele digita) ou aberta. A grade pode ficar para depois (selo "grade?" no cartão).
 const MESES_V = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN"];
-const GRADE_PADRAO = { feminina: "34–39 · 1-2-3-3-2-1", masculina: "38–43 · 1-2-3-3-2-1", infantil: "30–36 · 1-1-1-2-2-2-3", estendida: "unissex 34–44 (numeração por tamanho a combinar)", especial: "até o 48 (numeração por tamanho a combinar)" };
-const GRADES_OPC = { feminina: ["34–39 · 1-2-3-3-2-1"], masculina: ["38–43 · 1-2-3-3-2-1", "37–43 · 1-2-2-3-2-1-1", "38–44 · 1-2-3-2-2-1-1"], infantil: ["30–36 · 1-1-1-2-2-2-3"] };
+// as FAIXAS por tipo de grade (ele, 19/10 17:3x): masculina 37–44 · especial 44–48 · feminina 34–41 · unissex 34–44 · infantil 30–36;
+// "se algum produto ainda for fabricado do 33, puxa do 33" — a faixa feminina/unissex começa no 33 quando a numeração da cor começa no 33.
+// A distribuição por tamanho (1-2-3…) vem num segundo momento, na perguntinha completa do cartão.
+const FAIXA = { feminina: [34, 41], masculina: [37, 44], estendida: [34, 44], especial: [44, 48], infantil: [30, 36] };
+const faixaDe = (it, g) => { const f = FAIXA[g]; if (!f) return ""; const mi = numMin(it); const ini = (g === "feminina" || g === "estendida") && mi === 33 ? 33 : f[0]; return `${ini}–${f[1]}`; };
+const GRADE_PADRAO = { feminina: "34–41", masculina: "37–44", infantil: "30–36 · 1-1-1-2-2-2-3", estendida: "34–44", especial: "44–48" };
+const GRADES_OPC = { feminina: ["34–41", "34–39 · 1-2-3-3-2-1"], masculina: ["37–44", "38–43 · 1-2-3-3-2-1", "37–43 · 1-2-2-3-2-1-1", "38–44 · 1-2-3-2-2-1-1"], estendida: [], especial: [], infantil: ["30–36 · 1-1-1-2-2-2-3"] };
+const NOME_GRADE = { feminina: "feminina", masculina: "masculina", estendida: "unissex", especial: "grade especial (44–48)", infantil: "infantil" };
+// PASSO 1 (ele, 17:3x: "primeiro só as opções de grade, por nomenclatura — masculina, feminina, unissex, especial — marquei, já sobe;
+// as grades e os meses vêm num segundo momento, no cartão"): marca os tipos e sobe. A sugestão de meses do NÚCLEO entra na primeira.
+function perguntarTipos(it){
+  const opc = GRADES_GTM(it), padrao = gradePadraoDe(it), sug = VIT.sug.get(chaveCor(it));
+  return new Promise(resolve => {
+    const luz = document.createElement("div"); luz.className = "luz grade-luz";
+    luz.innerHTML = `<div class="quadro grade-quadro tipos"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}${it.ge ? " · " + esc(it.ge) : ""}</span></div>
+      <div class="gq-perg">Em que grade(s)? <span class="mu">marque uma ou mais; os meses e a numeração você acerta depois, no cartão</span></div>
+      <div class="gq-tipos">${opc.map(g => `<label class="gq-tipo${g === padrao ? " on" : ""}"><input type="checkbox" data-g="${g}" ${g === padrao ? "checked" : ""}><b>${esc(NOME_GRADE[g] || g)}</b><small>${esc(faixaDe(it, g))}</small></label>`).join("")}</div>
+      <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
+    const sobe = luz.querySelector(".gq-sobe"), marcados = () => [...luz.querySelectorAll(".gq-tipos input:checked")].map(i => i.dataset.g);
+    const mostra = () => { for (const l of luz.querySelectorAll(".gq-tipo")) l.classList.toggle("on", l.querySelector("input").checked); sobe.disabled = !marcados().length; };
+    for (const i of luz.querySelectorAll(".gq-tipos input")) i.onchange = mostra;
+    const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
+    const confirma = () => { if (sobe.disabled) return; const L = marcados().map((g, i) => ({ grade: g, tx: faixaDe(it, g) || (GRADE_PADRAO[g] || null), pm: (i === 0 && sug) ? Object.assign({}, sug.pm) : {}, pm6: {} })); fecha({ grades: L }); };
+    const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter") confirma(); };
+    document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(null); };
+    luz.querySelector(".gq-deixa").onclick = () => fecha(null); sobe.onclick = confirma; mostra();
+    document.body.appendChild(luz); sobe.focus();
+  });
+}
 const gradePadraoDe = it => { const o = GRADES_GTM(it); if (ehInf(it)) return "infantil"; if (o.length === 1) return o[0]; if (ehFem(it) && o.includes("feminina")) return "feminina"; if (ehMasc(it) && o.includes("masculina")) return "masculina"; const auto = ({ fem: "feminina", masc: "masculina", inf: "infantil" })[(MF.passo || "").replace("ua-", "")]; return auto && o.includes(auto) ? auto : null; };
 function perguntarMeses(it, atual){
   atual = atual || {};
@@ -846,7 +873,7 @@ function perguntarMeses(it, atual){
   const abre6 = (+it.p || 0) > 300;
   const redondo = (v, cx) => Math.max(0, Math.round((+v || 0) / cx) * cx);
   // as OPÇÕES de grade: as padrão que a numeração permite (a masculina com as 3), mais "modificar" e "aberta"; cada uma marcada vira um bloco de meses
-  const opcoes = opc.flatMap(g => (GRADES_OPC[g] || [GRADE_PADRAO[g]]).map(tx => ({ gid: g + "|" + tx, grade: g, tx, rot: ROTULO_GRADE[g] + " · " + tx })));
+  const opcoes = opc.flatMap(g => [faixaDe(it, g), ...(GRADES_OPC[g] || [])].filter((tx, i, a) => tx && a.indexOf(tx) === i).map(tx => ({ gid: g + "|" + tx, grade: g, tx, rot: (NOME_GRADE[g] || g) + " · " + tx })));
   opcoes.push({ gid: "propria|", grade: "propria", tx: "", rot: "modificar a grade (eu digito)" }, { gid: "aberta|", grade: "aberta", tx: "grade aberta", rot: "grade aberta" }, { gid: "depois|", grade: null, tx: null, rot: "deixo a grade para depois" });
   const gidDe = e => e.grade === "propria" ? "propria|" : (e.grade === "aberta" ? "aberta|" : (e.grade ? (e.grade + "|" + (e.tx || GRADE_PADRAO[e.grade] || "")) : "depois|"));
   // o que já está: a lista dele; se nada, a padrão pelo gênero/numeração com a sugestão do NÚCLEO
@@ -874,7 +901,7 @@ function perguntarMeses(it, atual){
     const ler = () => [...blocos.querySelectorAll(".gq-bloco")].map(lerBloco);
     const mostra = () => { const L = ler(); const t = somaMeses(L); const nm = new Set(L.flatMap(e => Object.keys(e.pm))).size;
       pct.textContent = L.length ? `${L.length > 1 ? L.length + " grades · " : ""}${nm ? nm + " mês(es) · " : ""}${t.pares ? t.pares.toLocaleString("pt-BR") + " pares" : "pares a definir depois"}${t.pares6 ? ` · ${t.pares6} em grades de 6` : ""}${abre6 ? "" : " · até R$ 300: só grade de 12"}` : "marque pelo menos uma grade";
-      sobe.disabled = !L.length || L.some(e => !Object.keys(e.pm).length) || L.some(e => e.grade === "propria" && !e.tx); };
+      sobe.disabled = !L.length || L.some(e => e.grade === "propria" && !e.tx); };
     const ligarBloco = bl => { for (const l of bl.querySelectorAll(".gq-mes")) { const cb = l.querySelector("input[type=checkbox]"), nps = [...l.querySelectorAll("input[type=number]")], np = nps[0];
         cb.onchange = () => { for (const i of nps) i.disabled = !cb.checked; l.classList.toggle("on", cb.checked); if (cb.checked && !(+np.value) && bl === blocos.firstElementChild) { np.value = redondo((sug && sug.pm[cb.dataset.m]) || 0, CAIXA) || ""; } if (cb.checked) { np.focus(); np.select(); } mostra(); };
         for (const i of nps) { i.oninput = mostra; i.onchange = () => { const cx = +i.dataset.cx, v = redondo(i.value, cx); i.value = v || ""; mostra(); }; }
