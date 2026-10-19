@@ -69,6 +69,19 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cg tr.tot td{position:sticky;bottom:0;background:rgba(120,123,134,.22)}
 .cg button.mm{width:20px;height:20px;padding:0;margin:0 6px 0 0;border-radius:6px;background:rgba(120,123,134,.3);color:var(--ink);border:1px solid var(--cinza-escuro);font-weight:800;line-height:1;vertical-align:middle}
 .cg tr.filha td{background:rgba(120,123,134,.1);font-size:.78rem}.cg tr.filha td.fixa{background:rgba(120,123,134,.1)}.cg tr.mae td{font-weight:600}
+.cg tr.filha td.ctf,.cg tr.tot td.ctf{background:var(--amarelo);color:var(--preto)}.cg tr.filha td.ct{color:var(--amarelo)}
+/* v5.67 (19/10, ele: "uma cópia fiel da análise de giro; o cabeçalho fica transparente quando rolo; os totais acima do cabeçalho") */
+.cg{background:var(--off-white);color:var(--preto)}.cg table{color:var(--preto);font-size:.82rem}
+.cg thead th{background:var(--cinza-claro);color:var(--preto);opacity:1}.cg thead tr:first-child th{top:0}.cg thead tr:nth-child(2) th{background:var(--cinza-claro);color:var(--preto);font-weight:700}
+.cg thead th.g,.cg thead tr:nth-child(2) th.g{background:var(--cinza-claro);color:var(--preto);box-shadow:inset 0 -2px 0 var(--azul)}.cg thead th.c,.cg thead tr:nth-child(2) th.c{background:var(--amarelo);color:var(--preto);box-shadow:none}
+.cg th.fixa,.cg td.fixa{background:var(--off-white);color:var(--preto)}.cg thead th.fixa{background:var(--cinza-claro)}.cg td.fixa.ref.mu,.cg td.fixa.cor.mu,.cg td .mu,.cg td.mu{color:var(--cinza-escuro)}
+.cg td{border-bottom:1px solid rgba(120,123,134,.25)}.cg td.est{background:rgba(173,174,179,.22)}.cg td.fat{font-weight:600}
+.cg td.ct{color:var(--preto);background:rgba(255,255,26,.35);box-shadow:none}.cg td.ctf{background:var(--amarelo);color:var(--preto)}.cg tr.filha td.ct{color:var(--preto)}
+.cg th.col,.cg td.col{background:var(--cinza-claro)}.cg thead th.col{color:var(--preto)}.cg thead tr:nth-child(2) th.col{color:var(--preto)}
+.cg tr.filha td{background:rgba(173,174,179,.14);color:var(--preto)}.cg tr.filha td.fixa{background:rgba(226,227,229,1)}.cg tr.mae td{font-weight:600}
+.cg button.mm{background:var(--off-white);color:var(--preto);border-color:var(--cinza-escuro)}
+.cg thead tr.tot th{position:sticky;background:var(--preto);color:var(--off-white);font-weight:800;font-variant-numeric:tabular-nums;text-align:right;box-shadow:inset 0 -2px 0 var(--amarelo)}.cg thead tr.tot th.fixa{text-align:left;background:var(--preto);color:var(--amarelo)}.cg thead tr.tot th.ct,.cg thead tr.tot th.ctf{background:var(--amarelo);color:var(--preto)}.cg thead tr.tot th.col{background:var(--preto)}
+.cg thead tr.tot th .cob{display:block;font-size:.66rem;font-weight:600;color:var(--cinza-claro)}.cg thead tr.tot th.ct .cob,.cg thead tr.tot th.ctf .cob{color:var(--preto)}
 /* abas e o seletor venda/estoque: botões pequenos, lado a lado */
 .abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
@@ -472,7 +485,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.66</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.67</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -535,6 +548,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
       <div class="painel oculto" id="chips-cliente"></div></div>
     <label>marca · família (toque para ligar mais de uma)</label>
     <div class="chips" id="chips-familia"></div>
+    <div class="frow oculto" id="linha-praca"><label>praça da Casa Pio (toque para ligar mais de uma)</label><div class="chips" id="chips-praca"></div></div>
     <div id="bloco-sub" class="oculto"><label>subfamília</label><div class="chips" id="chips-sub"></div></div>
     <label>meses (toque para ligar e desligar)</label>
     <div class="chips" id="chips-meses"></div>
@@ -827,7 +841,8 @@ const NOME_SUB = { "CLASSICOS": "CLÁSSICOS", "CONF_FEM": "CONF. FEMININO", "CON
 // nomes de exibição dos clientes (cadastro, como ele fala); o que não estiver aqui aparece como está no banco
 const NOME_CLI = { "BANBAN CALCADOS": "Ban Ban", "CASA PIO": "Casa Pio", "LOJAS NOROESTE": "Noroeste", "POLYELLE": "Polyélle", "SAPATARIA NOVA": "Sapataria Nova" };
 let CLIENTE_SEL = new Set(), FAMILIA_SEL = new Set(), SUB_SEL = new Set(), CLIENTES = [], MESES_DISP = [], MESES_SEL = new Set();   // conjuntos: múltipla escolha (12/10)
-let ABERTO_CLI = false, TODOS_CLI = false;       // a lista abre pela setinha; TODOS_CLI = ele escolheu "todos" (a página abre ZERADA: nada escolhido = nada consultado, 12/10)
+let ABERTO_CLI = false, TODOS_CLI = false;
+let PRACA_SEL = new Set(); const PRACAS = [["FORTALEZA", "Fortaleza"], ["RECIFE", "Recife"], ["JPESSOA", "João Pessoa"]];   // a AG da Casa Pio por praça (0055)       // a lista abre pela setinha; TODOS_CLI = ele escolheu "todos" (a página abre ZERADA: nada escolhido = nada consultado, 12/10)
 document.addEventListener("DOMContentLoaded", () => {
   $("abre-clientes").onclick = (ev) => { ev.stopPropagation(); ABERTO_CLI = !ABERTO_CLI; montarChips(); };
   document.addEventListener("click", (ev) => { if (ABERTO_CLI && !ev.target.closest(".lista-sel")) { ABERTO_CLI = false; montarChips(); } });   // clicou fora: fecha
@@ -862,6 +877,9 @@ function montarChips(){
   const sel = [...CLIENTE_SEL].map(c => NOME_CLI[c] || c);
   $("abre-clientes").textContent = (sel.length ? (sel.length <= 2 ? sel.join(" + ") : sel.length + " clientes") : (TODOS_CLI ? "todos" : "escolha o cliente")) + (ABERTO_CLI ? " ▴" : " ▾");
   $("chips-cliente").classList.toggle("oculto", !ABERTO_CLI);
+  const pio = !TODOS_CLI && CLIENTE_SEL.size === 1 && CLIENTE_SEL.has("CASA PIO");
+  $("linha-praca").classList.toggle("oculto", !pio); if (!pio) PRACA_SEL.clear();
+  if (pio) for (const b of chips("chips-praca", [["", "total"], ...PRACAS], PRACA_SEL)) b.onclick = () => { liga(PRACA_SEL, b.dataset.v); montarChips(); consultar(); };
   for (const b of chips("chips-familia", [["", "todas"], ...FAMILIAS.map(f => [f, f])], FAMILIA_SEL)) b.onclick = () => { liga(FAMILIA_SEL, b.dataset.v); for (const x of [...SUB_SEL]) if (!subsDisponiveis().includes(x)) SUB_SEL.delete(x); montarChips(); consultar(); };
   $("chips-meses").innerHTML = MESES_DISP.map(m => `<button type="button" data-m="${m}" class="${MESES_SEL.has(m) ? "ativa" : ""}">${mesBR(m)}</button>`).join("");
   for (const b of document.querySelectorAll("#chips-meses button")) b.onclick = () => { const m = b.dataset.m; if (MESES_SEL.has(m)) MESES_SEL.delete(m); else MESES_SEL.add(m); montarChips(); consultar(); };
@@ -913,7 +931,7 @@ async function consultar(){
   const t0 = performance.now();
   // UMA chamada (12/10, "está mais lento que o BI"): a função cg_consulta devolve já por referência+cor, meses dentro — antes eram
   // dezenas de páginas de 1.000 linhas e cada página refazia a soma inteira no banco
-  const r = await sb.rpc("cg_consulta", { p_clientes: TODOS_CLI ? null : [...CLIENTE_SEL], p_de: de + "-01", p_ate: ate + "-01" });
+  const r = await sb.rpc("cg_consulta", { p_clientes: TODOS_CLI ? null : [...CLIENTE_SEL], p_de: de + "-01", p_ate: ate + "-01", p_pracas: PRACA_SEL.size ? [...PRACA_SEL] : null });
   if (n !== CONSULTA_N) return;                                   // outro toque veio depois: este resultado já envelheceu
   if (r.error) { msg("msg-pergunta", "O banco recusou: " + esc(r.error.message), "erro"); return; }
   msg("msg-pergunta", "");
@@ -947,7 +965,7 @@ function desenharCG(linhas, pedidos, bases){
   const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
-  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda"><i style="background:var(--azul)"></i>venda (giro) <i style="background:rgba(173,174,179,.28)"></i>estoque · cob = estoque ÷ venda do mês <i style="background:transparent;box-shadow:inset 3px 0 0 var(--amarelo)"></i>carteira (texto amarelo) <i style="background:var(--amarelo)"></i>carteira com faturado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
+  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda">por mês: venda · estoque (cinza) · cob = estoque ÷ venda · carteira em amarelo (amarelo cheio = já tem faturado) · a linha preta no alto é o total do que está filtrado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
   html += `<div class="card cg"><table><thead><tr><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   const cabMes = (m, cls, span) => COLAPSADOS.has(cls + m) ? `<th class="mes col ${cls}" data-m="${cls + m}" title="mostrar ${mesBR(m)}">+</th>` : `<th class="mes ${cls}" data-m="${cls + m}" colspan="${span}" title="esconder ${mesBR(m)}">${mesBR(m)}</th>`;
   for (const m of mesesGiro) html += cabMes(m, "g", 3);
@@ -955,14 +973,21 @@ function desenharCG(linhas, pedidos, bases){
   html += `</tr><tr><th class="fixa ref"></th><th class="fixa nome"></th><th class="fixa cor"></th>`;
   for (const m of mesesGiro) html += COLAPSADOS.has("g" + m) ? `<th class="col g">${mesBR(m)}</th>` : `<th class="n ini g">venda</th><th class="n g">estoque</th><th class="n g">cob</th>`;
   for (const m of mesesCart) html += COLAPSADOS.has("c" + m) ? `<th class="col c">${mesBR(m)}</th>` : `<th class="n ini c">cart</th>`;
+  html += `</tr>`;
+  // a linha de TOTAIS no cabeçalho (ele, 19/10: "quando eu vou filtrando, vai ficando só os volumes totais acima do janeiro; com a cobertura")
+  html += `<tr class="tot"><th class="fixa ref">total</th><th class="fixa nome">${linhas.length} ref.</th><th class="fixa cor"></th>`;
+  for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { html += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}; html += `<th class="ini">${t.venda != null ? fmt(t.venda) : "—"}</th><th>${t.estoque != null ? fmt(t.estoque) : "—"}</th><th>${(t.estoque != null && t.venda) ? (t.estoque / t.venda).toFixed(1).replace(".", ",") : "—"}<span class="cob">cob</span></th>`; }
+  for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { html += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}, v = (t.fat || 0) + (t.cart || 0); html += `<th class="ini ${t.fat ? "ctf" : "ct"}">${v ? fmt(v) : "0"}</th>`; }
   html += `</tr></thead><tbody>`;
   for (const a of linhas) {
     const aberto = ABERTOS.has(a.referencia), varias = a.cores.size > 1 || (a.cores.size === 1 && a.cores.keys().next().value !== "");
     html += `<tr class="mae"><td class="fixa ref mu">${varias ? `<button type="button" class="mm" data-ref="${esc(a.referencia)}">${aberto ? "−" : "+"}</button>` : ""}${esc(a.referencia)}</td><td class="fixa nome">${esc(a.descricao)}</td><td class="fixa cor mu">${a.cores.size > 1 ? "todas" : esc(a.cores.keys().next().value || "")}</td>${celulas(a)}</tr>`;
     if (aberto) for (const f of [...a.cores.values()].sort((x, y) => (y.venda || 0) - (x.venda || 0))) html += `<tr class="filha"><td class="fixa ref"></td><td class="fixa nome mu"></td><td class="fixa cor">${esc(f.cor) || "<span class='mu'>sem cor</span>"}</td>${celulas(f)}</tr>`;
   }
-  html += `<tr class="tot"><td class="fixa ref">total</td><td class="fixa nome"></td><td class="fixa cor"></td>${celulas(tot)}</tr></tbody></table></div>`;
+  html += `</tbody></table></div>`;
   $("resultado").innerHTML = html;
+  // a linha de totais gruda logo abaixo das duas linhas do cabeçalho (altura medida, não chutada)
+  { const trs = document.querySelectorAll("#resultado .cg thead tr"); if (trs.length === 3) { const top = trs[0].offsetHeight + trs[1].offsetHeight; for (const th of trs[2].querySelectorAll("th")) th.style.top = top + "px"; } }
   for (const b of document.querySelectorAll("#resultado button.mm")) b.onclick = () => { const r = b.dataset.ref; if (ABERTOS.has(r)) ABERTOS.delete(r); else ABERTOS.add(r); desenharCG(linhas, pedidos, bases); };
   for (const th of document.querySelectorAll("#resultado th.mes")) th.onclick = () => { const m = th.dataset.m; if (COLAPSADOS.has(m)) COLAPSADOS.delete(m); else COLAPSADOS.add(m); desenharCG(linhas, pedidos, bases); };
   // as colunas travadas precisam saber a largura das vizinhas (ref → nome → cor)
