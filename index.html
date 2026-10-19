@@ -75,7 +75,21 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .abas button.ativa,.seletor button.ativa{background:var(--acc);color:var(--preto);border-color:var(--acc)}
 /* 19/10, ele: "um botão para extrair para outra janela — em todos os campos"; e o TOPICS ao lado, para ficar numa tela paralela */
 .tela-topo{display:flex;justify-content:flex-end;margin:-6px 0 8px}.tela-topo button{width:auto;margin:0;padding:6px 12px;font-size:.78rem;border-style:dashed;color:var(--mu);background:transparent}.tela-topo button:hover{border-color:var(--acc);color:var(--acc)}
-.topics-card{max-width:620px}.topics-card .sec-tit{font-weight:800;color:var(--acc);margin:0 0 8px}.topics-card p{color:var(--mu);font-size:.9rem;line-height:1.5;margin:0 0 12px}.topics-card button{width:auto;padding:12px 18px}
+/* ---- TOPICS (19/10): cliente → assunto → mini-demandas; do banco, só para o login dele ---- */
+.topics .linha-topo{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.topics .linha-topo input{flex:1;min-width:220px;padding:9px 12px}
+.topics .chips.blocos button.cli{border-color:var(--cinza-claro)}.topics .chips button small{background:var(--preto);color:var(--off-white);border-radius:999px;padding:0 6px;margin-left:4px;font-size:.66rem}.topics .chips button.ativa small{background:var(--preto);color:var(--amarelo)}
+.topics .sec-tit{font-weight:800;color:var(--acc);margin:0 0 8px;letter-spacing:.02em}.topics .sec-tit small{color:var(--mu);font-weight:500;font-size:.74rem}
+.topics .sub-tit{font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);margin:12px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--bd)}.topics .sub-tit small{color:var(--mu);font-weight:600;text-transform:none;letter-spacing:0}
+.topics .ti{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-bottom:1px solid rgba(120,123,134,.18)}.topics .ti:last-child{border-bottom:0}.topics .ti.feito .txt{text-decoration:line-through;color:var(--mu)}.topics .ti.urg{background:rgba(255,255,26,.06);border-left:3px solid var(--amarelo)}.topics .ti.dele .txt{font-weight:800}
+.topics .marca{flex:none;width:22px;height:22px;margin:2px 0 0;padding:0;border-radius:5px;border:1.5px solid var(--cinza-claro);background:transparent;color:var(--preto);font-weight:900;font-size:.9rem;line-height:1}.topics .ti.feito .marca{background:var(--amarelo);border-color:var(--amarelo)}
+.topics .corpo{flex:1;min-width:0}.topics .txt{font-size:.92rem;line-height:1.3}
+.topics .chip{display:inline-block;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:3px;border:1px solid var(--bd);color:var(--mu);margin:4px 4px 0 0}
+.topics .chip.tipo.pergunta{background:rgba(46,62,252,.25);color:var(--off-white);border-color:transparent}.topics .chip.tipo.espera{background:rgba(120,123,134,.3);border-color:transparent}.topics .chip.dono.LEO{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.topics .chip.bl{background:var(--preto);color:var(--off-white);border-color:var(--off-white)}
+.topics .chip.prazo.venc{color:var(--amarelo);border-color:var(--amarelo)}.topics .chip.dep,.topics .chip.esp{text-transform:none;letter-spacing:0}
+.topics .nota{font-size:.78rem;color:var(--mu);margin-top:4px;cursor:pointer;line-height:1.4;font-family:var(--fonte-mono)}.topics .nota.aberta{color:var(--ink)}
+.topics .resposta{margin-top:5px;min-height:1.3em;font-size:.86rem;color:var(--off-white);border-left:3px solid var(--azul);padding:2px 0 2px 8px;outline:none}.topics .resposta:empty::before{content:"responder aqui e apertar Enter";color:var(--mu);opacity:.6}.topics .resposta:focus{background:rgba(46,62,252,.12)}
+.topics .rodape{font-size:.62rem;margin-top:2px}.topics .card.agora{border-left:4px solid var(--amarelo)}
+@media print{.topics .filtros{display:none}.topics .card{background:#fff;color:#000;border:1px solid #ddd;break-inside:avoid}.topics .txt,.topics .nota,.topics .resposta{color:#000}}
 @media print{.tela-topo{display:none}}
 /* celular (PICASSO, 15/10): seis abas largas empurravam a página para o lado — 3 + 3 em grade, sem rolagem horizontal */
 @media (max-width:600px){.abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.abas button{padding:9px 4px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
@@ -369,7 +383,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.22</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.23</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -400,11 +414,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
   <!-- 19/10, ele: "cada botão abre no próprio local; e dentro do local eu tenho a opção de abrir numa outra janela" -->
   <div class="tela-topo"><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
   <div id="tela-raiox" class="oculto"></div>
-  <div id="tela-topics" class="oculto"><div class="card topics-card">
-    <div class="sec-tit">TO-DO LIST TOPICS</div>
-    <p>O TOPICS mora no claude.ai, que não deixa a página dele ser mostrada dentro de outra (regra de segurança do site deles, não nossa). Por isso ele não abre aqui dentro: abre numa janela própria, que você deixa na outra tela.</p>
-    <button type="button" id="bt-topics">abrir o TOPICS em outra janela ⧉</button>
-  </div></div>
+  <div id="tela-topics" class="oculto"></div>
   <div id="tela-catalogo" class="oculto"></div>
   <div id="tela-colecao" class="oculto"></div>
   <div id="tela-vitrine" class="oculto"></div>
@@ -440,6 +450,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=17"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
+<script src="topics.js?v=1"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -499,7 +510,7 @@ const ABAS = {
   colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar; toque no + para pôr a cor na vitrine do cliente escolhido. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
   vitrine: { subtitulo: "· vitrine", rodape: "As cores escolhidas para o cliente, gravadas no banco atrás do login: fecha e volta, no celular ou no computador, e estão aqui. × tira da vitrine. Exportar PDF = imprimir." },
   raiox: { subtitulo: "· raio-x clientes", rodape: "O raio-x do cliente, loja a loja: cluster, regulador, categorias, sazonalidade e pirâmide de PDV. Calculado da AG PORTA pelo NÚCLEO; mora no banco, atrás do login. Imprimir = exportar." },
-  topics: { subtitulo: "· topics", rodape: "" },
+  topics: { subtitulo: "· topics", rodape: "TO-DO LIST TOPICS: cliente → assunto → mini-demandas. Marca feito no quadradinho; a resposta se escreve na linha azul e grava com Enter. Mora no banco, atrás do login; só o seu login vê." },
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
 const COB = { carteira: [], giro: [], erro: null };
@@ -564,8 +575,7 @@ function trocarAba(nova){
   const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine", rx = nova === "raiox", top = nova === "topics";
   $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit); $("tela-raiox").classList.toggle("oculto", !rx); $("tela-topics").classList.toggle("oculto", !top);
   $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit || rx || top); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit || rx || top);
-  $("bt-janela").classList.toggle("oculto", top);
-  if (top) return;
+  if (top) { Topics.abrir(sb, $("tela-topics")); return; }
   if (rx) { RaioX.abrir(sb, $("tela-raiox")); return; }
   if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
   if (vit) { Colecao.abrirVitrine(sb, $("tela-vitrine")); return; }
@@ -581,13 +591,12 @@ for (const b of document.querySelectorAll(".abas button[data-aba]")) b.onclick =
 const TOPICS_URL = "https://claude.ai/artifact/AkHbS4bcFruP86xLekjNUv";
 function enderecoDaAba(){
   const p = new URLSearchParams(); p.set("aba", ABA);
-  const est = ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado && RaioX.estado()) : null;
-  if (est) { if (est.cliente) p.set("cliente", est.cliente); if (est.vista) p.set("vista", est.vista); }
+  const est = ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado && RaioX.estado()) : ABA === "topics" ? (window.Topics && Topics.estado()) : null;
+  if (est) { if (est.cliente) p.set("cliente", est.cliente); if (est.vista) p.set("vista", est.vista); if (est.bloco) p.set("bloco", est.bloco); }
   return location.origin + location.pathname + "#" + p.toString();
 }
 function outraJanela(url){ const w = Math.min(screen.availWidth, 1400), h = Math.min(screen.availHeight, 900); window.open(url, "_blank", `popup=yes,width=${w},height=${h},left=0,top=0`); }
 $("bt-janela").onclick = () => outraJanela(enderecoDaAba());
-$("bt-topics").onclick = () => outraJanela(TOPICS_URL);
 function mostrarCobertura(){
   if (COB.erro) { $("cobertura").textContent = "não consegui ler a cobertura (" + COB.erro + ") — recarregue a página; sem a cobertura não respondo"; return; }
   $("cobertura").textContent = "carteira: " + (COB.carteira.map(mesBR).join(", ") || "sem carga") + " · giro: " + (COB.giro.map(mesBR).join(", ") || "sem carga");
