@@ -71,6 +71,9 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 .abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
 .abas button.ativa,.seletor button.ativa{background:var(--acc);color:#000000;border-color:var(--acc)}
+/* 19/10, ele: "um botão para extrair para outra janela — em todos os campos"; e o TOPICS ao lado, para ficar numa tela paralela */
+.abas .ext{flex:none;width:auto;padding:10px 12px;border-style:dashed;color:var(--ink);font-size:.82rem}.abas .ext:hover{border-color:var(--acc);color:var(--acc)}.abas #bt-topics{margin-left:auto}
+@media (max-width:600px){.abas .ext{grid-column:span 1}.abas #bt-topics{margin-left:0}}
 /* celular (PICASSO, 15/10): seis abas largas empurravam a página para o lado — 3 + 3 em grade, sem rolagem horizontal */
 @media (max-width:600px){.abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.abas button{padding:9px 4px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .mont-placar .curto{display:none}@media (max-width:600px){.mont-placar .cheio{display:none}.mont-placar .curto{display:block}}
@@ -345,7 +348,7 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.15</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.16</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -371,6 +374,8 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
     <button data-aba="vitrine">Vitrine</button>
     <button data-aba="atas">Atas</button>
     <button data-aba="raiox">Raio-X</button>
+    <button type="button" class="ext" id="bt-topics" title="abre o TO-DO LIST TOPICS em outra janela">TOPICS ⧉</button>
+    <button type="button" class="ext" id="bt-janela" title="abre esta aba em outra janela, do jeito que está (cliente, vista)">outra janela ⧉</button>
   </div>
   <div id="tela-raiox" class="oculto"></div>
   <div id="tela-catalogo" class="oculto"></div>
@@ -405,9 +410,9 @@ td.est{background:rgba(173,174,179,.28);color:#F6F5F0;font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=13"></script>
+<script src="colecao.js?v=14"></script>
 <script src="atas.js?v=1"></script>
-<script src="raiox.js?v=2"></script>
+<script src="raiox.js?v=3"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
@@ -524,7 +529,7 @@ async function mostrarMetas(){
 let ABA = "cg";
 function trocarAba(nova){
   ABA = nova;
-  for (const b of document.querySelectorAll(".abas button")) b.classList.toggle("ativa", b.dataset.aba === nova);
+  for (const b of document.querySelectorAll(".abas button[data-aba]")) b.classList.toggle("ativa", b.dataset.aba === nova);
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
@@ -539,7 +544,20 @@ function trocarAba(nova){
   if (metas) { mostrarMetas(); return; }
   mostrarCobertura(); consultar();
 }
-for (const b of document.querySelectorAll(".abas button")) b.onclick = () => trocarAba(b.dataset.aba);
+for (const b of document.querySelectorAll(".abas button[data-aba]")) b.onclick = () => trocarAba(b.dataset.aba);
+// 19/10, ordem dele: "um botão que eu clique e tem a opção de extrair para outra janela — em todos os campos". A aba abre numa JANELA
+// nova (não aba), pelo endereço com #aba=…; vitrine e raio-x levam o cliente e a vista em que ele está. O TOPICS (painel de decisão,
+// artifact dele no claude.ai) abre do mesmo jeito. O endereço do TOPICS não tem dado: só abre para quem está logado na conta dele.
+const TOPICS_URL = "https://claude.ai/artifact/AkHbS4bcFruP86xLekjNUv";
+function enderecoDaAba(){
+  const p = new URLSearchParams(); p.set("aba", ABA);
+  const est = ABA === "vitrine" ? (window.Colecao && Colecao.estadoVitrine && Colecao.estadoVitrine()) : ABA === "raiox" ? (window.RaioX && RaioX.estado && RaioX.estado()) : null;
+  if (est) { if (est.cliente) p.set("cliente", est.cliente); if (est.vista) p.set("vista", est.vista); }
+  return location.origin + location.pathname + "#" + p.toString();
+}
+function outraJanela(url){ const w = Math.min(screen.availWidth, 1400), h = Math.min(screen.availHeight, 900); window.open(url, "_blank", `popup=yes,width=${w},height=${h},left=0,top=0`); }
+$("bt-janela").onclick = () => outraJanela(enderecoDaAba());
+$("bt-topics").onclick = () => outraJanela(TOPICS_URL);
 function mostrarCobertura(){
   if (COB.erro) { $("cobertura").textContent = "não consegui ler a cobertura (" + COB.erro + ") — recarregue a página; sem a cobertura não respondo"; return; }
   $("cobertura").textContent = "carteira: " + (COB.carteira.map(mesBR).join(", ") || "sem carga") + " · giro: " + (COB.giro.map(mesBR).join(", ") || "sem carga");

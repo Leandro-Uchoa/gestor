@@ -467,5 +467,6 @@ function abrirLuz(raiz, k, modo){
 function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createElement("div"), { className: "mu", textContent: "sem foto" })); }
 function fecharLuz(raiz){ raiz.querySelector(".luz").classList.add("oculto"); }
 
-window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande };
+const estadoVitrine = () => ({ cliente: VIT.cliente, vista: VIT.vista });   // 19/10: para "abrir em outra janela" levar o cliente e a vista
+window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande, estadoVitrine };
 })();
