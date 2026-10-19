@@ -465,7 +465,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.59</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.60</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -496,12 +496,12 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
     <button data-aba="trade">Trade</button>
   </div>
   <!-- 19/10, ele: "cada botão abre no próprio local; e dentro do local eu tenho a opção de abrir numa outra janela" -->
-  <div class="tela-topo"><button type="button" id="bt-fale" class="sec" title="escreva para o TI daqui; a resposta aparece aqui mesmo">fale com o TI ✉</button><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
-  <!-- 19/10, ele: "um campo de conversa contigo dentro do Gestor". É caixa de correio pelo banco (gestor_mensagem): o que ele escreve
-       chega ao TI (vigia no banco) e a resposta volta aqui. Não é IA dentro da página — isso é outra decisão (custo e chave da API). -->
-  <div id="fale" class="card oculto"><div class="fale-topo"><b>Fale com o TI</b> <small class="mu" id="fale-estado"></small><button type="button" class="sec" id="fale-fecha">×</button></div>
+  <div class="tela-topo"><button type="button" id="bt-fale" class="sec" title="escreva para o NÚCLEO (comercial) daqui; a resposta aparece aqui mesmo">fale com o NÚCLEO ✉</button><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
+  <!-- 19/10, ele: "um campo de conversa dentro do Gestor" — e (20:1x) "é o NÚCLEO, comercial puro: trade, metas, vitrine". É caixa de
+       correio pelo banco (gestor_mensagem): o que ele escreve chega ao NÚCLEO (vigia no banco) e a resposta volta aqui. Não é IA dentro da página — isso é outra decisão (custo e chave da API). -->
+  <div id="fale" class="card oculto"><div class="fale-topo"><b>Fale com o NÚCLEO</b> <small class="mu" id="fale-estado"></small><button type="button" class="sec" id="fale-fecha">×</button></div>
     <div id="fale-lista" class="fale-lista"></div>
-    <div class="fale-linha"><textarea id="fale-txt" rows="2" placeholder="escreva aqui e aperte Enter (Shift+Enter quebra linha). O TI responde aqui mesmo."></textarea><button type="button" id="fale-envia">enviar</button></div></div>
+    <div class="fale-linha"><textarea id="fale-txt" rows="2" placeholder="trade, metas, vitrine, cliente: pergunte aqui e aperte Enter (Shift+Enter quebra linha). O NÚCLEO responde aqui mesmo."></textarea><button type="button" id="fale-envia">enviar</button></div></div>
   <div id="tela-cliente" class="oculto"></div>
   <div id="tela-raiox" class="oculto"></div>
   <div id="tela-topics" class="oculto"></div>
@@ -713,9 +713,9 @@ async function faleLer(){
   const r = await sb.from("gestor_mensagem").select("id,texto,enviado_em,resposta,respondido_em,respondido_por,lido_em").order("enviado_em", { ascending: false }).limit(30);
   if (r.error) { $("fale-estado").textContent = "o banco recusou: " + r.error.message; return; }
   const lista = (r.data || []).reverse();
-  $("fale-lista").innerHTML = lista.map(m => `<div class="fm eu"><span>${esc(m.texto)}</span><small>${esc(hhmm(m.enviado_em))}${m.lido_em ? " · lida" : ""}</small></div>${m.resposta ? `<div class="fm ti"><span>${esc(m.resposta)}</span><small>TI · ${esc(hhmm(m.respondido_em))}</small></div>` : ""}`).join("") || `<div class="mu">nenhuma mensagem ainda.</div>`;
+  $("fale-lista").innerHTML = lista.map(m => `<div class="fm eu"><span>${esc(m.texto)}</span><small>${esc(hhmm(m.enviado_em))}${m.lido_em ? " · lida" : ""}</small></div>${m.resposta ? `<div class="fm ti"><span>${esc(m.resposta)}</span><small>${esc(m.respondido_por || "NÚCLEO")} · ${esc(hhmm(m.respondido_em))}</small></div>` : ""}`).join("") || `<div class="mu">nenhuma mensagem ainda.</div>`;
   $("fale-lista").scrollTop = $("fale-lista").scrollHeight;
-  const pend = lista.filter(m => !m.resposta).length; $("fale-estado").textContent = pend ? pend + " sem resposta · o TI lê em até 2 min quando a sala está aberta" : "o TI responde aqui";
+  const pend = lista.filter(m => !m.resposta).length; $("fale-estado").textContent = pend ? pend + " sem resposta · o NÚCLEO lê quando a sala dele está aberta" : "o NÚCLEO responde aqui";
 }
 const hhmm = t => t ? new Date(t).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
 async function faleAbrir(){
