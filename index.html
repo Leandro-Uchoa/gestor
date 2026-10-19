@@ -78,7 +78,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 @media (max-width:600px){.abas .ext{grid-column:span 1}.abas #bt-topics{margin-left:0}}
 /* celular (PICASSO, 15/10): seis abas largas empurravam a página para o lado — 3 + 3 em grade, sem rolagem horizontal */
 @media (max-width:600px){.abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.abas button{padding:9px 4px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
-.mont-placar .curto{display:none}@media (max-width:600px){.mont-placar .cheio{display:none}.mont-placar .curto{display:block}}
+.mont-placar .curto{display:none}@media (max-width:900px){.mont-placar .cheio{display:none}.mont-placar .curto{display:block}}
 .seletor{margin:10px 0 0}.seletor button{padding:8px;font-size:.85rem}
 /* ordem dele (28/09): filtro de cliente por NOME, um toque — nada de digitar no celular */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
@@ -304,7 +304,9 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .mcod{font-size:.62rem;color:var(--preto);margin-top:3px;font-weight:700}
 @keyframes pulso{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}.mthumb.pulso img{animation:pulso .5s ease-out}
 .mont-tit{font-weight:800;font-size:1.05rem}
-.mont-placar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 4px}
+/* 19/10: um placar por tipo (tênis, chinelos…), sem total geral — regra dele: chinelo nunca soma com tênis */
+.mont-placar{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}.pl-tipo{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}
+.pl-tipo em{font-style:normal;font-weight:900;font-size:.72rem;letter-spacing:.06em;color:var(--preto);align-self:center;min-width:70px;border-left:3px solid var(--amarelo);padding-left:6px}
 .mont-placar span{background:var(--off-white);border-radius:10px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;align-items:flex-start}.mont-placar b{color:var(--preto);font-size:1.15rem;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.mont-placar small{color:var(--cinza-escuro);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 /* 19/10, ele: cartão PEQUENO para ver a composição da vitrine — 4 por linha no computador, 3 em tela média, 2 no celular; um título por tipo */
 .mont-vitrine{background:var(--pagina);border-radius:10px;padding:8px;margin-top:8px;max-height:72vh;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-content:start}
@@ -323,7 +325,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 @keyframes sobe{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 .vcard.nova{animation:sobe .6s ease-out;outline:3px solid var(--azul);outline-offset:-1px}.vcard{transition:outline-color 1.5s}
 .vvazia{grid-column:1/-1;padding:42px 16px;text-align:center;color:var(--cinza-escuro);font-weight:800;font-size:1rem}.vvazia small{display:block;margin-top:8px;font-weight:600;font-size:.8rem}
-@media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:repeat(2,minmax(0,1fr))}.colecao .pagina{padding:10px}.mont-placar{grid-template-columns:minmax(0,.7fr) minmax(0,1fr) minmax(0,1.6fr);gap:6px}.mont-placar span{padding:6px 8px}.mont-placar b{font-size:.95rem}}
+@media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:repeat(2,minmax(0,1fr))}.colecao .pagina{padding:10px}.pl-tipo{grid-template-columns:auto minmax(0,.7fr) minmax(0,1fr) minmax(0,1.6fr);gap:6px}.pl-tipo em{min-width:0;font-size:.62rem}.mont-placar span{padding:6px 8px}.mont-placar b{font-size:.95rem}}
 /* impressão (PICASSO, 15/10): só Arial — a Segoe UI / system-ui dava "Font Capture" no Acrobat; e o PDF sai inteiro, sem caixa de rolagem */
 @media print{body,body *{font-family:var(--fonte-sans)!important}html,body{height:auto!important;overflow:visible!important}}
 /* PDF da vitrine (19/10, ele: "os PDFs ainda estão ruins"): A4 deitado, 6 cartões por linha, título e placar no alto, um título por tipo, sem botões */
@@ -331,7 +333,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
    abrir com "Font Capture: Erro de Aplicativo" (ele, 19/10: "aparece uma mensagem, eu queria que evitasse"); a margem volta como padding */
 @media print{@page{size:A4 landscape;margin:0}.mont-esq,.mont-troca,.mont-cab .chips,.mont-cab .frow,.vcard .mais,.colecao.vitrine .filtros label,.colecao.vitrine .filtros .chips,.colecao.vitrine .acoes,#vit-nota,#vit-erro{display:none!important}
   .montador{display:block}.mont-dir{background:#fff;padding:8mm;box-shadow:none}.mont-cab{display:block}.mont-tit{font-size:15pt;font-weight:900;margin:0 0 4px}
-  .mont-placar{display:flex;gap:8px;margin:0 0 6px}.mont-placar span{background:var(--off-white);padding:4px 10px;border-radius:6px}.mont-placar b{font-size:11pt}.mont-placar .curto{display:none}.mont-placar .cheio{display:block}.mont-tipos{font-size:8pt}
+  .mont-placar{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px 18px;margin:0 0 6px}.pl-tipo{display:flex;gap:6px;align-items:center}.pl-tipo em{font-size:8pt}.mont-placar span{background:var(--off-white);padding:3px 8px;border-radius:6px}.mont-placar b{font-size:10pt}.mont-placar small{font-size:6pt}.mont-placar .curto{display:none}.mont-placar .cheio{display:block}
   .mont-vitrine{max-height:none;overflow:visible;background:var(--pagina);padding:6px;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .vsec{font-size:8.5pt;padding-top:5px;break-after:avoid}.vcard{break-inside:avoid;border:1px solid #ddd;box-shadow:none;padding:4px}.vfoto{aspect-ratio:4/3}.vnome{font-size:7.5pt}.vpdv{font-size:8.5pt}.vcard .ref,.vcor{font-size:6.5pt}.vcard .mu{font-size:6pt}.vcard .selo{font-size:5.5pt}
   .colecao.vitrine .filtros{background:none;padding:0;margin:0}.vit-conta{font-size:8pt;color:var(--cinza-escuro)}}
@@ -350,7 +352,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.18</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.19</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -412,7 +414,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=14"></script>
+<script src="colecao.js?v=15"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script>

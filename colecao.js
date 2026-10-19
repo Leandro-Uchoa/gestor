@@ -24,7 +24,8 @@
 (function(){
 const IMG = "img/mini/";
 // 19/10: CHINELOS é tipo próprio (regra dele: chinelo nunca junto do tênis — outro dinheiro, outra cota, outro departamento)
-const TIPOS = [["", "Geral"], ["TENIS", "Footwear"], ["CHINELOS", "Chinelos"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
+// 19/10 (PICASSO): rótulo "Tênis", não "Footwear" — ele não fala inglês; o valor interno segue TENIS
+const TIPOS = [["", "Geral"], ["TENIS", "Tênis"], ["CHINELOS", "Chinelos"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
 const NOME_TIPO = Object.fromEntries(TIPOS.filter(([v]) => v));
 const NBSP = String.fromCharCode(160);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -374,15 +375,14 @@ function desenharDireita(pg){
   // 19/10: por TIPO (tênis, chinelos, meias…) e dentro do tipo do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const lista = todas.filter(it => (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
     .sort((a, b) => (tipoIdx(a.t) - tipoIdx(b.t)) || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
-  const modelos = new Set(todas.map(it => it.m + "|" + it.r)).size, soma = todas.reduce((s, it) => s + (+it.p || 0), 0);
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
-  // o valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
-  const cheio = soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
-  const curto = !soma ? "—" : (soma >= 1e6 ? "R$ " + (soma / 1e6).toFixed(2).replace(".", ",") + " mi" : (soma >= 1e3 ? "R$ " + (soma / 1e3).toFixed(1).replace(".", ",") + " mil" : "R$ " + Math.round(soma)));
-  // 19/10: o placar abre por tipo — o chinelo nunca entra na conta do tênis (regra dele); modelos contados dentro de cada tipo
-  const porTipo = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = todas.filter(it => it.t === v); return `${r} <b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b> mod · ${its.length} cor`; });
-  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b><small>cor(es)</small></span><span><b>${modelos}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(cheio)}</b><b class="curto">${esc(curto)}</b><small>em PDV</small></span>`
-    + (porTipo.length > 1 ? `<div class="mont-tipos mu">${porTipo.join(" · ")}</div>` : "");
+  // 19/10 (regra dele, chinelo-separado-do-tenis; PICASSO na conferência da v5.18): UM PLACAR POR TIPO, sem total geral — o chinelo
+  // nunca soma com o tênis. O valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
+  const dinheiroCheio = s => s ? "R$ " + Number(s).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+  const dinheiroCurto = s => !s ? "—" : (s >= 1e6 ? "R$ " + (s / 1e6).toFixed(2).replace(".", ",") + " mi" : (s >= 1e3 ? "R$ " + (s / 1e3).toFixed(1).replace(".", ",") + " mil" : "R$ " + Math.round(s)));
+  const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = todas.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
+    return `<div class="pl-tipo"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>em PDV</small></span></div>`; });
+  pg.querySelector("#vf-placar").innerHTML = placar.join("") || `<div class="pl-tipo"><em>—</em><span><b>0</b><small>cor(es)</small></span><span><b>0</b><small>modelo(s)</small></span><span><b>—</b><small>em PDV</small></span></div>`;
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
   // cartão PEQUENO (19/10, ele: "está muito grande, um formato ruim; preciso ver a composição da vitrine") e um título por tipo
