@@ -301,11 +301,17 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
    do cliente dos mais caros aos mais baratos; "mais bonito, mais visual, gamificar" — animação é evento (sobe e brilha 5 s), estado é repouso ---- */
 /* o montador inteiro é CLARO (revisão do PICASSO, 15/10: nada de texto branco ou amarelo sobre cinza claro): página cinza, painéis
    brancos, chips brancos com borda cinza e texto preto (ativo = amarelo com texto preto), PDV azul, placar preto sobre branco */
-.montador{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start;min-width:0;font-family:var(--fonte-sans);color:var(--preto)}
+.montador{display:grid;grid-template-columns:minmax(0,var(--esq,1fr)) 10px minmax(0,var(--dir,1.15fr));gap:12px;align-items:start;min-width:0;font-family:var(--fonte-sans);color:var(--preto)}
+/* a barra de arrastar entre os dois lados e o zoom por bloco (ele, 19/10): barra fina, mão de redimensionar; zoom meio opaco no canto, acende ao passar */
+.mont-divisor{align-self:stretch;width:10px;border-radius:5px;background:var(--cinza-claro);cursor:col-resize;opacity:.45;touch-action:none;position:relative}.mont-divisor:hover,.mont-divisor.pegando{opacity:1;background:var(--azul)}.mont-divisor::after{content:"";position:absolute;top:50%;left:3px;width:4px;height:28px;margin-top:-14px;border-left:1px solid var(--cartao);border-right:1px solid var(--cartao)}
+.mont-esq,.mont-dir{position:relative}.mont-zoom{position:absolute;top:6px;right:8px;z-index:3;display:flex;align-items:center;gap:2px;opacity:.35;transition:opacity .2s}.mont-zoom:hover,.mont-zoom:focus-within{opacity:1}.mont-zoom button{width:22px;height:22px;padding:0;margin:0;border-radius:var(--raio-selo);background:var(--off-white);color:var(--preto);border:1px solid var(--cinza-claro);font-weight:900;font-size:.9rem;line-height:1}.mont-zoom b{font-size:.6rem;min-width:30px;text-align:center;color:var(--cinza-escuro)}
+.mont-lista{zoom:var(--z-esq,1)}.mont-vitrine{zoom:var(--z-dir,1)}
+@media (max-width:860px){.mont-divisor{display:none}.mont-lista,.mont-vitrine{zoom:1}}
+@media print{.mont-divisor,.mont-zoom{display:none!important}.mont-vitrine{zoom:1}}
 .montador *,.montador *::before,.montador *::after{box-sizing:border-box}
 .mont-troca{display:none;gap:6px;margin-bottom:8px}.mont-troca button{width:auto;margin:0;padding:8px 14px;border-radius:999px;background:var(--cartao);color:var(--preto);border:1px solid var(--cinza-claro);font-family:inherit;font-weight:800}.mont-troca button.ativa{background:var(--amarelo);border-color:var(--amarelo)}.mont-troca b{margin-left:4px}
 .mont-esq,.mont-dir{background:var(--cartao);border-radius:14px;padding:10px;min-width:0;box-shadow:var(--sombra-cartao)}
-.montador input[type=search]{width:100%;padding:9px 12px;border:1px solid var(--cinza-claro);border-radius:10px;background:var(--cartao);color:var(--preto);font:inherit;font-size:.9rem}.montador input[type=search]::placeholder{color:var(--cinza-escuro)}
+.montador input[type=search]{width:100%;padding:9px 92px 9px 12px;border:1px solid var(--cinza-claro);border-radius:10px;background:var(--cartao);color:var(--preto);font:inherit;font-size:.9rem}.montador input[type=search]::placeholder{color:var(--cinza-escuro)}
 .frow{display:flex;align-items:center;gap:8px;margin-top:6px;min-width:0}.frow.oculto{display:none}.fl{flex:none;width:56px;font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--cinza-escuro)}
 .frow .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:0;padding-bottom:3px;min-width:0;scrollbar-width:thin}
 .montador .chips button{flex:none;width:auto;margin:0;padding:5px 10px;border-radius:999px;background:var(--cartao);color:var(--preto);border:1px solid var(--cinza-claro);font:inherit;font-size:.76rem;font-weight:700;white-space:nowrap}
@@ -387,7 +393,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 @keyframes sobe{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 .vcard.nova{animation:sobe .6s ease-out;outline:3px solid var(--azul);outline-offset:-1px}.vcard{transition:outline-color 1.5s}
 .vvazia{grid-column:1/-1;padding:42px 16px;text-align:center;color:var(--cinza-escuro);font-weight:800;font-size:1rem}.vvazia small{display:block;margin-top:8px;font-weight:600;font-size:.8rem}
-@media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:repeat(2,minmax(0,1fr))}.colecao .pagina{padding:10px}.pl-tipo{grid-template-columns:auto minmax(0,.7fr) minmax(0,1fr) minmax(0,1.6fr);gap:6px}.pl-tipo em{min-width:0;font-size:.62rem}.mont-placar span{padding:6px 8px}.mont-placar b{font-size:.95rem}}
+@media (max-width:860px){.montador{grid-template-columns:minmax(0,1fr)!important}.mont-troca{display:flex}.montador[data-painel="esq"] .mont-dir{display:none}.montador[data-painel="dir"] .mont-esq{display:none}.mont-lista,.mont-vitrine{max-height:none}.mont-vitrine{grid-template-columns:repeat(2,minmax(0,1fr))}.colecao .pagina{padding:10px}.pl-tipo{grid-template-columns:auto minmax(0,.7fr) minmax(0,1fr) minmax(0,1.6fr);gap:6px}.pl-tipo em{min-width:0;font-size:.62rem}.mont-placar span{padding:6px 8px}.mont-placar b{font-size:.95rem}}
 /* impressão (PICASSO, 15/10): só Arial — a Segoe UI / system-ui dava "Font Capture" no Acrobat; e o PDF sai inteiro, sem caixa de rolagem */
 @media print{body,body *{font-family:var(--fonte-sans)!important}html,body{height:auto!important;overflow:visible!important}}
 /* PDF da vitrine (19/10, ele: "os PDFs ainda estão ruins"): A4 deitado, 6 cartões por linha, título e placar no alto, um título por tipo, sem botões */
@@ -414,7 +420,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.40</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.41</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -478,7 +484,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=32"></script>
+<script src="colecao.js?v=33"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script src="topics.js?v=3"></script>

@@ -396,11 +396,35 @@ const GEN_ORDEM = ["Feminino", "Masculino", "Unissex", "Infantil"];
 const genOrd = g => { const i = GEN_ORDEM.indexOf(g); return i < 0 ? 9 : i; };
 const escolhidas = () => VIT.cliente ? DADOS.itens.filter(it => marcas(DADOS.colecao).get(chaveCor(it)) === "escolhida") : [];
 
+// zoom por bloco e a barra de arrastar entre coleção e vitrine (ele, 19/10 15:1x: "botãozinho meio opaco de zoom em cada bloco — maior nos
+// produtos, menor na vitrine — e aquela barrinha que eu arrasto para aumentar um lado e diminuir o outro, como no Excel"). Fica guardado no aparelho.
+const PREF = { ler: (k, d) => { try { const v = localStorage.getItem("gestor.vitrine." + k); return v == null ? d : +v; } catch (e) { return d; } }, gravar: (k, v) => { try { localStorage.setItem("gestor.vitrine." + k, String(v)); } catch (e) {} } };
+function ligarZoomEDivisor(pg){
+  const mont = pg.querySelector(".montador");
+  const aplicar = () => {
+    const ze = PREF.ler("zoom.esq", 1), zd = PREF.ler("zoom.dir", 1), fr = PREF.ler("divisor", 0.465);
+    mont.style.setProperty("--z-esq", ze); mont.style.setProperty("--z-dir", zd);
+    mont.style.setProperty("--esq", fr + "fr"); mont.style.setProperty("--dir", (1 - fr) + "fr");
+    for (const z of mont.querySelectorAll(".mont-zoom")) z.querySelector("b").textContent = Math.round((z.dataset.lado === "esq" ? ze : zd) * 100) + "%";
+  };
+  for (const z of mont.querySelectorAll(".mont-zoom")) for (const b of z.querySelectorAll("button")) b.onclick = () => {
+    const k = "zoom." + z.dataset.lado, v = Math.min(2, Math.max(0.5, Math.round((PREF.ler(k, 1) + 0.1 * +b.dataset.d) * 10) / 10)); PREF.gravar(k, v); aplicar(); };
+  const div = mont.querySelector(".mont-divisor");
+  div.onpointerdown = ev => {
+    ev.preventDefault(); div.setPointerCapture(ev.pointerId); div.classList.add("pegando");
+    const r = mont.getBoundingClientRect(), larg = r.width - div.offsetWidth - 24;   // menos a barra e os dois gaps
+    const move = e => { const fr = Math.min(0.8, Math.max(0.2, (e.clientX - r.left - 12) / larg)); PREF.gravar("divisor", Math.round(fr * 1000) / 1000); aplicar(); };
+    const solta = () => { div.classList.remove("pegando"); div.removeEventListener("pointermove", move); div.removeEventListener("pointerup", solta); div.removeEventListener("pointercancel", solta); };
+    div.addEventListener("pointermove", move); div.addEventListener("pointerup", solta); div.addEventListener("pointercancel", solta);
+  };
+  div.ondblclick = () => { PREF.gravar("divisor", 0.465); aplicar(); };
+  aplicar();
+}
 function desenharMontador(pg){
   if (!pg.querySelector(".montador")) {
     pg.innerHTML = `<div class="montador">
       <div class="mont-troca"><button type="button" data-p="esq" class="ativa">Coleção</button><button type="button" data-p="dir">Vitrine <b id="mont-n"></b></button></div>
-      <div class="mont-esq">
+      <div class="mont-esq"><div class="mont-zoom" data-lado="esq" title="zoom da coleção"><button type="button" data-d="-1">−</button><b></b><button type="button" data-d="1">+</button></div>
         <div class="mont-filtros">
           <input type="search" id="mf-busca" placeholder="digite o nome do produto, a referência ou a cor" autocomplete="off" value="${esc(MF.busca)}">
           <div class="frow"><span class="fl">roteiro</span><div class="chips roteiro" id="mf-roteiro"></div></div>
@@ -412,7 +436,8 @@ function desenharMontador(pg){
         </div>
         <div class="mont-lista" id="mf-lista"></div>
       </div>
-      <div class="mont-dir">
+      <div class="mont-divisor" title="arraste para mudar a largura dos dois lados"></div>
+      <div class="mont-dir"><div class="mont-zoom" data-lado="dir" title="zoom da vitrine"><button type="button" data-d="-1">−</button><b></b><button type="button" data-d="1">+</button></div>
         <div class="mont-cab">
           <div class="mont-tit" id="vf-tit"></div>
           <div class="mont-placar" id="vf-placar"></div>
@@ -424,6 +449,7 @@ function desenharMontador(pg){
       </div>
     </div>`;
     pg.querySelector("#mf-busca").oninput = (ev) => { MF.busca = ev.target.value; clearTimeout(desenharMontador._t); desenharMontador._t = setTimeout(() => desenharEsquerda(pg), 120); };
+    ligarZoomEDivisor(pg);
     for (const b of pg.querySelectorAll(".mont-troca button")) b.onclick = () => { PAINEL = b.dataset.p; pg.querySelector(".montador").dataset.painel = PAINEL; for (const x of pg.querySelectorAll(".mont-troca button")) x.classList.toggle("ativa", x === b); };
   }
   pg.querySelector(".montador").dataset.painel = PAINEL;
