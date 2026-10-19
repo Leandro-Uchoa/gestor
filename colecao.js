@@ -155,7 +155,19 @@ function chips(raiz, id, lista, sel, aoClicar){
   el.innerHTML = lista.map(([v, r, n]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(r)}${n != null ? ` <small>${n}</small>` : ""}</button>`).join("");
   for (const b of el.querySelectorAll("button")) b.onclick = () => aoClicar(b.dataset.v);
 }
-const chipsClientes = (raiz, id) => chips(raiz, id, VIT.clientes.map(c => [c, nomeCli(c)]), new Set(VIT.cliente ? [VIT.cliente] : []), async v => { VIT.cliente = v; MF.tipo = ""; MF.bloco.clear(); await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); });
+// os clientes: os comuns + UM chip "GTM CMS Distribuição" (ele, 19/10 17:0x: "ficou muito botão; agrupa, e lá dentro um filtro de mês")
+// — com o GTM escolhido abre a linha dos meses (JAN…JUN), que é o que escolhe o cliente de verdade ("GTM 1S27 JAN")
+const GTM_GRUPO = "__GTM";
+const chipsClientes = (raiz, id) => {
+  const gp = gtmPref(), comuns = VIT.clientes.filter(c => !c.startsWith(gp)), meses = VIT.clientes.filter(c => c.startsWith(gp)), noGtm = !!(VIT.cliente && VIT.cliente.startsWith(gp));
+  const escolher = async v => { VIT.cliente = v; MF.tipo = ""; MF.bloco.clear(); if (v.startsWith(gp)) PREF.gravar("gtm.mes", meses.indexOf(v)); await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); };
+  chips(raiz, id, [...comuns.map(c => [c, nomeCli(c)]), ...(meses.length ? [[GTM_GRUPO, "GTM CMS Distribuição"]] : [])], new Set(VIT.cliente ? [noGtm ? GTM_GRUPO : VIT.cliente] : []),
+    v => escolher(v === GTM_GRUPO ? (noGtm ? VIT.cliente : (meses[PREF.ler("gtm.mes", 0)] || meses[0])) : v));
+  let linha = raiz.querySelector("#" + id + "-mes");
+  if (!linha) { linha = document.createElement("div"); linha.id = id + "-mes"; linha.className = "chips gtm-meses"; raiz.querySelector("#" + id).insertAdjacentElement("afterend", linha); }
+  linha.classList.toggle("oculto", !noGtm);
+  if (noGtm) chips(raiz, id + "-mes", meses.map(c => [c, c.slice(gp.length) + "/" + String(DADOS.colecao || "").slice(-2)]), new Set([VIT.cliente]), escolher);
+};
 
 function desenhar(){
   const el = EL;
