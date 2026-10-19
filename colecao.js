@@ -358,7 +358,9 @@ function desenharEsquerda(pg){
     else if (v === "inf") { if (!gtm) MF.tipo = "TENIS"; MF.gen.add("Infantil"); }
     else if (v === "chin") { MF.tipo = "CHINELOS"; }
     desenharEsquerda(pg); });
-  const daMarca = DADOS.itens.filter(it => it.m === MF.marca && (!gtm || gtmDe(it)));
+  // GTM (ele, 19/10 10:5x): "quando eu clicar janeiro, extraia só os de janeiro… e deixa todas as opções de cores" — no mês, só os modelos
+  // com volume naquele mês (volume_modelo_mes > 0); dentro deles, todas as cores, com ou sem estrela, de qualquer classe
+  const daMarca = DADOS.itens.filter(it => it.m === MF.marca && (!gtm || (gtmDe(it) && (gtmDe(it).vm[mes] || 0) > 0)));
   chips(pg, "mf-marca", [["OLY", "Olympikus"], ["UA", "Under Armour"]], new Set([MF.marca]), v => { MF.marca = v; MF.tipo = ""; MF.bloco.clear(); MF.gen.clear(); desenharEsquerda(pg); });
   const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
   if (gtm) chips(pg, "mf-tipo", [["", "todas", daMarca.length], ["estrela", "★ estrela Vulcabras", daMarca.filter(it => gtmDe(it).e).length]], new Set(MF.tipo ? [MF.tipo] : []), v => { MF.tipo = v; desenharEsquerda(pg); });
@@ -428,7 +430,7 @@ function desenharDireita(pg){
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
-        ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">${g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "")}">${esc(g.cl)}</i> ` : ""}${g.e ? "★ " : ""}mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b> pares ${esc(mes)}</div>${g.gr ? `<div class="vgrade">${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}`)(gtmDe(it)) : ""}
+        ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">${g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "")}">${esc(g.cl)}</i> ` : ""}${g.e ? "★ " : ""}mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b> pares ${esc(mes)}</div>${g.gr ? `<div class="vgrade">${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}${!(g.vm[mes] || 0) ? `<div class="selo falta vsem">modelo sem volume em ${esc(mes)}</div>` : ""}`)(gtmDe(it)) : (gtm ? `<div class="selo falta vsem">fora do pacote do GTM</div>` : "")}
         ${VIT.grades.get(chaveCor(it)) ? `<button type="button" class="selo grade" data-kc="${esc(chaveCor(it))}" title="trocar a grade">${esc(ROTULO_GRADE[VIT.grades.get(chaveCor(it))] || "grade " + VIT.grades.get(chaveCor(it)))}</button>` : (opcoesGrade(it).length ? `<button type="button" class="selo grade falta" data-kc="${esc(chaveCor(it))}" title="definir a grade">grade?</button>` : "")}
         <div class="mu">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}</div></div>
     </div>`;
