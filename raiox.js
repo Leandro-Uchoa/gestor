@@ -258,10 +258,15 @@ const lista = arr => arr.length > 1 ? arr.slice(0, -1).join(", ") + " e " + arr[
 const corte = arr => arr.length < 2 ? [arr, []] : [arr.slice(0, Math.ceil(arr.length / 2)), arr.slice(Math.ceil(arr.length / 2))];
 // PICASSO (20/10): nas tabelas por loja a altura da linha = espaço útil ÷ (lojas por coluna + 2), teto TETO_LINHA, e o corpo da letra
 // acompanha (com 29 lojas volta ao compacto do molde). util = o que sobra da página depois do cabeçalho, dos vãos e da leitura.
-const TETO_LINHA = 34, ALT_UTIL = 1_080 - 96 - 160;
-const medida = (porColuna, util, fsMax, extraLinhas) => { const h = Math.max(22, Math.min(TETO_LINHA, Math.floor(util / (porColuna + 2 + (extraLinhas || 0))))); const fs = Math.max(15, Math.min(fsMax || 23, Math.round(h * 0.64))); return { fs, pv: Math.max(1, Math.floor((h - fs * 1.2 - 1) / 2)), h }; };
+// PICASSO (20/10, regra corrigida): teto 56 px; fonte = 0,42 × altura da linha, entre 11 e 22 px — a Poly (6 por coluna) enche ~70%,
+// o Ban Ban (15 por coluna) fica no compacto. fsMax é o teto do slide (o mapa de calor pede letra menor nas células estreitas).
+// Mínimo 20 px (decisão de 20/10: "o Ban Ban fica como está"), nunca acima do teto do slide.
+const TETO_LINHA = 56, ALT_UTIL = 1_080 - 96 - 160;
+const medida = (porColuna, util, fsMax, extraLinhas) => { const h = Math.max(22, Math.min(TETO_LINHA, Math.floor(util / (porColuna + 2 + (extraLinhas || 0))))); const fs = Math.max(Math.min(20, fsMax || 22), Math.min(fsMax || 22, Math.round(h * 0.42))); return { fs, pv: Math.max(1, Math.floor((h - fs * 1.2 - 1) / 2)), h }; };
 const altCabec = 107, altLeitura = (frases, size) => 12 + frases.filter(Boolean).reduce((s, f) => s + Math.ceil(String(f).replace(/<[^>]+>/g, "").length / (W / ((size || 24) * 0.5))) * (size || 24) * 1.35 + 6, 0);
 let NOME_DECK = "";
+// mede um texto na fonte do deck (canvas 2d), para cortar o que não cabe antes de fotografar
+const medir = (() => { let ctx = null; return (t, fs, peso) => { if (!ctx) ctx = document.createElement("canvas").getContext("2d"); ctx.font = `${peso || 400} ${fs}px Barlow, Arial, sans-serif`; return ctx.measureText(t).width; }; })();
 const kick = t => `<p style="font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${AZUL}">${t}</p>`;
 const cabec = (kicker, titulo, sub) => `<div style="display:flex;flex-direction:column;gap:8px">${kick(kicker)}<div style="display:flex;flex-direction:row;align-items:baseline;gap:24px"><h2 style="font-size:64px;font-weight:700;line-height:1.1;color:${PRETO};white-space:nowrap">${titulo}</h2>${sub ? `<p style="font-size:24px;color:${CINZA}">${sub}</p>` : ""}</div></div>`;
 const leitura = (frases, size) => `<div style="border-left:6px solid ${AZUL};padding:6px 0 6px 24px;display:flex;flex-direction:column;gap:6px">${frases.filter(Boolean).map(f => `<p style="font-size:${size || 24}px;line-height:1.35;color:${PRETO}">${f}</p>`).join("")}</div>`;
@@ -276,7 +281,7 @@ function tabela(cols, linhas, larg, fs, pad, grupos){
   let s = `<table style="width:${Wt}px;font-size:${fs || 22}px;color:${PRETO};border-collapse:collapse;table-layout:fixed"><colgroup>${larg.map(w => `<col style="width:${w}px">`).join("")}</colgroup>`;
   if (grupos) s += `<tr>${grupos.map(([t, n, bg]) => `<th colspan="${n}" style="background:${bg};color:${bg === "transparent" ? PRETO : OFF};font-weight:700;padding:3px 4px;text-align:center;border-left:2px solid ${OFF}">${t}</th>`).join("")}</tr>`;
   s += `<tr>${cols.map(([t, al]) => `<th style="background:${PRETO};color:${OFF};font-weight:700;padding:${pad};text-align:${al};line-height:1.15">${t}</th>`).join("")}</tr>`;
-  for (const ln of linhas) s += `<tr style="background:${ln.bg || "transparent"}">${ln.cells.map(([t, extra], i) => `<td style="padding:${pad};text-align:${cols[i][1]};border-bottom:1px solid rgba(0,0,0,0.12);white-space:nowrap;overflow:hidden;${extra || ""}">${t}</td>`).join("")}</tr>`;
+  for (const ln of linhas) s += `<tr style="background:${ln.bg || "transparent"}">${ln.cells.map(([t, extra], i) => `<td style="padding:${pad};text-align:${cols[i][1]};border-bottom:1px solid rgba(0,0,0,0.12);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${extra || ""}">${t}</td>`).join("")}</tr>`;
   return s + "</table>";
 }
 const duas = (a, b, gap) => `<div style="display:flex;flex-direction:row;gap:${gap || 32}px;align-items:flex-start">${a}${b}</div>`;
@@ -337,7 +342,12 @@ function montarApresentacao(d){
   // a loja para o cliente é o CÓDIGO DELE (l.loja: MA09, 021…), que é como ele a reconhece; l.nome é a descrição e vai ao lado, em
   // cinza, quando cabe; l.codigo (o da Vulcabras) nunca sai. Nas leituras, só o código dele (o texto do banco já fala nele).
   const nomeL = l => esc(String(l.loja));
-  const lojaCel = (l, larg, fs) => { const nome = bonito(l.nome || ""), cabe = nome && (String(l.loja).length + 1 + nome.length) * fs * 0.52 <= larg - 16; return `<b>${nomeL(l)}</b>${cabe ? ` <span style="color:${CINZA}">${esc(nome)}</span>` : ""}`; };
+  // PICASSO (20/10): o nome entra SEMPRE; quando não cabe, corta com reticências. O html2canvas não desenha text-overflow, então a
+  // reticência é posta aqui, medindo o texto na própria fonte (a td continua nowrap + overflow hidden como rede de segurança).
+  const lojaCel = (l, larg, fs, ph) => { const cod = String(l.loja); let nome = bonito(l.nome || ""); if (!nome) return `<b>${esc(cod)}</b>`;
+    const livre = larg - 2 * (ph || 6) - medir(cod + " ", fs, 700) - 2;
+    if (medir(nome, fs) > livre) { while (nome.length > 1 && medir(nome + "…", fs) > livre) nome = nome.slice(0, -1); nome = nome.trimEnd() + "…"; }
+    return `<b>${esc(cod)}</b> <span style="color:${CINZA}">${esc(nome)}</span>`; };
   const xc = (l, c) => ((l.cat || {})[c] || {});
   const texto = t => esc(t);
   // famílias e categorias: pelo nome, não pela posição
@@ -392,7 +402,7 @@ function montarApresentacao(d){
     const frSec = !secas.length ? "Nenhuma loja está abaixo de 4 meses." : secas.length === 1 ? `Só a ${nomeL(secas[0])}${secas[0] === L[0] ? ", a maior loja," : ""} está abaixo de 4 meses (${n1(secas[0].cob)}).` : `${lista(secas.map(l => `${nomeL(l)} (${n1(l.cob)})`))} estão abaixo de 4 meses.`;
     const frPes = !pesadas.length ? "Nenhuma passa de 8 meses." : pesadas.length === 1 ? `A ${nomeL(pesadas[0])} passa de 8 meses (${n1(pesadas[0].cob)}).` : `${lista(pesadas.map(nomeL))} passam de 8 meses; a ${nomeL(pesadas[0])} tem ${n1(pesadas[0].cob)}.`;
     const frases = [frCl, frSec + " " + frPes], { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura(frases)), pad = `${pv}px 8px`;
-    const lin = l => ({ bg: tint(l.cluster), cells: [...(temCl ? [[esc(l.cluster || ""), ""]] : []), [lojaCel(l, 304, fs), ""], [n0(l.v), ""], [pc1(l.part), ""], [n0(l.e), ""], [n1(l.cob), l.cob == null ? "" : l.cob < 4 ? `background:${AMARELO};font-weight:800` : l.cob > 8 ? `background:${CINZA2}` : ""]] });
+    const lin = l => ({ bg: tint(l.cluster), cells: [...(temCl ? [[esc(l.cluster || ""), ""]] : []), [lojaCel(l, 304, fs, 8), ""], [n0(l.v), ""], [pc1(l.part), ""], [n0(l.e), ""], [n1(l.cob), l.cob == null ? "" : l.cob < 4 ? `background:${AMARELO};font-weight:800` : l.cob > 8 ? `background:${CINZA2}` : ""]] });
     const rede = { bg: CINZA2, cells: [...(temCl ? [["", ""]] : []), ["<b>Rede</b>", ""], [`<b>${n0(ESC.v)}</b>`, ""], ["<b>100%</b>", ""], [`<b>${n0(ESC.e)}</b>`, ""], [`<b>${n1(cob)}</b>`, ""]] };
     const corpoT = e2.length ? duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad)) : tabela(cols, [...e1.map(lin), rede], LG, fs, pad);
     pags.push(pagina(cabec("Lojas e clusters · " + escopoTxt, "Venda e estoque por porta", "pares · cobertura em meses · amarelo: abaixo de 4 · cinza: acima de 8") + corpoT + leitura(frases), FONTE_LJ, 16));
@@ -412,7 +422,7 @@ function montarApresentacao(d){
     const fr2 = catChi ? `O chinelo se concentra em ${top3(catChi)}.` : "";
     const frases = [`<span style="color:${CINZA}">venda média ${janela} · a participação é da loja dentro de cada categoria</span>`, [fr1, fr2].filter(Boolean).join(" ")];
     const { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 28 - altLeitura(frases), cats.length <= 9 ? 19 : 17), pad = `${pv}px 4px`;
-    const lin = l => ({ bg: "transparent", cells: [[esc(l.cluster || ""), "background:" + tint(l.cluster)], [lojaCel(l, 188, fs), "background:" + tint(l.cluster)], ...cats.map((c, j) => [pc1(partDe(l, c)), heat(partDe(l, c), mx[j])])] });
+    const lin = l => ({ bg: "transparent", cells: [[esc(l.cluster || ""), "background:" + tint(l.cluster)], [lojaCel(l, 188, fs, 4), "background:" + tint(l.cluster)], ...cats.map((c, j) => [pc1(partDe(l, c)), heat(partDe(l, c), mx[j])])] });
     const rede = { bg: PRETO, cells: [["", "color:" + OFF], ["<b>Rede</b>", "color:" + OFF], ...cats.map(() => ["<b>100%</b>", "color:" + OFF])] };
     pags.push(pagina(cabec("Lojas e clusters · participação de cada porta", "Quanto cada loja leva de cada categoria", "cada coluna soma 100% · mais escuro = fatia maior") + duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad), 24)
       + leitura(frases), FONTE_LJ, 14));
@@ -494,7 +504,7 @@ function montarApresentacao(d){
     const lid = c => L.filter(l => (xc(l, c).idx || 0) >= 110).sort((a, b) => xc(b, c).idx - xc(a, c).idx).slice(0, 2);
     const frI = catsTenis.map(c => { const t = lid(c); return t.length ? `<b>${ab(c)}</b> puxa em ${lista(t.map(l => `${nomeL(l)} (${xc(l, c).idx})`))}` : ""; }).filter(Boolean).join("; ");
     const frasesI = [frI ? frI + "." : "Nenhuma loja passa de 110 em categoria alguma."], mI = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura(frasesI)), padI = `${mI.pv}px 6px`;
-    const linI = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 190, mI.fs), ""], ...catsTenis.map(c => celIdx(xc(l, c).idx))] });
+    const linI = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 190, mI.fs, 6), ""], ...catsTenis.map(c => celIdx(xc(l, c).idx))] });
     const redeI = { bg: CINZA2, cells: [["", ""], ["<b>Rede (pares/mês)</b>", ""], ...catsTenis.map(c => [`<b>${n0((T[c] || {}).v)}</b>`, ""])] };
     pags.push(pagina(cabec("Tênis por loja · quem vende o quê", "Índice por categoria", "100 = a loja vende a categoria na mesma proporção do seu tênis · azul: 110 ou mais · cinza: 70 ou menos")
       + duas(tabela(cols, e1.map(linI), LG, mI.fs, padI), tabela(cols, [...e2.map(linI), redeI], LG, mI.fs, padI)) + leitura(frasesI), FONTE_LJ, 16));
@@ -505,7 +515,7 @@ function montarApresentacao(d){
     const frF = falta.length ? `Falta produto onde a venda é alta: ${falta.slice(0, 7).map(([l, c, v]) => `${nomeL(l)} ${ab(c)} (${n1(v)})`).join("; ")}.` : "Nenhuma loja está abaixo de 4 meses numa categoria em que vende 15 pares/mês ou mais.";
     const frP = (pesados.length ? `${lista(pesados.map(([c, v]) => `${esc(bonito(c))} (${n1(v)} meses)`))} ${pesados.length > 1 ? "estão pesados" : "está pesado"} na rede` : "Nenhuma categoria passa de 8 meses na rede") + (leve ? `; a ${esc(bonito(leve[0]))} gira em ${n1(leve[1])}.` : ".");
     const mC = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura([frF, frP])), padC = `${mC.pv}px 6px`;
-    const linC = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 190, mC.fs), ""], ...catsTenis.map(c => celCob(xc(l, c)))] });
+    const linC = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 190, mC.fs, 6), ""], ...catsTenis.map(c => celCob(xc(l, c)))] });
     pags.push(pagina(cabec("Tênis por loja · estoque contra venda", "Cobertura por categoria", "meses de estoque na venda média · amarelo: abaixo de 4 · cinza: acima de 10")
       + duas(tabela(cols, e1.map(linC), LG, mC.fs, padC), tabela(cols, [...e2.map(linC), redeC], LG, mC.fs, padC)) + leitura([frF, frP]), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 16));
   }
@@ -532,7 +542,7 @@ function montarApresentacao(d){
     const fr0 = secasM.length ? `Meias: ${lista(secasM.slice(0, 5).map(l => `${nomeL(l)} (${n1(xc(l, catMei).cob)})`))} ${secasM.length > 1 ? "têm" : "tem"} menos de 1 mês de estoque.` : "";
     const frs = e1.length <= 10 ? OC.map(([c, t]) => (d.leitura || {})[c] ? `<b>${t}:</b> ${texto(d.leitura[c])}` : "").filter(Boolean) : [];
     const fsL = e1.length <= 10 ? 24 : 22, { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 28 - altLeitura([fr0, ...frs], fsL), 21, 1), pad = `${pv}px 5px`;
-    const lin = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 216, fs), ""], ...OC.flatMap(([c]) => { const x = xc(l, c), lim = /MEIA/i.test(c) ? 2 : 4;
+    const lin = l => ({ bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 216, fs, 5), ""], ...OC.flatMap(([c]) => { const x = xc(l, c), lim = /MEIA/i.test(c) ? 2 : 4;
       return [[x.v == null ? "—" : x.v < 100 ? n1(x.v) : n0(x.v), ""], !x.v || x.cob == null || x.e < 0 ? ["—", `color:${CINZA}`] : [n1(x.cob), x.cob < lim ? `background:${AMARELO};font-weight:800` : x.cob > 12 ? `background:${CINZA2}` : ""]]; })] });
     const rede = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], ...OC.flatMap(([c]) => { const t = T[c] || {}; return [[`<b>${n0(t.v)}</b>`, ""], [`<b>${n1(t.v ? t.e / t.v : null)}</b>`, ""]]; })] };
     pags.push(pagina(cabec("Chinelos, acessórios e meias · por loja", "Venda e cobertura", "venda média/mês · cobertura em meses · amarelo: abaixo de 4 (meias: abaixo de 2) · cinza: acima de 12")
@@ -546,7 +556,7 @@ function montarApresentacao(d){
     const topU = L.slice().sort((a, b) => (xc(b, catUA).v || 0) - (xc(a, catUA).v || 0)).slice(0, 6), somaTop = topU.reduce((s, l) => s + (xc(l, catUA).v || 0), 0), par = L.filter(l => (xc(l, catUA).v || 0) < 1.5 && (xc(l, catUA).e || 0) >= 40);
     const frases = [`As ${topU.length} lojas que mais vendem (${topU.map(nomeL).join(", ")}) fazem ${pc(t.v ? somaTop / t.v : null)} da venda de UA.${par.length ? ` ${lista(par.map(nomeL))} quase não ${par.length > 1 ? "vendem" : "vende"} e ${par.length > 1 ? "têm" : "tem"} estoque.` : ""}`];
     const { fs, pv } = medida(e1.length, ALT_UTIL - altCabec - 32 - altLeitura(frases)), pad = `${pv}px 8px`;
-    const lin = l => { const x = xc(l, catUA); return { bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 236, fs), ""], [n1(x.v), ""], [x.e < 0 ? "—" : n0(x.e), ""], !x.v || x.cob == null || x.e < 0 ? ["—", `color:${CINZA}`] : [n0(x.cob), x.cob > 24 ? `background:${CINZA2}` : ""], [x.idx == null ? "—" : String(x.idx), x.idx >= 110 ? `background:rgba(46,62,252,0.75);color:${OFF};font-weight:700` : ""]] }; };
+    const lin = l => { const x = xc(l, catUA); return { bg: tint(l.cluster), cells: [[esc(l.cluster || ""), ""], [lojaCel(l, 236, fs, 8), ""], [n1(x.v), ""], [x.e < 0 ? "—" : n0(x.e), ""], !x.v || x.cob == null || x.e < 0 ? ["—", `color:${CINZA}`] : [n0(x.cob), x.cob > 24 ? `background:${CINZA2}` : ""], [x.idx == null ? "—" : String(x.idx), x.idx >= 110 ? `background:rgba(46,62,252,0.75);color:${OFF};font-weight:700` : ""]] }; };
     const rede = { bg: CINZA2, cells: [["", ""], ["<b>Rede</b>", ""], [`<b>${n1(t.v)}</b>`, ""], [`<b>${n0(t.e)}</b>`, ""], [`<b>${n0(cobU)}</b>`, ""], ["<b>100</b>", ""]] };
     pags.push(pagina(cabec("Under Armour · tênis por loja", "Onde o UA gira", "pares · cobertura em meses · índice 100 = proporção do tênis da loja · azul: 110 ou mais · cinza: acima de 24 meses")
       + duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad)) + leitura(frases), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 16));
