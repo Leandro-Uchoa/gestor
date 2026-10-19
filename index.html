@@ -74,8 +74,9 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
 .abas button.ativa,.seletor button.ativa{background:var(--acc);color:var(--preto);border-color:var(--acc)}
 /* 19/10, ele: "um botão para extrair para outra janela — em todos os campos"; e o TOPICS ao lado, para ficar numa tela paralela */
-.abas .ext{flex:none;width:auto;padding:10px 12px;border-style:dashed;color:var(--ink);font-size:.82rem}.abas .ext:hover{border-color:var(--acc);color:var(--acc)}.abas #bt-topics{margin-left:auto}
-@media (max-width:600px){.abas .ext{grid-column:span 1}.abas #bt-topics{margin-left:0}}
+.tela-topo{display:flex;justify-content:flex-end;margin:-6px 0 8px}.tela-topo button{width:auto;margin:0;padding:6px 12px;font-size:.78rem;border-style:dashed;color:var(--mu);background:transparent}.tela-topo button:hover{border-color:var(--acc);color:var(--acc)}
+.topics-card{max-width:620px}.topics-card .sec-tit{font-weight:800;color:var(--acc);margin:0 0 8px}.topics-card p{color:var(--mu);font-size:.9rem;line-height:1.5;margin:0 0 12px}.topics-card button{width:auto;padding:12px 18px}
+@media print{.tela-topo{display:none}}
 /* celular (PICASSO, 15/10): seis abas largas empurravam a página para o lado — 3 + 3 em grade, sem rolagem horizontal */
 @media (max-width:600px){.abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.abas button{padding:9px 4px;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .mont-placar .curto{display:none}@media (max-width:900px){.mont-placar .cheio{display:none}.mont-placar .curto{display:block}}
@@ -357,7 +358,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.20</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.21</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -383,10 +384,16 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
     <button data-aba="vitrine">Vitrine</button>
     <button data-aba="atas">Atas</button>
     <button data-aba="raiox">Raio-X</button>
-    <button type="button" class="ext" id="bt-topics" title="abre o TO-DO LIST TOPICS em outra janela">TOPICS ⧉</button>
-    <button type="button" class="ext" id="bt-janela" title="abre esta aba em outra janela, do jeito que está (cliente, vista)">outra janela ⧉</button>
+    <button data-aba="topics">TOPICS</button>
   </div>
+  <!-- 19/10, ele: "cada botão abre no próprio local; e dentro do local eu tenho a opção de abrir numa outra janela" -->
+  <div class="tela-topo"><button type="button" id="bt-janela" class="sec" title="abre esta tela em outra janela, do jeito que está (cliente, vista)">abrir esta tela em outra janela ⧉</button></div>
   <div id="tela-raiox" class="oculto"></div>
+  <div id="tela-topics" class="oculto"><div class="card topics-card">
+    <div class="sec-tit">TO-DO LIST TOPICS</div>
+    <p>O TOPICS mora no claude.ai, que não deixa a página dele ser mostrada dentro de outra (regra de segurança do site deles, não nossa). Por isso ele não abre aqui dentro: abre numa janela própria, que você deixa na outra tela.</p>
+    <button type="button" id="bt-topics">abrir o TOPICS em outra janela ⧉</button>
+  </div></div>
   <div id="tela-catalogo" class="oculto"></div>
   <div id="tela-colecao" class="oculto"></div>
   <div id="tela-vitrine" class="oculto"></div>
@@ -481,6 +488,7 @@ const ABAS = {
   colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar; toque no + para pôr a cor na vitrine do cliente escolhido. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
   vitrine: { subtitulo: "· vitrine", rodape: "As cores escolhidas para o cliente, gravadas no banco atrás do login: fecha e volta, no celular ou no computador, e estão aqui. × tira da vitrine. Exportar PDF = imprimir." },
   raiox: { subtitulo: "· raio-x clientes", rodape: "O raio-x do cliente, loja a loja: cluster, regulador, categorias, sazonalidade e pirâmide de PDV. Calculado da AG PORTA pelo NÚCLEO; mora no banco, atrás do login. Imprimir = exportar." },
+  topics: { subtitulo: "· topics", rodape: "" },
 };
 // cobertura de meses de cada fonte (lida do banco no arranque); erro = cobertura DESCONHECIDA, não vazia
 const COB = { carteira: [], giro: [], erro: null };
@@ -542,9 +550,11 @@ function trocarAba(nova){
   $("subtitulo").textContent = ABAS[nova].subtitulo;
   $("rodape").textContent = ABAS[nova].rodape;
   $("resultado").innerHTML = ""; msg("msg-pergunta", "");
-  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine", rx = nova === "raiox";
-  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit); $("tela-raiox").classList.toggle("oculto", !rx);
-  $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit || rx); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit || rx);
+  const metas = nova === "metas", cat = nova === "catalogo", atas = nova === "atas", col = nova === "colecao", vit = nova === "vitrine", rx = nova === "raiox", top = nova === "topics";
+  $("tela-metas").classList.toggle("oculto", !metas); $("tela-catalogo").classList.toggle("oculto", !cat); $("tela-atas").classList.toggle("oculto", !atas); $("tela-colecao").classList.toggle("oculto", !col); $("tela-vitrine").classList.toggle("oculto", !vit); $("tela-raiox").classList.toggle("oculto", !rx); $("tela-topics").classList.toggle("oculto", !top);
+  $("filtros").classList.toggle("oculto", metas || cat || atas || col || vit || rx || top); $("resultado").classList.toggle("oculto", metas || cat || atas || col || vit || rx || top);
+  $("bt-janela").classList.toggle("oculto", top);
+  if (top) return;
   if (rx) { RaioX.abrir(sb, $("tela-raiox")); return; }
   if (atas) { Atas.abrir(sb, $("tela-atas")); return; }
   if (vit) { Colecao.abrirVitrine(sb, $("tela-vitrine")); return; }
