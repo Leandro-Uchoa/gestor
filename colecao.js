@@ -468,7 +468,9 @@ function desenharEsquerda(pg){
     </div>`;
   }
   const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
-  pg.querySelector("#mf-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) — toque na cor para pôr na vitrine`;
+  // no GTM o contador diz a MARCA (ele, 19/10 13:1x: "14 modelos e 58 cores à esquerda, 17 e 51 na vitrine — não bate": a esquerda é só a marca do chip; a vitrine soma as duas)
+  const outra = gtm ? (() => { const om = MF.marca === "OLY" ? "UA" : "OLY", oi = DADOS.itens.filter(it => it.m === om && gtmDe(it) && (gtmDe(it).vm[mes] || 0) > 0); return ` · ${om === "OLY" ? "Olympikus" : "Under Armour"}: ${new Set(oi.map(it => it.r)).size} modelo(s) · ${oi.length} cor(es) (toque no chip)`; })() : "";
+  pg.querySelector("#mf-conta").textContent = `${gtm ? (MF.marca === "OLY" ? "Olympikus" : "Under Armour") + ": " : ""}${modelos} modelo(s) · ${lista.length} cor(es)${outra} — toque na cor para pôr na vitrine`;
   for (const b of L.querySelectorAll(".ref")) b.onclick = (ev) => { ev.stopPropagation(); copiar(b); };
   for (const th of L.querySelectorAll(".mthumb:not(.fora)")) th.onclick = () => { th.classList.add("pulso"); setTimeout(() => th.classList.remove("pulso"), 500); alternar(th.dataset.kc, "montador"); };
   ligarCaixas(L);
