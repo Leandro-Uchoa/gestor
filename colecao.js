@@ -612,16 +612,27 @@ const fotoMini = it => { const src = srcFoto(it); return src ? `<img loading="la
 
 function desenharDireita(pg){
   const todas = escolhidas();
-  const ct = new Map(), cgn = new Map(), cb = new Map();
-  for (const it of ordenar(todas)) { ct.set(it.t, (ct.get(it.t) || 0) + 1); if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1); const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
-  // filtro de MARCA na vitrine (ele, 19/10 16:0x: "deixa o filtro de Under Armour e de Olympikus, já me confundi uma vez")
-  const cm = new Map(); for (const it of todas) cm.set(it.m, (cm.get(it.m) || 0) + 1);
+  // filtros em CASCATA (ele, 19/10 17:4x: "tudo só aparece de acordo com o que eu for filtrando; se só tem Olympikus, só Olympikus; se tem
+  // tênis e chinelo, os dois e 'todos' — não 'tudo'; filtrei tênis, a família chinelo some"): cada linha conta só o que passou nas de cima
   if (ehGtm()) VF_MES.v.clear();
-  chips(pg, "vf-marca", [["", "as duas"], ...[["OLY", "Olympikus"], ["UA", "Under Armour"]].filter(([v]) => cm.has(v)).map(([v, r]) => [v, r, cm.get(v)])], VF.marca, v => { if (v === "") VF.marca.clear(); else if (VF.marca.has(v)) VF.marca.delete(v); else VF.marca.add(v); desenharDireita(pg); });
-  chips(pg, "vf-tipo", [["", "tudo"], ...TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => [v, r, ct.get(v)])], VF.tipo, v => { if (v === "") VF.tipo.clear(); else if (VF.tipo.has(v)) VF.tipo.delete(v); else VF.tipo.add(v); desenharDireita(pg); });
-  chips(pg, "vf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], VF.gen, v => { if (v === "") VF.gen.clear(); else if (VF.gen.has(v)) VF.gen.delete(v); else VF.gen.add(v); desenharDireita(pg); });
-  { const f = pg.querySelector("#vf-gen").closest(".frow"); if (f) f.classList.toggle("oculto", ehGtm()); if (ehGtm()) VF.gen.clear(); }
-  chips(pg, "vf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], VF.bloco, v => { if (v === "") VF.bloco.clear(); else if (VF.bloco.has(v)) VF.bloco.delete(v); else VF.bloco.add(v); desenharDireita(pg); });
+  const conta = (lista, f) => { const m = new Map(); for (const it of lista) { const k = f(it); if (k) m.set(k, (m.get(k) || 0) + 1); } return m; };
+  const linha = (id, m, rotulo, sel, rotTodos, ordem) => {
+    for (const v of [...sel]) if (!m.has(v)) sel.delete(v);                                   // opção que sumiu com a cascata sai do filtro
+    const op = [...m.entries()].sort(ordem || ((a, b) => String(a[0]).localeCompare(String(b[0])))).map(([v, n]) => [v, rotulo(v), n]);
+    const um = op.length === 1;
+    chips(pg, id, um ? op : [...op, ["", rotTodos]], um ? new Set([op[0][0]]) : sel, v => { if (um) return; if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); desenharDireita(pg); });
+    const f = pg.querySelector("#" + id).closest(".frow"); if (f) f.classList.toggle("oculto", !op.length);
+  };
+  const NOME_MARCA = { OLY: "Olympikus", UA: "Under Armour" };
+  linha("vf-marca", conta(todas, it => it.m), v => NOME_MARCA[v] || v, VF.marca, "todas", (a, b) => (a[0] === "OLY" ? -1 : 1));
+  const l1 = todas.filter(it => !VF.marca.size || VF.marca.has(it.m));
+  linha("vf-tipo", conta(l1, it => it.t), v => NOME_TIPO[v] || v, VF.tipo, "todos", (a, b) => tipoIdx(a[0]) - tipoIdx(b[0]));
+  const l2 = l1.filter(it => !VF.tipo.size || VF.tipo.has(it.t));
+  linha("vf-gen", ehGtm() ? new Map() : conta(l2, it => it.ge), v => v, VF.gen, "todos", (a, b) => genOrd(a[0]) - genOrd(b[0]));
+  if (ehGtm()) VF.gen.clear();
+  const l3 = l2.filter(it => !VF.gen.size || VF.gen.has(it.ge || ""));
+  linha("vf-bloco", conta(l3, it => familiaDe(it)), v => titulo(v), VF.bloco, "todas as famílias");
+  const ct = conta(todas, it => it.t);
   // 19/10: por SEÇÃO (tênis feminino · masculino · grade especial · infantil · grade unissex; depois chinelos, meias…) e dentro da seção
   // do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const gtm = ehGtm(), mes = gtmMes();
@@ -646,9 +657,10 @@ function desenharDireita(pg){
     const c0 = its.map(condDe).find(Boolean), rotCusto = temCond ? (gtm ? "custo · markup 2,0 · 63 d" : `custo · markup ${c0 ? c0.markup.toFixed(2).replace(".", ",") : "?"}${c0 && c0.prazo ? ` · ${c0.prazo} d` : ""}`) : "em PDV";
     const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
     const teto = gtm ? [...new Map(its.map(it => [it.m + "|" + it.r, it])).values()].reduce((s, it) => s + (((gtmDe(it) || { vm: {} }).vm[mes]) || 0), 0) : null;
-    const pm = {}; if (!gtm) for (const it of semMes.filter(x => x.t === v)) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (k in m) pm[k] = (pm[k] || 0) + (m[k] || 0); }
+    const pm = {}, skus = {}; if (!gtm) for (const it of semMes.filter(x => x.t === v)) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (k in m) { pm[k] = (pm[k] || 0) + (m[k] || 0); skus[k] = (skus[k] || 0) + 1; } }
+    const ano = String(DADOS.colecao || "").slice(-2);
     const totMes = MESES_V.filter(k => k in pm && (!VF_MES.v.size || VF_MES.v.has(k))).reduce((a, k) => a + pm[k], 0);
-    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>${esc(rotCusto)}</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>${!gtm && Object.keys(pm).length ? `<div class="pl-meses"><em>mês / pares</em>${MESES_V.filter(k => k in pm).map(k => `<button type="button" class="pl-mes${VF_MES.v.has(k) ? " ativa" : ""}" data-m="${k}" title="aperta para filtrar; de novo para tirar"><b>${pm[k].toLocaleString("pt-BR")}</b><small>${k}</small></button>`).join("")}<span class="tot"><b>${totMes.toLocaleString("pt-BR")}</b><small>${VF_MES.v.size ? "nos meses marcados" : "total"}</small></span></div>` : ""}`; });
+    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>${esc(rotCusto)}</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>${!gtm && Object.keys(pm).length ? `<div class="pl-meses"><em>mês / pares</em>${MESES_V.filter(k => k in pm).map(k => `<button type="button" class="pl-mes${VF_MES.v.has(k) ? " ativa" : ""}" data-m="${k}" title="aperta para filtrar; de novo para tirar"><small>${k}/${esc(ano)}</small><b>${pm[k].toLocaleString("pt-BR")}</b><i>${skus[k]} SKU${skus[k] === 1 ? "" : "s"}</i></button>`).join("")}<span class="tot"><small>${VF_MES.v.size ? "meses marcados" : "total"}</small><b>${totMes.toLocaleString("pt-BR")}</b><i>${new Set(semMes.filter(x => x.t === v && VIT.meses.get(chaveCor(x)) && MESES_V.some(k => k in VIT.meses.get(chaveCor(x)) && (!VF_MES.v.size || VF_MES.v.has(k)))).map(x => chaveCor(x))).size} SKUs</i></span></div>` : ""}`; });
   pg.querySelector("#vf-placar").innerHTML = placar.join("") || `<div class="pl-tipo"><em>—</em><span><b>0</b><small>cor(es)</small></span><span><b>0</b><small>modelo(s)</small></span><span><b>—</b><small>em PDV</small></span></div>`;
   for (const b of pg.querySelectorAll("#vf-placar .pl-mes")) b.onclick = () => { const m = b.dataset.m; if (VF_MES.v.has(m)) VF_MES.v.delete(m); else VF_MES.v.add(m); desenharDireita(pg); };
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
