@@ -352,6 +352,10 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cx{margin:0;width:34px;height:34px;padding:0;border-radius:var(--raio-selo);background:var(--off-white);color:var(--preto);border:1px solid var(--cinza-claro);font-size:1.1rem;font-weight:900;line-height:1;cursor:pointer;flex:none}.cx:hover{background:var(--amarelo);border-color:var(--amarelo)}
 .mcol{display:flex;flex-direction:column;align-items:center;width:76px}.mthumbs .mdist{display:flex;flex-direction:column;align-items:stretch;gap:1px;margin:2px 0 4px;min-height:26px;width:100%}.mthumbs .mrow{display:flex;align-items:center;justify-content:center;gap:2px}.mthumbs .mtot{font-size:.6rem;font-weight:800;text-align:center;color:var(--cinza-escuro)}.mthumbs .mtot b{color:var(--preto);font-size:.68rem}.mteto small{font-weight:600}.mthumbs .mdist.vazia{min-height:0;margin:0}.mthumbs .mdist .cx{width:20px;height:22px;font-size:.85rem}.mthumbs .mdist span{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;line-height:1.05}.mthumbs .mdist b{font-size:.78rem;color:var(--preto)}.mthumbs .mdist small{font-size:.58rem;font-weight:700;color:var(--cinza-escuro)}
 .gq-pares{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}.gq-rot{flex:none;width:130px;font-size:.8rem;font-weight:800}.gq-pares input{width:70px!important}.gq-sub{font-size:.78rem;font-weight:700;color:var(--cinza-escuro)}.gq-pct{font-size:.85rem;font-weight:800;margin-top:2px}.gq-pares input{width:120px;font-size:1.3rem;font-weight:800;padding:8px 10px;border:1px solid var(--cinza-claro);border-radius:var(--raio-selo);font-family:var(--fonte-mono);color:var(--preto);background:var(--off-white)}.gq-pct{font-size:.8rem;font-weight:700;color:var(--cinza-escuro)}.gq-pct.passou{color:var(--vermelho-ua)}
+/* a vitrine de cliente por mês (19/10, via NÚCLEO): meses com pares, grade padrão / modificada / aberta */
+.grade-quadro.meses{max-width:560px}.gq-meses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.gq-mes{display:flex;align-items:center;gap:6px;border:1px solid var(--cinza-claro);border-radius:var(--raio-selo);padding:6px 8px;background:var(--off-white);cursor:pointer}.gq-mes.on{border-color:var(--azul);background:var(--cartao)}.gq-mes .gm-rot{font-weight:900;font-size:.8rem;width:34px}.gq-mes input[type=number]{width:100%!important;min-width:0;font-size:1rem!important;padding:4px 6px!important}.gq-mes input[type=number]:disabled{opacity:.35}
+.gq-grade{display:grid;gap:6px}.gq-opt{display:flex;align-items:center;gap:6px;font-weight:800;font-size:.85rem;cursor:pointer}.gq-opt input{margin:0}.gq-grade .gq-botoes button{font-size:.8rem;padding:9px}.gq-grade .gq-botoes button:disabled{opacity:.4}.gq-texto{font-family:var(--fonte-mono);font-size:.95rem;padding:8px 10px;border:1px solid var(--cinza-claro);border-radius:var(--raio-selo);background:var(--off-white);color:var(--preto)}.gq-texto:disabled{opacity:.35}
+.pl-meses{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 0 6px;font-family:var(--fonte-sans)}.pl-meses em{font-style:normal;font-weight:900;font-size:.68rem;letter-spacing:.06em;color:var(--cinza-escuro);min-width:70px;padding-left:9px}.pl-meses span{background:var(--off-white);border-radius:6px;padding:3px 8px;display:flex;flex-direction:column;align-items:center;line-height:1.05}.pl-meses b{font-size:.85rem;color:var(--preto)}.pl-meses small{font-size:.56rem;font-weight:800;color:var(--cinza-escuro)}.pl-meses .tot{background:var(--amarelo)}
 .gq-acoes{display:flex;gap:8px;margin-top:12px}.gq-acoes .gq-sobe{flex:1;margin:0;background:var(--azul);color:var(--off-white);font-weight:800;padding:12px}.gq-acoes .gq-sobe:disabled{opacity:.4;cursor:not-allowed}.grade-quadro.gtm .gq-deixa{margin-top:0}
 .pl-tipo span.passou b{color:var(--vermelho-ua)}
 /* as saídas da vitrine (19/10, ordem dele): giro · pedido com imagem · Excel EBM · todos — o botão anota, o TI gera, a lista mostra */
@@ -406,7 +410,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.35</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.36</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -470,7 +474,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=27"></script>
+<script src="colecao.js?v=28"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script src="topics.js?v=3"></script>
