@@ -128,7 +128,7 @@ function carteiraGiro(d){
 // ---------- raio-x: totais, lojas e a leitura do NÚCLEO
 function raioX(d){
   const r = d.raio_x, est = { cliente: d.cliente, vista: "lojas" };
-  if (!r) return `<div class="card">${tit("Raio-X", "", "")}<div class="vazio">ainda não calculado para este cliente — o NÚCLEO calcula (AG PORTA) e o TI carrega.</div></div>`;
+  if (!r) return `<div class="card">${tit("Raio-X", "", "")}<div class="vazio">${["ITENIS", "MIL PASSOS"].includes(d.cliente) ? "sem AG: este cliente não tem análise de giro (o NÚCLEO conferiu em 19/10)." : "ainda não calculado para este cliente — o NÚCLEO calcula (AG PORTA) e o TI carrega."}</div></div>`;
   const e = r.escopo || {}, reg = e.regulador || {}, lojas = (r.lojas || []).slice().sort((a, b) => (b.part || 0) - (a.part || 0));
   const leit = r.leitura || {}, chaves = Object.keys(leit);
   return `<div class="card">${tit("Raio-X", "base " + dmy(r.base_em) + (r.ponta_em ? " · ponta de estoque " + dmy(r.ponta_em) : ""), ir("raiox", est, "abrir raio-x"))}

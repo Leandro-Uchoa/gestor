@@ -122,23 +122,23 @@ const dinheiroCurto = v => !v ? "R$ 0" : v >= 1e6 ? "R$ " + (v / 1e6).toFixed(2)
 
 // ---- LOJAS: uma linha por porta, cluster, regulador e a diferença estoque − regulador
 function vistaLojas(d){
-  const L = d.lojas, maxV = Math.max(...L.map(l => l.v));
+  const L = d.lojas, maxV = Math.max(...L.map(l => l.v)), rede = L.length === 1;
   const reg = d.escopo.regulador;
   const tot = { v: d.escopo.v, e: d.escopo.e, reg: L.reduce((s, l) => s + l.reg, 0) };
   const linha = l => `<tr>
-      <td>${badge(l.cluster)}</td><td class="loja">${esc(l.loja)}</td><td class="nome">${esc(l.nome)}${l.codigo ? `<span class="mu cod">${esc(l.codigo)}</span>` : ""}</td>
+      ${rede ? "" : `<td>${badge(l.cluster)}</td>`}<td class="loja">${esc(l.loja)}</td><td class="nome">${esc(l.nome)}${l.codigo ? `<span class="mu cod">${esc(l.codigo)}</span>` : ""}</td>
       <td class="n"><div class="barra" style="--w:${(l.v / maxV * 100).toFixed(0)}%"><span>${fmt(l.v)}</span></div></td>
       <td class="n">${pct(l.part)}</td><td class="n">${fmt(l.e)}</td><td class="n">${dec(l.cob)}</td><td class="n">${fmt(l.reg)}</td>
       <td class="n ${l.dif < 0 ? "pede" : "sobra"}">${l.dif < 0 ? "−" : "+"}${fmt(Math.abs(l.dif))}<small>${l.dif < 0 ? "pede entrada" : "acima do regulador"}</small></td></tr>`;
   return `<div class="card">
     <div class="sec-tit">RESUMO POR LOJA <small>${esc(reg.escopo)} · regulador = ${esc(reg.regra)} · ${fmt(reg.total)} pares</small></div>
     <div class="rolagem"><table class="rx">
-      <thead><tr><th>cluster</th><th>loja</th><th>nome</th><th class="n">venda/mês</th><th class="n">partic.</th><th class="n">estoque</th><th class="n">cobertura</th><th class="n">regulador</th><th class="n">estoque − regulador</th></tr></thead>
+      <thead><tr>${rede ? "" : "<th>cluster</th>"}<th>loja</th><th>nome</th><th class="n">venda/mês</th><th class="n">partic.</th><th class="n">estoque</th><th class="n">cobertura</th><th class="n">regulador</th><th class="n">estoque − regulador</th></tr></thead>
       <tbody>${L.map(linha).join("")}</tbody>
-      <tfoot><tr><td></td><td colspan="2">rede · ${L.length} lojas</td><td class="n">${fmt(tot.v)}</td><td class="n">100%</td><td class="n">${fmt(tot.e)}</td><td class="n">${dec(tot.e / tot.v)}</td><td class="n">${fmt(tot.reg)}</td>
+      <tfoot><tr>${rede ? "" : "<td></td>"}<td colspan="2">rede · ${L.length} ${rede ? "linha (sem visão por loja)" : "lojas"}</td><td class="n">${fmt(tot.v)}</td><td class="n">100%</td><td class="n">${fmt(tot.e)}</td><td class="n">${dec(tot.e / tot.v)}</td><td class="n">${fmt(tot.reg)}</td>
         <td class="n ${tot.e - tot.reg < 0 ? "pede" : "sobra"}">${tot.e - tot.reg < 0 ? "−" : "+"}${fmt(Math.abs(tot.e - tot.reg))}</td></tr></tfoot>
     </table></div>
-    <div class="legenda mu">${badge("A")} perto de 500 pares/mês · ${badge("B")} de 230 a 290 · ${badge("C")} de 140 a 216 · cobertura em meses = estoque ÷ venda/mês · amarelo = abaixo do regulador, pede entrada</div>
+    <div class="legenda mu">${rede ? "" : `${badge("A")} perto de 500 pares/mês · ${badge("B")} de 230 a 290 · ${badge("C")} de 140 a 216 · `}cobertura em meses = estoque ÷ venda/mês · amarelo = abaixo do regulador, pede entrada</div>
   </div>`;
 }
 
@@ -148,10 +148,10 @@ function vistaCat(d, corpo){
   const unid = c => (d.unidade || {})[c] || "pares";
   corpo.innerHTML = `<div class="card filtros"><label>categoria</label><div class="chips" id="rx-cat"></div></div><div id="rx-cat-corpo"></div>`;
   chips("rx-cat", d.cats.map(c => [c, c, fmt(d.totais[c].v) + "/mês"]), S.cat, v => { S.cat = v; vistaCat(d, corpo); });
-  const c = S.cat, t = d.totais[c], L = d.lojas, maxV = Math.max(...L.map(l => l.cat[c].v));
+  const c = S.cat, t = d.totais[c], L = d.lojas, maxV = Math.max(...L.map(l => l.cat[c].v)), rede = L.length === 1;
   const linha = l => { const x = l.cat[c]; const idx = x.idx == null ? null : Math.min(x.idx, 200);
     return `<tr>
-      <td>${badge(l.cluster)}</td><td class="loja">${esc(l.loja)}</td><td class="nome">${esc(l.nome)}</td>
+      ${rede ? "" : `<td>${badge(l.cluster)}</td>`}<td class="loja">${esc(l.loja)}</td><td class="nome">${esc(l.nome)}</td>
       <td class="n"><div class="barra" style="--w:${maxV ? (x.v / maxV * 100).toFixed(0) : 0}%"><span>${fmt(x.v)}</span></div></td>
       <td class="n">${pct(x.part)}</td><td class="n">${fmt(x.e)}</td><td class="n ${x.cob != null && x.cob >= 9 ? "pesado" : ""}">${dec(x.cob)}</td>
       <td class="n idx ${x.idx == null ? "" : x.idx >= 120 ? "alto" : x.idx <= 80 ? "baixo" : ""}"><div class="ibar" style="--w:${idx == null ? 0 : (idx / 2).toFixed(0)}%"><i></i><span>${x.idx == null ? "—" : x.idx}</span></div></td></tr>`; };
@@ -159,7 +159,7 @@ function vistaCat(d, corpo){
     <div class="sec-tit">${esc(c)} <small>${fmt(t.v)} ${esc(unid(c))}/mês na rede · estoque ${fmt(t.e)} · cobertura ${dec(t.v ? t.e / t.v : null)} meses</small></div>
     ${d.leitura[c] ? `<div class="leitura">${esc(d.leitura[c])}</div>` : ""}
     <div class="rolagem"><table class="rx">
-      <thead><tr><th>cluster</th><th>loja</th><th>nome</th><th class="n">venda/mês (${esc(unid(c))})</th><th class="n">partic.</th><th class="n">estoque</th><th class="n">cobertura</th><th class="n">índice <small>100 = proporção da loja</small></th></tr></thead>
+      <thead><tr>${rede ? "" : "<th>cluster</th>"}<th>loja</th><th>nome</th><th class="n">venda/mês (${esc(unid(c))})</th><th class="n">partic.</th><th class="n">estoque</th><th class="n">cobertura</th><th class="n">índice <small>100 = proporção da loja</small></th></tr></thead>
       <tbody>${L.map(linha).join("")}</tbody>
     </table></div>
     <div class="legenda mu">índice acima de 120 = a loja puxa a categoria · abaixo de 80 = a loja não vende a categoria na proporção dela · cobertura em destaque a partir de 9 meses</div>
