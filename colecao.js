@@ -50,7 +50,7 @@ let DADOS = null, EL = null, ELV = null, SB = null;
 const S = { marca: "OLY", tipo: "", grupo: new Set(), selo: new Set(), busca: "" };
 // a vitrine: cliente escolhido; marcas dele por coleção (chave marca|ref|cor → estado); a coleção ATUAL do cliente (vitrine_atual);
 // bloqueios por cliente (cliente|marca|ref); qual vista está aberta (atual | montando); id do escritório
-const VIT = { cliente: null, clientes: [], marcas: new Map(), grades: new Map(), pares: new Map(), atual: null, vista: null, bloq: new Set(), esc: null, carregadoPara: null, erro: "" };
+const VIT = { cliente: null, clientes: [], marcas: new Map(), grades: new Map(), pares: new Map(), pares6: new Map(), atual: null, vista: null, bloq: new Set(), esc: null, carregadoPara: null, erro: "" };
 const chaveCor = it => it.m + "|" + it.r + "|" + it.c;
 const chave = it => it.m + "|" + it.t + "|" + it.o;
 const chaveModelo = it => it.m + "|" + it.t + "|" + (it.g || "") + "|" + (it.n || "") + "|" + (it.r || "");
@@ -102,10 +102,10 @@ async function carregarVitrine(sb){
     if (!VIT.cliente) VIT.cliente = VIT.clientes.includes("POLYELLE") ? "POLYELLE" : (VIT.clientes[0] || null);
   }
   if (VIT.cliente && VIT.carregadoPara !== VIT.cliente) {
-    const [r, a] = await Promise.all([tudo(sb.from("vitrine").select("colecao,marca,referencia,cor,estado,grade,pares").eq("cliente", VIT.cliente)), sb.rpc("vitrine_atual_consulta", { p_cliente: VIT.cliente, p_colecao: null })]);
+    const [r, a] = await Promise.all([tudo(sb.from("vitrine").select("colecao,marca,referencia,cor,estado,grade,pares,pares6").eq("cliente", VIT.cliente)), sb.rpc("vitrine_atual_consulta", { p_cliente: VIT.cliente, p_colecao: null })]);
     if (r.error) { VIT.erro = "não consegui ler a vitrine: " + r.error.message; return; }
-    VIT.marcas = new Map(); VIT.grades = new Map(); VIT.pares = new Map();
-    for (const x of r.data) { const k = x.marca + "|" + x.referencia + "|" + x.cor; marcas(x.colecao).set(k, x.estado || "escolhida"); if (x.grade) VIT.grades.set(k, x.grade); if (x.pares != null) VIT.pares.set(k, x.pares); }
+    VIT.marcas = new Map(); VIT.grades = new Map(); VIT.pares = new Map(); VIT.pares6 = new Map();
+    for (const x of r.data) { const k = x.marca + "|" + x.referencia + "|" + x.cor; marcas(x.colecao).set(k, x.estado || "escolhida"); if (x.grade) VIT.grades.set(k, x.grade); if (x.pares != null) VIT.pares.set(k, x.pares); if (x.pares6) VIT.pares6.set(k, x.pares6); }
     VIT.atual = (!a.error && a.data && a.data.n > 0) ? a.data : null;
     VIT.carregadoPara = VIT.cliente; VIT.erro = a.error ? "não consegui ler a coleção atual: " + a.error.message : "";
     VIT.vista = VIT.vistaPedida === "montando" ? "montando" : (VIT.atual ? "atual" : "montando"); VIT.vistaPedida = null;
@@ -477,32 +477,40 @@ function desenharEsquerda(pg){
 }
 // a CAIXA (ele, 19/10 11:4x): "diminuir caixa em caixa, de 12 pares" — o − e o + mexem 12 de cada vez, direto embaixo da cor, no bloco do modelo
 const CAIXA = 12;
-const distDaCor = it => { const k = chaveCor(it), sel = marcas(DADOS.colecao).get(k) === "escolhida", p = VIT.pares.get(k), g = gtmDe(it), teto = g ? (g.vm[gtmMes()] || 0) : 0;
+// grade de 6 (ele, 19/10 13:2x: "na Under Armour vai aparecer; dois campos — grade de 12 em cima, grade de 6 embaixo"): pares = total da cor;
+// pares6 = a parte em grades de 6; a linha das 6 aparece na UA ou quando a cor já tem grade de 6
+const CAIXA6 = 6;
+const temGrade6 = it => it.m === "UA" || (VIT.pares6.get(chaveCor(it)) || 0) > 0;
+// o teto DIGITÁVEL (ele, 13:3x: "371 não é múltiplo de nada; diminui para ficar múltiplo de 6"): arredonda para baixo à menor grade da marca
+const tetoDigitavel = (m, teto) => { const cx = temGrade6(m) ? CAIXA6 : CAIXA; return Math.floor(teto / cx) * cx; };
+const distDaCor = it => { const k = chaveCor(it), sel = marcas(DADOS.colecao).get(k) === "escolhida", p = VIT.pares.get(k) || 0, p6 = VIT.pares6.get(k) || 0, g = gtmDe(it), teto = g ? (g.vm[gtmMes()] || 0) : 0;
   if (!sel) return `<div class="mdist vazia" data-kc="${esc(k)}"></div>`;
-  return `<div class="mdist" data-kc="${esc(k)}"><button type="button" class="cx cx-menos" data-kc="${esc(k)}" title="tira uma caixa (${CAIXA} pares)">−</button><span><b>${(p || 0).toLocaleString("pt-BR")}</b><small>${teto ? Math.round((p || 0) * 100 / teto) + "%" : "—"}</small></span><button type="button" class="cx cx-mais" data-kc="${esc(k)}" title="põe uma caixa (${CAIXA} pares)">+</button></div>`; };
+  const linha = (cx, n, rot) => `<div class="mrow"><button type="button" class="cx cx-menos" data-kc="${esc(k)}" data-cx="${cx}" title="tira uma grade de ${cx}">−</button><span><b>${n}</b><small>${rot}</small></span><button type="button" class="cx cx-mais" data-kc="${esc(k)}" data-cx="${cx}" title="põe uma grade de ${cx}">+</button></div>`;
+  return `<div class="mdist${temGrade6(it) ? " duas" : ""}" data-kc="${esc(k)}">${linha(CAIXA, Math.floor((p - p6) / CAIXA), "gr. 12")}${temGrade6(it) ? linha(CAIXA6, Math.floor(p6 / CAIXA6), "gr. 6") : ""}<div class="mtot"><b>${p.toLocaleString("pt-BR")}</b> pares · ${teto ? Math.round(p * 100 / teto) + "%" : "—"}</div></div>`; };
 function ligarCaixas(raiz){
-  for (const b of raiz.querySelectorAll(".mdist .cx")) b.onclick = ev => { ev.stopPropagation(); mexerCaixa(b.dataset.kc, b.classList.contains("cx-mais") ? CAIXA : -CAIXA); };
+  for (const b of raiz.querySelectorAll(".mdist .cx")) b.onclick = ev => { ev.stopPropagation(); const cx = +b.dataset.cx || CAIXA; mexerCaixa(b.dataset.kc, b.classList.contains("cx-mais") ? cx : -cx, cx); };
 }
 const GRAVA_PARES = new Map();   // kc → timer: a tela muda na hora; o banco recebe 600 ms depois do último toque
-function mexerCaixa(kc, delta){
+function mexerCaixa(kc, delta, cx){
   if (marcas(DADOS.colecao).get(kc) !== "escolhida") return;
-  const p = Math.max(0, (VIT.pares.get(kc) || 0) + delta);
-  VIT.pares.set(kc, p); refrescar();
+  const p6 = VIT.pares6.get(kc) || 0, p12 = Math.max(0, (VIT.pares.get(kc) || 0) - p6);
+  const n12 = cx === CAIXA6 ? p12 : Math.max(0, p12 + delta), n6 = cx === CAIXA6 ? Math.max(0, p6 + delta) : p6;
+  VIT.pares.set(kc, n12 + n6); VIT.pares6.set(kc, n6); refrescar();
   clearTimeout(GRAVA_PARES.get(kc)); GRAVA_PARES.set(kc, setTimeout(() => gravarPares(kc), 600));
 }
 async function gravarPares(kc){
   const it = DADOS.itens.find(x => chaveCor(x) === kc); if (!it || !VIT.cliente || marcas(DADOS.colecao).get(kc) !== "escolhida") return;
-  const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: DADOS.colecao, marca: it.m, referencia: it.r, cor: it.c }, pares = VIT.pares.get(kc) || 0, grade = VIT.grades.get(kc) || null;
+  const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: DADOS.colecao, marca: it.m, referencia: it.r, cor: it.c }, pares = VIT.pares.get(kc) || 0, pares6 = VIT.pares6.get(kc) || 0, grade = VIT.grades.get(kc) || null;
   const d = await SB.from("vitrine").delete().match(linha); if (d.error) { VIT.erro = "O banco recusou: " + d.error.message; refrescar(); return; }
-  const r = await SB.from("vitrine").insert(Object.assign({ estado: "escolhida", estado_anterior: null, grade, pares }, linha));
-  if (r.error) { marcas(DADOS.colecao).delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.erro = "O banco recusou: " + r.error.message; refrescar(); } else VIT.erro = "";
+  const r = await SB.from("vitrine").insert(Object.assign({ estado: "escolhida", estado_anterior: null, grade, pares, pares6: pares6 || null }, linha));
+  if (r.error) { marcas(DADOS.colecao).delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.pares6.delete(kc); VIT.erro = "O banco recusou: " + r.error.message; refrescar(); } else VIT.erro = "";
 }
 // o teto do modelo no mês (o que se digita no GTM) e o que já foi distribuído nas cores — a faixa azul vira amarela quando fecha, vermelha quando passa
 function tetoDoModelo(m){
-  const gm = gtmDe(m), mes = gtmMes(), teto = gm ? (gm.vm[mes] || 0) : 0, dist = paresDoModelo(m);
+  const gm = gtmDe(m), mes = gtmMes(), teto0 = gm ? (gm.vm[mes] || 0) : 0, teto = tetoDigitavel(m, teto0), dist = paresDoModelo(m);
   if (!gm) return "";
-  const aberto = teto - dist, cx = Math.floor(Math.abs(aberto) / CAIXA);
-  return `<div class="mteto${dist > teto ? " passou" : (dist === teto && teto ? " cheio" : "")}">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares${dist ? ` · distribuídos <b>${dist.toLocaleString("pt-BR")}</b> · ${aberto < 0 ? `<em>passou ${(-aberto).toLocaleString("pt-BR")} (${cx} cx)</em>` : (aberto ? `em aberto <b>${aberto.toLocaleString("pt-BR")}</b> pares · ${cx} cx` : "<b>fechou</b>")}` : ""}</div>`;
+  const cxm = temGrade6(m) ? CAIXA6 : CAIXA, aberto = teto - dist, cx = Math.floor(Math.abs(aberto) / cxm);
+  return `<div class="mteto${dist > teto ? " passou" : (dist === teto && teto ? " cheio" : "")}">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares${teto !== teto0 ? ` <small>(previsto ${teto0.toLocaleString("pt-BR")}, arredondado a múltiplo de ${cxm})</small>` : ""}${dist ? ` · distribuídos <b>${dist.toLocaleString("pt-BR")}</b> · ${aberto < 0 ? `<em>passou ${(-aberto).toLocaleString("pt-BR")} (${cx} cx)</em>` : (aberto ? `em aberto <b>${aberto.toLocaleString("pt-BR")}</b> pares · ${cx} cx` : "<b>fechou</b>")}` : ""}</div>`;
 }
 const fotoMini = it => { const src = srcFoto(it); return src ? `<img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">` : `<div class="sem">sem foto</div>`; };
 
@@ -547,7 +555,8 @@ function desenharDireita(pg){
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
         ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">${g.cl ? `<i class="gcl ${esc(g.cl)}" title="${esc(g.clt || "")}">${esc(g.cl)}</i> ` : ""}${g.e ? "★ " : ""}mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · sugerido <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b></div>${g.gr ? `<div class="vgrade">${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}${!(g.vm[mes] || 0) ? `<div class="selo falta vsem">modelo sem volume em ${esc(mes)}</div>` : ""}`)(gtmDe(it)) : (gtm ? `<div class="selo falta vsem">fora do pacote do GTM</div>` : "")}
         ${gtm ? (() => { const p = VIT.pares.get(chaveCor(it)), g = gtmDe(it), teto = g ? (g.vm[mes] || 0) : 0, pct = (p != null && teto) ? Math.round(p * 100 / teto) : null;
-          return `<button type="button" class="selo pares${p == null ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="mudar os pares desta cor">${p == null ? "pares?" : `<b>${p.toLocaleString("pt-BR")}</b> pares${pct != null ? ` · ${pct}% de ${teto.toLocaleString("pt-BR")}` : ""}`}</button>`; })() : ""}
+          const p6 = VIT.pares6.get(chaveCor(it)) || 0;
+          return `<button type="button" class="selo pares${p == null ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="mudar os pares desta cor">${p == null ? "pares?" : `<b>${p.toLocaleString("pt-BR")}</b> pares${p6 ? ` (${Math.floor((p - p6) / CAIXA)}×12 + ${Math.floor(p6 / CAIXA6)}×6)` : ""}${pct != null ? ` · ${pct}% de ${teto.toLocaleString("pt-BR")}` : ""}`}</button>`; })() : ""}
         ${VIT.grades.get(chaveCor(it)) ? `<button type="button" class="selo grade" data-kc="${esc(chaveCor(it))}" title="trocar a grade">${esc(ROTULO_GRADE[VIT.grades.get(chaveCor(it))] || "grade " + VIT.grades.get(chaveCor(it)))}</button>` : (opcoesGrade(it).length || gtm ? `<button type="button" class="selo grade falta" data-kc="${esc(chaveCor(it))}" title="definir a grade">grade?</button>` : "")}
         <div class="mu">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}</div></div>
     </div>`;
@@ -576,21 +585,21 @@ async function alternar(kc, modo){
   // ("se eu coloquei ele dentro do bloco feminino, ele vira um produto feminino"); fora do roteiro (livre), pergunta
   // na DISTRIBUIÇÃO (GTM), ordem dele 19/10 11:1x: TODO clique pergunta a grade (sem separar por gênero) e a quantidade de pares da cor,
   // com o teto do modelo no mês à vista — a resposta grava na linha da vitrine e é a lista de digitação
-  let grade = null, pares = null;
+  let grade = null, pares = null, pares6 = 0;
   if (!tinha && !atual && ehGtm() && modo !== "atual") {
-    const resp = await perguntarGtm(it); if (!resp) return; grade = resp.grade; pares = resp.pares;
+    const resp = await perguntarGtm(it); if (!resp) return; grade = resp.grade; pares = resp.pares; pares6 = resp.pares6;
   } else if (!tinha && !atual && opcoesGrade(it).length) {
     const auto = modo === "montador" ? ({ fem: "feminina", masc: "masculina", esp: "especial" })[MF.passo] : null;
     grade = (auto && opcoesGrade(it).includes(auto)) ? auto : await perguntarGrade(it);
     if (!grade) return;
   }
-  if (tinha) { M.delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); } else { M.set(kc, estado); if (grade) VIT.grades.set(kc, grade); if (pares != null) VIT.pares.set(kc, pares); }
+  if (tinha) { M.delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.pares6.delete(kc); } else { M.set(kc, estado); if (grade) VIT.grades.set(kc, grade); if (pares != null) VIT.pares.set(kc, pares); if (pares6) VIT.pares6.set(kc, pares6); }
   NOVA = (!tinha && !atual) ? kc : null;
   refrescar();
   const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: col, marca: it.m, referencia: it.r, cor: it.c };
-  const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(Object.assign({ estado, estado_anterior: atual ? (it.st || null) : null, grade, pares }, linha));
+  const r = tinha ? await SB.from("vitrine").delete().match(linha) : await SB.from("vitrine").insert(Object.assign({ estado, estado_anterior: atual ? (it.st || null) : null, grade, pares, pares6: pares6 || null }, linha));
   if (r.error) {
-    if (tinha) M.set(kc, estado); else { M.delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); }
+    if (tinha) M.set(kc, estado); else { M.delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.pares6.delete(kc); }
     // 19/10 (ele, com duas abas abertas: "a ALGDNA não sobe"): a cor já estava no banco, posta pela outra aba — "chave duplicada". Não é
     // recusa: esta aba estava desatualizada. Relê a vitrine do banco e redesenha, sem erro na tela.
     if (/duplicate key|vitrine_pkey/i.test(r.error.message || "")) { await relerVitrine(); return; }
@@ -660,31 +669,36 @@ const GRADES_GTM = it => {
   return o.length ? o : ["feminina", "masculina", "estendida"];
 };
 const paresDoModelo = (m, menos) => DADOS.itens.filter(it => it.m === m.m && it.r === m.r && chaveCor(it) !== menos).reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0);
-function perguntarGtm(it, atualGrade, atualPares){
-  const g = gtmDe(it), mes = gtmMes(), teto = g ? (g.vm[mes] || 0) : 0, outras = paresDoModelo(it, chaveCor(it)), ficam = Math.max(0, teto - outras);
-  const opc = GRADES_GTM(it);
-  const sugerido = atualPares != null ? atualPares : Math.floor(Math.min(ficam, (g && g.ps[mes]) || ficam) / CAIXA) * CAIXA;   // em caixas fechadas
+function perguntarGtm(it, atualGrade, atualPares, atualPares6){
+  const g = gtmDe(it), mes = gtmMes(), teto = g ? (g.vm[mes] || 0) : 0, dig = tetoDigitavel(it, teto), outras = paresDoModelo(it, chaveCor(it)), ficam = Math.max(0, dig - outras);
+  const opc = GRADES_GTM(it), seis = temGrade6(it);
+  const p6 = atualPares6 || 0, p12 = atualPares != null ? Math.max(0, atualPares - p6) : Math.floor(Math.min(ficam, (g && g.ps[mes]) || ficam) / CAIXA) * CAIXA;   // em grades fechadas
+  const n12 = Math.floor(p12 / CAIXA), n6 = Math.floor(p6 / CAIXA6);
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro gtm"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}</span></div>
-      <div class="gq-teto">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares no modelo${outras ? ` · já distribuídos nas outras cores <b>${outras.toLocaleString("pt-BR")}</b> · ficam <b>${ficam.toLocaleString("pt-BR")}</b>` : ""}</div>
+      <div class="gq-teto">digitar no GTM em ${esc(mes)}: <b>${teto.toLocaleString("pt-BR")}</b> pares no modelo${dig !== teto ? ` (digitável <b>${dig.toLocaleString("pt-BR")}</b>, múltiplo de ${temGrade6(it) ? CAIXA6 : CAIXA})` : ""}${outras ? ` · já distribuídos nas outras cores <b>${outras.toLocaleString("pt-BR")}</b> · ficam <b>${ficam.toLocaleString("pt-BR")}</b>` : ""}</div>
       <div class="gq-perg">${opc.length === 1 ? `Grade: só a <b>${esc(ROTULO_GRADE[opc[0]])}</b> cabe na numeração ${esc(it.nu || "")}` : `Em que grade? <span class="mu">numeração ${esc(it.nu || "?")}</span>`}</div>
       <div class="gq-botoes">${opc.map(v => `<button type="button" data-g="${v}" class="${v === (atualGrade || (opc.length === 1 ? opc[0] : null)) ? "ativa" : ""}">${esc(ROTULO_GRADE[v])}</button>`).join("")}</div>
-      <div class="gq-perg">Quantos pares desta cor?</div>
-      <div class="gq-pares"><button type="button" class="cx cx-menos" title="tira uma caixa (${CAIXA} pares)">−</button><input type="number" min="0" step="${CAIXA}" inputmode="numeric" value="${sugerido}"><button type="button" class="cx cx-mais" title="põe uma caixa (${CAIXA} pares)">+</button><span class="gq-pct"></span></div>
+      <div class="gq-perg">Quantas grades desta cor?</div>
+      <div class="gq-pares" data-cx="${CAIXA}"><span class="gq-rot">grade de ${CAIXA} pares</span><button type="button" class="cx cx-menos" title="tira uma grade de ${CAIXA}">−</button><input type="number" min="0" step="1" inputmode="numeric" value="${n12}"><button type="button" class="cx cx-mais" title="põe uma grade de ${CAIXA}">+</button><span class="gq-sub"></span></div>
+      ${seis ? `<div class="gq-pares" data-cx="${CAIXA6}"><span class="gq-rot">grade de ${CAIXA6} pares</span><button type="button" class="cx cx-menos" title="tira uma grade de ${CAIXA6}">−</button><input type="number" min="0" step="1" inputmode="numeric" value="${n6}"><button type="button" class="cx cx-mais" title="põe uma grade de ${CAIXA6}">+</button><span class="gq-sub"></span></div>` : ""}
+      <div class="gq-pct"></div>
       <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
     let grade = atualGrade || (opc.length === 1 ? opc[0] : null);
-    const inp = luz.querySelector("input"), pct = luz.querySelector(".gq-pct"), sobe = luz.querySelector(".gq-sobe");
-    const mostra = () => { const p = +inp.value || 0; pct.textContent = teto ? `${Math.round(p * 100 / teto)}% do modelo · ${Math.floor(p / CAIXA)} cx${p > ficam ? " · passa do teto" : ""}` : ""; pct.classList.toggle("passou", p > ficam); sobe.disabled = !grade; };
-    for (const b of luz.querySelectorAll(".gq-pares .cx")) b.onclick = () => { inp.value = Math.max(0, (+inp.value || 0) + (b.classList.contains("cx-mais") ? CAIXA : -CAIXA)); mostra(); };
+    const campos = [...luz.querySelectorAll(".gq-pares")], inp = campos[0].querySelector("input"), pct = luz.querySelector(".gq-pct"), sobe = luz.querySelector(".gq-sobe");
+    const conta = () => { let t = 0, t6 = 0; for (const c of campos) { const cx = +c.dataset.cx, n = Math.max(0, Math.round(+c.querySelector("input").value || 0)), p = n * cx; c.querySelector(".gq-sub").textContent = `= ${p} pares`; t += p; if (cx === CAIXA6) t6 = p; } return { pares: t, pares6: t6 }; };
+    const mostra = () => { const { pares: p } = conta(); pct.textContent = teto ? `${p.toLocaleString("pt-BR")} pares · ${Math.round(p * 100 / teto)}% do modelo${p > ficam ? " · passa do teto" : ""}` : `${p} pares`; pct.classList.toggle("passou", p > ficam); sobe.disabled = !grade; };
+    for (const b of luz.querySelectorAll(".gq-pares .cx")) b.onclick = () => { const i = b.parentElement.querySelector("input"); i.value = Math.max(0, (+i.value || 0) + (b.classList.contains("cx-mais") ? 1 : -1)); mostra(); };
+    for (const c of campos) c.querySelector("input").oninput = mostra;
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
-    const confirma = () => { if (!grade) return; fecha({ grade, pares: Math.max(0, Math.round(+inp.value || 0)) }); };
+    const confirma = () => { if (!grade) return; const { pares, pares6 } = conta(); fecha({ grade, pares, pares6 }); };
     const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter") confirma(); };
     document.addEventListener("keydown", tecla);
     luz.onclick = ev => { if (ev.target === luz) fecha(null); };
     luz.querySelector(".gq-deixa").onclick = () => fecha(null);
     for (const b of luz.querySelectorAll("button[data-g]")) b.onclick = () => { grade = b.dataset.g; for (const x of luz.querySelectorAll("button[data-g]")) x.classList.toggle("ativa", x === b); mostra(); inp.focus(); inp.select(); };
-    inp.oninput = mostra; sobe.onclick = confirma; mostra();
+    sobe.onclick = confirma; mostra();
     document.body.appendChild(luz);
     if (grade) { inp.focus(); inp.select(); }
   });
@@ -692,13 +706,13 @@ function perguntarGtm(it, atualGrade, atualPares){
 // trocar a grade (e, no GTM, os pares) de uma cor que já está na vitrine: a página só pode inserir e apagar, então apaga e insere de novo (o histórico guarda os dois)
 async function trocarGrade(kc){
   const it = DADOS.itens.find(x => chaveCor(x) === kc); if (!it || !VIT.cliente) return;
-  let grade, pares = null;
-  if (ehGtm()) { const resp = await perguntarGtm(it, VIT.grades.get(kc), VIT.pares.get(kc)); if (!resp) return; grade = resp.grade; pares = resp.pares; if (grade === VIT.grades.get(kc) && pares === VIT.pares.get(kc)) return; }
+  let grade, pares = null, pares6 = null;
+  if (ehGtm()) { const resp = await perguntarGtm(it, VIT.grades.get(kc), VIT.pares.get(kc), VIT.pares6.get(kc)); if (!resp) return; grade = resp.grade; pares = resp.pares; pares6 = resp.pares6; if (grade === VIT.grades.get(kc) && pares === VIT.pares.get(kc) && pares6 === (VIT.pares6.get(kc) || 0)) return; }
   else { grade = await perguntarGrade(it, VIT.grades.get(kc)); if (!grade || grade === VIT.grades.get(kc)) return; }
   const linha = { escritorio_id: VIT.esc, cliente: VIT.cliente, colecao: DADOS.colecao, marca: it.m, referencia: it.r, cor: it.c };
   const d = await SB.from("vitrine").delete().match(linha); if (d.error) { VIT.erro = "O banco recusou: " + d.error.message; refrescar(); return; }
-  const r = await SB.from("vitrine").insert(Object.assign({ estado: "escolhida", estado_anterior: null, grade, pares }, linha));
-  if (r.error) { marcas(DADOS.colecao).delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.erro = "O banco recusou: " + r.error.message; } else { VIT.grades.set(kc, grade); if (pares != null) VIT.pares.set(kc, pares); VIT.erro = ""; }
+  const r = await SB.from("vitrine").insert(Object.assign({ estado: "escolhida", estado_anterior: null, grade, pares, pares6: pares6 || null }, linha));
+  if (r.error) { marcas(DADOS.colecao).delete(kc); VIT.grades.delete(kc); VIT.pares.delete(kc); VIT.pares6.delete(kc); VIT.erro = "O banco recusou: " + r.error.message; } else { VIT.grades.set(kc, grade); if (pares != null) VIT.pares.set(kc, pares); VIT.pares6.set(kc, pares6 || 0); VIT.erro = ""; }
   refrescar();
 }
 function refrescar(){
