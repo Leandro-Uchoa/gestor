@@ -128,7 +128,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 #fale{position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));max-height:70vh;display:flex;flex-direction:column;z-index:50;background:var(--preto);border:1px solid var(--cinza-escuro);box-shadow:0 6px 24px rgba(0,0,0,.5);margin:0}#fale.oculto{display:none}
 .fale-topo{display:flex;align-items:center;gap:8px}.fale-topo b{color:var(--amarelo)}.fale-topo small{flex:1;font-size:.7rem}.fale-topo button{width:auto;margin:0;padding:2px 8px}
 .fale-lista{flex:1;overflow:auto;min-height:80px;max-height:40vh;margin:8px 0;display:flex;flex-direction:column;gap:6px}.fm{max-width:88%;padding:6px 10px;border-radius:10px;font-size:.84rem;line-height:1.35}.fm span{white-space:pre-wrap}.fm small{display:block;font-size:.62rem;color:var(--mu);margin-top:2px}.fm.eu{align-self:flex-end;background:rgba(46,62,252,.35)}.fm.ti{align-self:flex-start;background:rgba(120,123,134,.25);border-left:3px solid var(--amarelo)}
-.fale-linha{display:flex;gap:6px}.fale-linha textarea{flex:1;margin:0;padding:8px 10px;font-size:.84rem;resize:vertical}.fale-linha button{width:auto;margin:0;padding:8px 12px}
+.fale-linha{display:flex;gap:6px}.fale-linha .mic{width:auto;margin:0;padding:8px 10px;background:transparent;border:1px solid var(--bd);font-size:1.1rem;line-height:1}.fale-linha .mic.gravando{background:var(--amarelo);border-color:var(--amarelo);animation:pulsa 1s infinite}@keyframes pulsa{50%{opacity:.55}}.fale-linha textarea{flex:1;margin:0;padding:8px 10px;font-size:.84rem;resize:vertical}.fale-linha button{width:auto;margin:0;padding:8px 12px}
 .tradeaba select.st{margin:0;padding:3px 6px;font-size:.74rem;width:auto}.tradeaba .atu{margin-top:4px;min-height:1.1em;font-size:.76rem;color:var(--ink);border-left:3px solid var(--azul);padding:1px 0 1px 6px;outline:none;white-space:normal;max-width:220px}.tradeaba .atu:empty::before{content:"sua atualização…";color:var(--mu);opacity:.6}.tradeaba .atu:focus{background:rgba(46,62,252,.12)}
 /* o seletor da casa (gestor_lib.seletor), fora das Atas: mesmo visual */
 .seletor{position:relative;min-width:180px;display:inline-block}.seletor .sel-bt{width:auto;min-width:180px;margin:0;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:transparent;color:var(--ink);border:1px solid var(--bd);font-weight:600;font-size:.85rem;text-align:left}.seletor .sel-rot{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}.seletor .sel-val{flex:1;color:var(--amarelo);font-weight:800}.seletor .sel-val small{color:var(--mu);font-weight:600}.seletor .sel-seta{color:var(--mu)}
@@ -472,7 +472,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.64</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.65</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -510,10 +510,10 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
        API da Anthropic como segredo lá, nunca aqui); a página manda a pergunta com o contexto (aba, cliente) e mostra a resposta. -->
   <div id="ia" class="card oculto"><div class="fale-topo"><b>IA do Gestor</b> <small class="mu" id="ia-estado">lê o banco da aba em que você está</small><button type="button" class="sec" id="ia-nova" title="começa outra conversa">nova</button><button type="button" class="sec" id="ia-fecha">×</button></div>
     <div id="ia-lista" class="fale-lista"></div>
-    <div class="fale-linha"><textarea id="ia-txt" rows="2" placeholder="ex.: qual ação de trade para a Casa Pio? · o que falta na vitrine da Polyélle? · onde foco na meta? (Enter envia)"></textarea><button type="button" id="ia-envia">perguntar</button></div></div>
+    <div class="fale-linha"><textarea id="ia-txt" rows="2" placeholder="ex.: qual ação de trade para a Casa Pio? · o que falta na vitrine da Polyélle? · onde foco na meta? (Enter envia)"></textarea><button type="button" class="mic" id="ia-mic" title="falar: o texto aparece no campo; aperte de novo para parar">🎤</button><button type="button" id="ia-envia">perguntar</button></div></div>
   <div id="fale" class="card oculto"><div class="fale-topo"><b>Fale com o NÚCLEO</b> <small class="mu" id="fale-estado"></small><button type="button" class="sec" id="fale-fecha">×</button></div>
     <div id="fale-lista" class="fale-lista"></div>
-    <div class="fale-linha"><textarea id="fale-txt" rows="2" placeholder="trade, metas, vitrine, cliente: pergunte aqui e aperte Enter (Shift+Enter quebra linha). O NÚCLEO responde aqui mesmo."></textarea><button type="button" id="fale-envia">enviar</button></div></div>
+    <div class="fale-linha"><textarea id="fale-txt" rows="2" placeholder="trade, metas, vitrine, cliente: pergunte aqui e aperte Enter (Shift+Enter quebra linha). O NÚCLEO responde aqui mesmo."></textarea><button type="button" class="mic" id="fale-mic" title="falar: o texto aparece no campo; aperte de novo para parar">🎤</button><button type="button" id="fale-envia">enviar</button></div></div>
   <div id="tela-cliente" class="oculto"></div>
   <div id="tela-raiox" class="oculto"></div>
   <div id="tela-topics" class="oculto"></div>
@@ -762,6 +762,22 @@ async function iaPerguntar(){
   } catch (e) { item.r = "⚠ não consegui falar com a função gestor-ia: " + (e.message || e); $("ia-estado").textContent = "não respondeu"; }
   IA.ocupada = false; iaDesenhar();
 }
+// ---------- ÁUDIO (ele, 19/10 22:0x: "um botão de áudio, que eu possa inserir comandos via áudio, na IA e no NÚCLEO"): o reconhecimento
+// de voz do próprio navegador (pt-BR); o que ele fala entra no campo, ele confere e envia. Sem suporte (Firefox, alguns celulares), avisa.
+function ligarMic(idBotao, idCampo){
+  const bt = $(idBotao), campo = $(idCampo); const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { bt.onclick = () => alert("este navegador não faz voz para texto; use o Chrome ou o Edge."); return; }
+  let rec = null, base = "";
+  bt.onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = "pt-BR"; rec.continuous = true; rec.interimResults = true; base = campo.value ? campo.value.replace(/\s+$/, "") + " " : "";
+    rec.onresult = ev => { let fim = "", meio = ""; for (let i = 0; i < ev.results.length; i++) { const r = ev.results[i]; if (r.isFinal) fim += r[0].transcript + " "; else meio += r[0].transcript; } campo.value = base + fim + meio; };
+    rec.onerror = ev => { bt.classList.remove("gravando"); rec = null; if (ev.error === "not-allowed") alert("o navegador não deixou usar o microfone: libere o microfone para o Gestor (cadeado ao lado do endereço)."); };
+    rec.onend = () => { bt.classList.remove("gravando"); rec = null; campo.focus(); };
+    bt.classList.add("gravando"); rec.start();
+  };
+}
+ligarMic("ia-mic", "ia-txt"); ligarMic("fale-mic", "fale-txt");
 $("bt-ia").onclick = iaAbrir; $("ia-fecha").onclick = iaAbrir; $("ia-envia").onclick = iaPerguntar; $("ia-nova").onclick = () => { IA.sessao = null; IA.hist = []; iaDesenhar(); $("ia-estado").textContent = "nova conversa"; };
 $("ia-txt").onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); iaPerguntar(); } };
 $("bt-fale").onclick = faleAbrir; $("fale-fecha").onclick = faleAbrir; $("fale-envia").onclick = faleEnviar;
