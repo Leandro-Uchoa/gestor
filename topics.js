@@ -8,7 +8,8 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&a
 const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 const dmy = d => d ? d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(2, 4) : "";
 let D = null, EL = null, SB = null, ESC = null, EMAIL = null;
-const S = { bloco: null, vista: "pendentes", busca: "", abertas: new Set() };
+const S = { bloco: null, vista: "pendentes", busca: "", abertas: new Set(), agora: "mini" };   // agora: mini (5) | tudo | fechado (uma linha)
+const AGORA_MINI = 5;
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 async function abrir(sb, el){
@@ -44,11 +45,24 @@ function desenhar(){
     el.querySelector("#tp-busca").oninput = ev => { S.busca = ev.target.value; clearTimeout(desenhar._t); desenhar._t = setTimeout(desenharCorpo, 120); };
   }
   chips("tp-vista", [["pendentes", "pendentes", D.pendentes], ["feitos", "feitos", D.n - D.pendentes], ["todos", "todos", D.n]], S.vista, v => { S.vista = v; desenharCorpo(); });
-  chips("tp-blocos", D.blocos.map(b => [b.nome, b.nome, pend(b)]), S.bloco, v => { S.bloco = v; desenharCorpo(); }, b => D.blocos.find(x => x.nome === b).cliente ? "cli" : "");
-  const ag = urgentes();
-  el.querySelector("#tp-agora").innerHTML = ag.length ? `<div class="card agora"><div class="sec-tit">AGORA <small>${ag.length} urgente(s), de todos os blocos</small></div>${ag.map(i => linha(i, true)).join("")}</div>` : "";
-  ligar(el.querySelector("#tp-agora"));
+  // PICASSO (19/10): o bloco que ele tocou vem primeiro — tocar num bloco recolhe o AGORA a uma linha; aberto, mostra 5 e o botão "ver os N"
+  chips("tp-blocos", D.blocos.map(b => [b.nome, b.nome, pend(b)]), S.bloco, v => { S.bloco = v; S.agora = "fechado"; desenharAgora(); desenharCorpo(); }, b => D.blocos.find(x => x.nome === b).cliente ? "cli" : "");
+  desenharAgora();
   desenharCorpo();
+}
+function desenharAgora(){
+  const el = EL.querySelector("#tp-agora"), ag = urgentes();
+  if (!ag.length) { el.innerHTML = ""; return; }
+  if (S.agora === "fechado") el.innerHTML = `<button type="button" class="agora-linha" id="tp-agora-abre">AGORA · ${ag.length} urgente(s) ▸</button>`;
+  else {
+    const lista = S.agora === "tudo" ? ag : ag.slice(0, AGORA_MINI);
+    el.innerHTML = `<div class="card agora"><div class="sec-tit">AGORA <small>${ag.length} urgente(s), de todos os blocos</small><button type="button" class="sec mini" id="tp-agora-fecha">recolher</button></div>${lista.map(i => linha(i, true)).join("")}
+      ${ag.length > lista.length ? `<button type="button" class="sec ver-mais" id="tp-agora-tudo">ver os ${ag.length} urgentes</button>` : ""}</div>`;
+  }
+  const a = el.querySelector("#tp-agora-abre"); if (a) a.onclick = () => { S.agora = "mini"; desenharAgora(); };
+  const f = el.querySelector("#tp-agora-fecha"); if (f) f.onclick = () => { S.agora = "fechado"; desenharAgora(); };
+  const t = el.querySelector("#tp-agora-tudo"); if (t) t.onclick = () => { S.agora = "tudo"; desenharAgora(); };
+  ligar(el);
 }
 function chips(id, lista, atual, aoClicar, classe){
   const el = EL.querySelector("#" + id);
@@ -87,14 +101,14 @@ function linha(i, naFaixa){
     <div class="corpo">
       <div class="txt">${esc(i.txt)}</div>
       <div class="chips">${naFaixa ? chip("bl", i._bloco) : ""}${chip("tipo " + (i.tipo || ""), i.tipo)}${chip("dono " + (i.dono || ""), i.dono === "LEO" ? "você" : i.dono === "CLAUDE" ? "casa" : i.dono)}${chip("ag", i.agente)}${i.prazo ? `<span class="chip prazo ${venc ? "venc" : ""}">${esc(dmy(i.prazo))}</span>` : ""}${chip("dep", i.depende_de ? "depende: " + i.depende_de : "")}${chip("esp", i.espera_de ? "espera: " + i.espera_de : "")}${i.algumdia ? chip("alg", "algum dia") : ""}${i.sub && naFaixa ? chip("sub", i.sub) : ""}</div>
-      ${nota ? `<div class="nota ${aberta ? "aberta" : ""}" title="${aberta ? "recolher" : "abrir a nota inteira"}">${esc(aberta || nota.length <= 170 ? nota : nota.slice(0, 170) + "…")}</div>` : ""}
+      ${nota ? `<div class="nota ${aberta ? "aberta" : ""}" title="${aberta ? "recolher" : "abrir a nota inteira"}">${esc(nota)}</div>` : ""}
       <div class="resposta" contenteditable="true" data-id="${esc(i.id)}" data-antes="${esc(i.resposta || "")}">${esc(i.resposta || "")}</div>
       <div class="mu rodape">${i.atualizado_por ? esc(i.atualizado_por) + " · " : ""}${esc(dmy(i.atualizado_em || ""))}</div>
     </div></div>`;
 }
 function ligar(raiz){
   for (const b of raiz.querySelectorAll(".ti .marca")) b.onclick = () => marcar(b.closest(".ti").dataset.id);
-  for (const n of raiz.querySelectorAll(".ti .nota")) n.onclick = () => { const id = n.closest(".ti").dataset.id; if (S.abertas.has(id)) S.abertas.delete(id); else S.abertas.add(id); desenhar(); };
+  for (const n of raiz.querySelectorAll(".ti .nota")) n.onclick = () => { const id = n.closest(".ti").dataset.id; if (S.abertas.has(id)) S.abertas.delete(id); else S.abertas.add(id); desenharAgora(); desenharCorpo(); };
   for (const r of raiz.querySelectorAll(".ti .resposta")) {
     r.onkeydown = ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); r.blur(); } };
     r.onblur = () => { const v = r.textContent.trim(); if (v !== (r.dataset.antes || "")) responder(r.dataset.id, v); };
@@ -114,7 +128,7 @@ async function marcar(id){
   if (await gravar(id, { feito })) { D.pendentes += feito ? -1 : 1; desenhar(); }
 }
 async function responder(id, resposta){
-  if (await gravar(id, { resposta: resposta || null })) desenhar();
+  if (await gravar(id, { resposta: resposta || null })) { desenharAgora(); desenharCorpo(); }
 }
 window.Topics = { abrir, estado: () => ({ bloco: S.bloco }) };
 })();

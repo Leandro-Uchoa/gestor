@@ -75,18 +75,23 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .abas button.ativa,.seletor button.ativa{background:var(--acc);color:var(--preto);border-color:var(--acc)}
 /* 19/10, ele: "um botão para extrair para outra janela — em todos os campos"; e o TOPICS ao lado, para ficar numa tela paralela */
 .tela-topo{display:flex;justify-content:flex-end;margin:-6px 0 8px}.tela-topo button{width:auto;margin:0;padding:6px 12px;font-size:.78rem;border-style:dashed;color:var(--mu);background:transparent}.tela-topo button:hover{border-color:var(--acc);color:var(--acc)}
-/* ---- TOPICS (19/10): cliente → assunto → mini-demandas; do banco, só para o login dele ---- */
+/* ---- TOPICS (19/10): cliente → assunto → mini-demandas; do banco, só para o login dele. Revisão do PICASSO (19/10): Arial em toda a aba
+   (o sistema proíbe system-ui/Segoe), título com peso uniforme, nota em sans a 70%, fundo neutro no urgente, prazo neutro (amarelo só vencido),
+   AGORA com 5 + "ver os N" e recolhido a uma linha quando ele toca num bloco, chips numa linha com rolagem no celular ---- */
+.topics,.topics *{font-family:var(--fonte-sans)}
 .topics .linha-topo{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.topics .linha-topo input{flex:1;min-width:220px;padding:9px 12px}
 .topics .chips.blocos button.cli{border-color:var(--cinza-claro)}.topics .chips button small{background:var(--preto);color:var(--off-white);border-radius:999px;padding:0 6px;margin-left:4px;font-size:.66rem}.topics .chips button.ativa small{background:var(--preto);color:var(--amarelo)}
-.topics .sec-tit{font-weight:800;color:var(--acc);margin:0 0 8px;letter-spacing:.02em}.topics .sec-tit small{color:var(--mu);font-weight:500;font-size:.74rem}
+.topics .sec-tit{font-weight:800;color:var(--acc);margin:0 0 8px;letter-spacing:.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.topics .sec-tit small{color:var(--mu);font-weight:500;font-size:.74rem}.topics .sec-tit .mini{margin-left:auto;width:auto;padding:4px 10px;font-size:.72rem}
+.topics .agora-linha{width:auto;margin:0 0 12px;padding:8px 14px;background:transparent;color:var(--amarelo);border:1px solid var(--amarelo);font-weight:800}.topics .ver-mais{width:auto;margin:8px 0 0;padding:8px 14px;font-size:.8rem}
 .topics .sub-tit{font-weight:800;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);margin:12px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--bd)}.topics .sub-tit small{color:var(--mu);font-weight:600;text-transform:none;letter-spacing:0}
-.topics .ti{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-bottom:1px solid rgba(120,123,134,.18)}.topics .ti:last-child{border-bottom:0}.topics .ti.feito .txt{text-decoration:line-through;color:var(--mu)}.topics .ti.urg{background:rgba(255,255,26,.06);border-left:3px solid var(--amarelo)}.topics .ti.dele .txt{font-weight:800}
+.topics .ti{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-bottom:1px solid rgba(120,123,134,.18)}.topics .ti:last-child{border-bottom:0}.topics .ti.feito .txt{text-decoration:line-through;color:var(--mu)}.topics .ti.urg{background:rgba(120,123,134,.10);border-left:3px solid var(--amarelo)}
 .topics .marca{flex:none;width:22px;height:22px;margin:2px 0 0;padding:0;border-radius:5px;border:1.5px solid var(--cinza-claro);background:transparent;color:var(--preto);font-weight:900;font-size:.9rem;line-height:1}.topics .ti.feito .marca{background:var(--amarelo);border-color:var(--amarelo)}
-.topics .corpo{flex:1;min-width:0}.topics .txt{font-size:.92rem;line-height:1.3}
+.topics .corpo{flex:1;min-width:0}.topics .txt{font-size:15px;font-weight:700;line-height:1.3}
 .topics .chip{display:inline-block;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:3px;border:1px solid var(--bd);color:var(--mu);margin:4px 4px 0 0}
 .topics .chip.tipo.pergunta{background:rgba(46,62,252,.25);color:var(--off-white);border-color:transparent}.topics .chip.tipo.espera{background:rgba(120,123,134,.3);border-color:transparent}.topics .chip.dono.LEO{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.topics .chip.bl{background:var(--preto);color:var(--off-white);border-color:var(--off-white)}
-.topics .chip.prazo.venc{color:var(--amarelo);border-color:var(--amarelo)}.topics .chip.dep,.topics .chip.esp{text-transform:none;letter-spacing:0}
-.topics .nota{font-size:.78rem;color:var(--mu);margin-top:4px;cursor:pointer;line-height:1.4;font-family:var(--fonte-mono)}.topics .nota.aberta{color:var(--ink)}
+.topics .chip.prazo{border-color:var(--cinza-claro);color:var(--off-white)}.topics .chip.prazo.venc{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.topics .chip.dep,.topics .chip.esp{text-transform:none;letter-spacing:0}
+.topics .nota{font-size:13px;color:rgba(246,245,240,.7);margin-top:4px;cursor:pointer;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.topics .nota.aberta{white-space:normal;color:var(--off-white)}
+@media (max-width:700px){.topics .chips.blocos,.topics #tp-vista{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}.topics .chips.blocos button,.topics #tp-vista button{flex:none;white-space:nowrap}}
 .topics .resposta{margin-top:5px;min-height:1.3em;font-size:.86rem;color:var(--off-white);border-left:3px solid var(--azul);padding:2px 0 2px 8px;outline:none}.topics .resposta:empty::before{content:"responder aqui e apertar Enter";color:var(--mu);opacity:.6}.topics .resposta:focus{background:rgba(46,62,252,.12)}
 .topics .rodape{font-size:.62rem;margin-top:2px}.topics .card.agora{border-left:4px solid var(--amarelo)}
 @media print{.topics .filtros{display:none}.topics .card{background:#fff;color:#000;border:1px solid #ddd;break-inside:avoid}.topics .txt,.topics .nota,.topics .resposta{color:#000}}
@@ -383,7 +388,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.24</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.25</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -450,7 +455,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=18"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
-<script src="topics.js?v=1"></script>
+<script src="topics.js?v=2"></script>
 <script>
 const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";
 const sb = supabase.createClient(URL_SB, CHAVE);
