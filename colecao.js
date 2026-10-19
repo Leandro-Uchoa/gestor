@@ -377,15 +377,18 @@ async function pedirSaida(tipos){
 }
 async function mostrarSaidas(el){
   const o = el.querySelector("#vit-saidas"); if (!o || !VIT.cliente) { if (o) o.innerHTML = ""; return; }
-  const r = await SB.from("vitrine_saida").select("tipo,pedido_em,atendido_em,arquivo,erro,nota").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
+  const r = await SB.from("vitrine_saida").select("id,tipo,pedido_em,atendido_em,arquivo,erro,nota").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
   if (r.error || !r.data) { o.innerHTML = ""; return; }
   const hora = s => s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   // enquanto houver pedido na fila, a lista se relê sozinha a cada 20 s (ele, 19/10 15:0x: "só apareceu uma informação" — o pronto não chegava sem F5)
   // e a linha SOME depois (ele, 15:5x: "aparece e depois some, senão ocupa espaço"): pronto fica 10 min na tela, erro 30 min, na fila até sair
-  const agora = Date.now(), vivo = x => !x.atendido_em || (agora - new Date(x.atendido_em).getTime()) < (x.erro ? 30 : 10) * 60_000;
+  // e um × em cada linha para ele tirar na hora (ele, 16:0x: "não deixar só por tempo"): fica guardado no aparelho
+  const ocultas = new Set((() => { try { return JSON.parse(localStorage.getItem("gestor.saidas.ocultas") || "[]"); } catch (e) { return []; } })());
+  const agora = Date.now(), vivo = x => !ocultas.has(x.id) && (!x.atendido_em || (agora - new Date(x.atendido_em).getTime()) < (x.erro ? 30 : 10) * 60_000);
   const lista = r.data.filter(vivo);
   clearTimeout(mostrarSaidas._t); if (lista.length) mostrarSaidas._t = setTimeout(() => mostrarSaidas(el), lista.some(x => !x.atendido_em) ? 20_000 : 60_000);
-  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}"><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → <code>${esc(x.arquivo || "")}</code>${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min, na pasta do cliente (esta lista se atualiza sozinha)")}</div>`).join("");
+  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}" data-id="${x.id}"><button type="button" class="sai-x" title="tirar esta linha">×</button><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → <code>${esc(x.arquivo || "")}</code>${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min, na pasta do cliente (esta lista se atualiza sozinha)")}</div>`).join("");
+  for (const b of o.querySelectorAll(".sai-x")) b.onclick = () => { const id = +b.parentElement.dataset.id; ocultas.add(id); try { localStorage.setItem("gestor.saidas.ocultas", JSON.stringify([...ocultas].slice(-200))); } catch (e) {} b.parentElement.remove(); };
 }
 
 // ---------- o MONTADOR (15/10, orientação dele, ao vivo): "parta a tela no meio: do lado esquerdo os produtos da 1S27 com filtros
@@ -394,7 +397,9 @@ async function mostrarSaidas(el){
 // e com o PDV. Mais bonito, mais visual, gamificar." Regras da casa que valem aqui: animação é evento (sobe, brilha, PARA);
 // estado é repouso; paleta só a oficial.
 const MF = { busca: "", marca: "OLY", tipo: "", bloco: new Set(), gen: new Set(), esp: false, passo: "" };   // filtros da esquerda (a coleção); esp = só os que chegam ao 48; passo = o roteiro
-const VF = { gen: new Set(), bloco: new Set(), tipo: new Set() };                      // filtros da direita (a vitrine)
+const VF = { gen: new Set(), bloco: new Set(), tipo: new Set(), marca: new Set() };
+// custo para a CMS (ele, 19/10 16:0x): "markup 2,0, padrão para o prazo médio de 63 dias" → custo = PDV ÷ 2; no GTM o placar mostra custo × pares, não PDV
+const MARKUP_CMS = 2;                      // filtros da direita (a vitrine)
 let PAINEL = "esq";                                                                    // no celular: qual metade está na tela
 const GEN_ORDEM = ["Feminino", "Masculino", "Unissex", "Infantil"];
 const genOrd = g => { const i = GEN_ORDEM.indexOf(g); return i < 0 ? 9 : i; };
@@ -447,6 +452,7 @@ function desenharMontador(pg){
         <div class="mont-cab">
           <div class="mont-tit" id="vf-tit"></div><div class="vf-confere"><button type="button" class="sec" id="vf-reler" title="relê o que está gravado no banco">↻ conferir no banco</button><span class="mu" id="vf-lido"></span></div>
           <div class="mont-placar" id="vf-placar"></div>
+          <div class="frow"><span class="fl">marca</span><div class="chips" id="vf-marca"></div></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
           <div class="frow"><span class="fl">gênero</span><div class="chips" id="vf-gen"></div></div>
           <div class="frow"><span class="fl">família</span><div class="chips" id="vf-bloco"></div></div>
@@ -564,6 +570,9 @@ function desenharDireita(pg){
   const todas = escolhidas();
   const ct = new Map(), cgn = new Map(), cb = new Map();
   for (const it of ordenar(todas)) { ct.set(it.t, (ct.get(it.t) || 0) + 1); if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1); const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
+  // filtro de MARCA na vitrine (ele, 19/10 16:0x: "deixa o filtro de Under Armour e de Olympikus, já me confundi uma vez")
+  const cm = new Map(); for (const it of todas) cm.set(it.m, (cm.get(it.m) || 0) + 1);
+  chips(pg, "vf-marca", [["", "as duas"], ...[["OLY", "Olympikus"], ["UA", "Under Armour"]].filter(([v]) => cm.has(v)).map(([v, r]) => [v, r, cm.get(v)])], VF.marca, v => { if (v === "") VF.marca.clear(); else if (VF.marca.has(v)) VF.marca.delete(v); else VF.marca.add(v); desenharDireita(pg); });
   chips(pg, "vf-tipo", [["", "tudo"], ...TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => [v, r, ct.get(v)])], VF.tipo, v => { if (v === "") VF.tipo.clear(); else if (VF.tipo.has(v)) VF.tipo.delete(v); else VF.tipo.add(v); desenharDireita(pg); });
   chips(pg, "vf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], VF.gen, v => { if (v === "") VF.gen.clear(); else if (VF.gen.has(v)) VF.gen.delete(v); else VF.gen.add(v); desenharDireita(pg); });
   { const f = pg.querySelector("#vf-gen").closest(".frow"); if (f) f.classList.toggle("oculto", ehGtm()); if (ehGtm()) VF.gen.clear(); }
@@ -572,7 +581,7 @@ function desenharDireita(pg){
   // do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const gtm = ehGtm(), mes = gtmMes();
   // na DISTRIBUIÇÃO: por tipo, dentro do tipo o modelo junto (todas as cores), a cor com mais pares primeiro
-  const lista = todas.filter(it => (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
+  const lista = todas.filter(it => (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
     .sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || (gtm ? (String(a.n).localeCompare(String(b.n)) || ((VIT.pares.get(chaveCor(b)) || 0) - (VIT.pares.get(chaveCor(a)) || 0))) : 0)
       || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
@@ -581,12 +590,14 @@ function desenharDireita(pg){
   const dinheiroCheio = s => s ? "R$ " + Number(s).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
   const dinheiroCurto = s => !s ? "—" : (s >= 1e6 ? "R$ " + (s / 1e6).toFixed(2).replace(".", ",") + " mi" : (s >= 1e3 ? "R$ " + (s / 1e3).toFixed(1).replace(".", ",") + " mil" : "R$ " + Math.round(s)));
   // no GTM o placar é a digitação: pares DISTRIBUÍDOS (o que ele respondeu) contra o TETO (soma do volume do mês dos modelos que já têm cor)
-  const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = todas.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
+  const base = VF.marca.size ? todas.filter(it => VF.marca.has(it.m)) : todas;   // o placar segue o filtro de marca
+  const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = base.filter(it => it.t === v); if (!its.length) return "";
+    const soma = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0) * ((+it.p || 0) / MARKUP_CMS), 0) : its.reduce((s, it) => s + (+it.p || 0), 0);
     const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
     const teto = gtm ? [...new Map(its.map(it => [it.m + "|" + it.r, it])).values()].reduce((s, it) => s + (((gtmDe(it) || { vm: {} }).vm[mes]) || 0), 0) : null;
     const pm = {}; if (!gtm) for (const it of its) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (m[k]) pm[k] = (pm[k] || 0) + m[k]; }
     const totMes = Object.values(pm).reduce((a, b) => a + b, 0);
-    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>em PDV</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>${!gtm && totMes ? `<div class="pl-meses"><em>pares</em>${MESES_V.filter(k => pm[k]).map(k => `<span><b>${pm[k].toLocaleString("pt-BR")}</b><small>${k}</small></span>`).join("")}<span class="tot"><b>${totMes.toLocaleString("pt-BR")}</b><small>total</small></span></div>` : ""}`; });
+    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>${gtm ? "custo · markup 2,0 · 63 d" : "em PDV"}</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>${!gtm && totMes ? `<div class="pl-meses"><em>pares</em>${MESES_V.filter(k => pm[k]).map(k => `<span><b>${pm[k].toLocaleString("pt-BR")}</b><small>${k}</small></span>`).join("")}<span class="tot"><b>${totMes.toLocaleString("pt-BR")}</b><small>total</small></span></div>` : ""}`; });
   pg.querySelector("#vf-placar").innerHTML = placar.join("") || `<div class="pl-tipo"><em>—</em><span><b>0</b><small>cor(es)</small></span><span><b>0</b><small>modelo(s)</small></span><span><b>—</b><small>em PDV</small></span></div>`;
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
@@ -600,7 +611,7 @@ function desenharDireita(pg){
       <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}</div>
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
-        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : (!gtm && VIT.sug.get(chaveCor(it)) && VIT.sug.get(chaveCor(it)).inicio ? `<span class="selo inicio">${esc(VIT.sug.get(chaveCor(it)).inicio)}</span>` : (ehLanc(it) ? `<span class="selo inicio">sem data</span>` : ""))}</div>
+        <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${gtm && it.p != null ? `<span class="vcusto" title="custo CMS: PDV ÷ 2 (markup 2,0, prazo médio 63 dias)">custo ${esc(dinheiro(+it.p / MARKUP_CMS))}</span>` : ""}${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : (!gtm && VIT.sug.get(chaveCor(it)) && VIT.sug.get(chaveCor(it)).inicio ? `<span class="selo inicio">${esc(VIT.sug.get(chaveCor(it)).inicio)}</span>` : (ehLanc(it) ? `<span class="selo inicio">sem data</span>` : ""))}</div>
         ${gtm && gtmDe(it) ? (g => `<div class="vgtm${g.e ? " estrela" : ""}">mix ${Math.round(g.mf != null ? g.mf : g.mx)}% · sugerido <b>${(g.ps[mes] || 0).toLocaleString("pt-BR")}</b></div>${g.gr && !VIT.grades.get(chaveCor(it)) ? `<div class="vgrade">sugestão: ${esc(g.gg ? g.gg + " · " : "")}${esc(g.gr)}</div>` : ""}${!(g.vm[mes] || 0) ? `<div class="selo falta vsem">modelo sem volume em ${esc(mes)}</div>` : ""}`)(gtmDe(it)) : (gtm ? `<div class="selo falta vsem">fora do pacote do GTM</div>` : "")}
         ${gtm ? (() => { const p = VIT.pares.get(chaveCor(it)), g = gtmDe(it), teto = g ? (g.vm[mes] || 0) : 0, pct = (p != null && teto) ? Math.round(p * 100 / teto) : null;
           const p6 = VIT.pares6.get(chaveCor(it)) || 0;

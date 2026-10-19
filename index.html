@@ -348,6 +348,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .pl-tipo.gtm{grid-template-columns:auto repeat(4,minmax(0,1fr))}
 .mgtm{font-size:.6rem;color:var(--cinza-escuro);font-weight:700;text-align:center;margin-top:1px;white-space:nowrap}.mgtm b{color:var(--preto)}.mgtm.estrela{color:var(--preto)}
 .mgtm-mod{font-size:.68rem;color:var(--cinza-escuro);font-weight:700;margin-left:6px}.mgtm-mod b{color:var(--preto)}
+.vcusto{font-size:.62rem;font-weight:800;color:var(--cinza-escuro);margin-left:6px;white-space:nowrap}
 .vgtm{font-size:.62rem;color:var(--cinza-escuro);font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vgtm b{color:var(--preto);font-size:.72rem}.vgtm.estrela{color:var(--preto)}
 /* classe A/B/C da votação (NÚCLEO, 19/10): A azul · B amarelo · C cinza; e a grade a digitar no cartão */
 .gcl{font-style:normal;display:inline-block;min-width:16px;padding:0 4px;border-radius:var(--raio-selo);font-size:.6rem;font-weight:900;text-align:center;line-height:1.5}.gcl.A{background:var(--azul);color:var(--off-white)}.gcl.B{background:var(--amarelo);color:var(--preto)}.gcl.C{background:var(--cinza-claro);color:var(--preto)}
@@ -370,7 +371,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .pl-tipo span.passou b{color:var(--vermelho-ua)}
 /* as saídas da vitrine (19/10, ordem dele): giro · pedido com imagem · Excel EBM · todos — o botão anota, o TI gera, a lista mostra */
 .colecao.vitrine .saidas{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}.colecao.vitrine .saidas .fl{width:auto;margin-right:2px}.colecao.vitrine .saidas .sai{width:auto;margin:0;padding:6px 10px;font-size:.72rem}.colecao.vitrine .saidas .sai.todos{background:var(--azul);color:var(--off-white);border-color:var(--azul)}
-#vit-saidas{flex-basis:100%;display:grid;gap:3px;margin-top:2px}.sai-item{font-size:.68rem;padding:3px 8px;border-left:3px solid var(--cinza-claro);background:var(--cartao);color:var(--preto)}.sai-item.pronto{border-color:var(--azul)}.sai-item.erro{border-color:var(--vermelho-ua)}.sai-item.fila{border-color:var(--amarelo)}.sai-item code{font-family:var(--fonte-mono);font-size:.64rem;word-break:break-all}
+#vit-saidas{flex-basis:100%;display:grid;gap:3px;margin-top:2px}.sai-item{font-size:.68rem;padding:3px 8px 3px 26px;border-left:3px solid var(--cinza-claro);background:var(--cartao);color:var(--preto);position:relative}.sai-x{position:absolute;left:6px;top:2px;width:16px;height:16px;padding:0;margin:0;border:0;border-radius:50%;background:var(--cinza-claro);color:var(--preto);font-size:.7rem;font-weight:900;line-height:1;cursor:pointer}.sai-x:hover{background:var(--amarelo)}.sai-item.pronto{border-color:var(--azul)}.sai-item.erro{border-color:var(--vermelho-ua)}.sai-item.fila{border-color:var(--amarelo)}.sai-item code{font-family:var(--fonte-mono);font-size:.64rem;word-break:break-all}
 @media print{.colecao.vitrine .saidas{display:none!important}}
 .mthumb .gcl{position:absolute;top:2px;left:2px;z-index:2}
 /* a estrela da Vulcabras no alto da imagem, à ESQUERDA, no lugar do selo A/B/C (ele, 19/10 13:4x: "tira a clusterização A, B, C; a estrelinha substitui") */
@@ -420,7 +421,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.45</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.46</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -484,7 +485,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=37"></script>
+<script src="colecao.js?v=38"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script src="topics.js?v=3"></script>
