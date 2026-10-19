@@ -723,7 +723,7 @@ function perguntarGtm(it, atualGrade, atualPares, atualPares6){
 // padrão da casa (pelo gênero/numeração da cor), modificada (ele digita) ou aberta. A grade pode ficar para depois (selo "grade?" no cartão).
 const MESES_V = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN"];
 const GRADE_PADRAO = { feminina: "34–39 · 1-2-3-3-2-1", masculina: "38–43 · 1-2-3-3-2-1", infantil: "30–36 · 1-1-1-2-2-2-3", estendida: "", especial: "" };
-const GRADES_OPC = { feminina: ["34–39 · 1-2-3-3-2-1"], masculina: ["38–43 · 1-2-3-3-2-1", "37–43 · 1-2-2-3-2-1-1", "38–44 · 1-2-3-2-2-1"], infantil: ["30–36 · 1-1-1-2-2-2-3"] };
+const GRADES_OPC = { feminina: ["34–39 · 1-2-3-3-2-1"], masculina: ["38–43 · 1-2-3-3-2-1", "37–43 · 1-2-2-3-2-1-1", "38–44 · 1-2-3-2-2-1-1"], infantil: ["30–36 · 1-1-1-2-2-2-3"] };
 const gradePadraoDe = it => { const o = GRADES_GTM(it); if (ehInf(it)) return "infantil"; if (o.length === 1) return o[0]; if (ehFem(it) && o.includes("feminina")) return "feminina"; if (ehMasc(it) && o.includes("masculina")) return "masculina"; const auto = ({ fem: "feminina", masc: "masculina", inf: "infantil" })[MF.passo]; return auto && o.includes(auto) ? auto : null; };
 function perguntarMeses(it, atual){
   atual = atual || {};
