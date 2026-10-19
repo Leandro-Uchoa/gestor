@@ -237,9 +237,16 @@ function montarApresentacao(d){
   try {
     const pag = (titulo, html) => paginas.push(`<section class="pg"><div class="pg-cab"><b>${esc(d.nome)}</b> · raio-x · ${esc(titulo)}</div>${html}</section>`);
     paginas.push(`<section class="pg capa"><div><small>RAIO-X DO CLIENTE</small><h1>${esc(d.nome)}</h1><p>${d.base.lojas_ativas} lojas ativas · ${esc(d.base.fonte)}<br>${esc(d.base.lojas)}<br>${esc(d.base.serie)}</p><p class="mu">gerado em ${new Date().toLocaleDateString("pt-BR")} pelo Gestor</p></div></section>`);
-    pag("resumo por loja", vistaLojas(d));
-    for (const c of d.cats) { S.cat = c; vistaCat(d, palco); pag("categoria · " + c, palco.querySelector("#rx-cat-corpo").innerHTML); }
-    for (const f of ordenar(Object.keys(d.sazonal || {}), ORD_FAM)) { S.fam = f; S.sub = ""; vistaSaz(d, palco); pag("sazonalidade · " + f, palco.querySelector("#rx-saz-corpo").innerHTML); }
+    // TETO de 18 páginas (ele, 20/10 00:1x, pelo NÚCLEO: "64 páginas, ninguém merece"): loja nunca ganha página — todas numa tabela (duas
+    // páginas só se a rede passar de 30 lojas); categorias = as 8 que mais vendem; sazonalidade = as 3 famílias que mais vendem
+    const lojasHtml = vistaLojas(d);
+    if ((d.lojas || []).length > 30) { const metade = Math.ceil(d.lojas.length / 2); for (const [k, fatia] of [["1/2", d.lojas.slice(0, metade)], ["2/2", d.lojas.slice(metade)]]) { const dd = Object.assign({}, d, { lojas: fatia }); pag("resumo por loja " + k, vistaLojas(dd)); } }
+    else pag("resumo por loja", lojasHtml);
+    const catsTop = (d.cats || []).slice().sort((a, b) => ((d.totais[b] || {}).v || 0) - ((d.totais[a] || {}).v || 0)).slice(0, 8);
+    for (const c of catsTop) { S.cat = c; vistaCat(d, palco); pag("categoria · " + c, palco.querySelector("#rx-cat-corpo").innerHTML); }
+    const somaFam = f => Object.values((d.sazonal[f] || {}).mensal || {}).reduce((a, b) => a + b, 0);
+    const famsTop = ordenar(Object.keys(d.sazonal || {}), ORD_FAM).sort((a, b) => somaFam(b) - somaFam(a)).slice(0, 3);
+    for (const f of famsTop) { S.fam = f; S.sub = ""; vistaSaz(d, palco); pag("sazonalidade · " + f, palco.querySelector("#rx-saz-corpo").innerHTML); }
     if (d.piramide) pag("pirâmide de PDV", vistaPir(d));
     if (d.ponta) { PF.sit = "fora de linha"; PF.marca = ""; PF.busca = ""; vistaPonta(d, palco); pag("ponta de estoque · fora de linha", limpa(palco.innerHTML)); }
     if (d.leitura && Object.keys(d.leitura).length) pag("a leitura", `<div class="card">${Object.entries(d.leitura).map(([k, v]) => `<div class="leitura"><b>${esc(k)}</b> ${esc(v)}</div>`).join("")}</div>`);
@@ -277,6 +284,8 @@ async function apresentacao(){
     }
     const blob = pdf.output("blob");
     q.remove();
+    if (pdf.getNumberOfPages() !== paginas.length) throw new Error("o PDF saiu com " + pdf.getNumberOfPages() + " páginas e a apresentação tem " + paginas.length + " — não entrego página a mais");
+    if (paginas.length > 18) throw new Error("a apresentação passou do teto de 18 páginas (" + paginas.length + ")");
     const arquivo = new File([blob], nomeArq + ".pdf", { type: "application/pdf" });
     // no celular: compartilhar (WhatsApp, Arquivos); senão, baixa já nomeado
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) { try { await navigator.share({ files: [arquivo], title: nomeArq }); avisa("compartilhado ✓"); setTimeout(() => avisa(antes), 2.5e3); return; } catch (e) { if (e && e.name === "AbortError") { avisa(antes); return; } } }
