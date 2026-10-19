@@ -23,7 +23,8 @@
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto, preço, bloqueio moram no banco.
 (function(){
 const IMG = "img/mini/";
-const TIPOS = [["", "Geral"], ["TENIS", "Footwear"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
+// 19/10: CHINELOS é tipo próprio (regra dele: chinelo nunca junto do tênis — outro dinheiro, outra cota, outro departamento)
+const TIPOS = [["", "Geral"], ["TENIS", "Footwear"], ["CHINELOS", "Chinelos"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
 const NOME_TIPO = Object.fromEntries(TIPOS.filter(([v]) => v));
 const NBSP = String.fromCharCode(160);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -375,7 +376,10 @@ function desenharDireita(pg){
   // o valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
   const cheio = soma ? "R$ " + Number(soma).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
   const curto = !soma ? "—" : (soma >= 1e6 ? "R$ " + (soma / 1e6).toFixed(2).replace(".", ",") + " mi" : (soma >= 1e3 ? "R$ " + (soma / 1e3).toFixed(1).replace(".", ",") + " mil" : "R$ " + Math.round(soma)));
-  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b><small>cor(es)</small></span><span><b>${modelos}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(cheio)}</b><b class="curto">${esc(curto)}</b><small>em PDV</small></span>`;
+  // 19/10: o placar abre por tipo — o chinelo nunca entra na conta do tênis (regra dele); modelos contados dentro de cada tipo
+  const porTipo = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = todas.filter(it => it.t === v); return `${r} <b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b> mod · ${its.length} cor`; });
+  pg.querySelector("#vf-placar").innerHTML = `<span><b>${todas.length}</b><small>cor(es)</small></span><span><b>${modelos}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(cheio)}</b><b class="curto">${esc(curto)}</b><small>em PDV</small></span>`
+    + (porTipo.length > 1 ? `<div class="mont-tipos mu">${porTipo.join(" · ")}</div>` : "");
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
   V.innerHTML = lista.length ? lista.map(it => `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}" data-kc="${esc(chaveCor(it))}">
