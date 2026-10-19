@@ -19,7 +19,7 @@
 // reversível ("voltar"); só faturado não tem botão. ⛔ Nada disso escreve na DETALHADA nem no EBM: a vitrine REGISTRA a decisão.
 // Cada marcação guarda quem, quando e o estado anterior (histórico pelo gatilho do banco — BOSS; a ATA VIVA lê).
 // Fora da vitrine que ele monta: PDV nulo/zero (DTC/marketplace, NÚCLEO) e a lista por cliente (vitrine_bloqueio: CARDIO na Poly).
-// Exportar PDF = imprimir: página cinza, cartão branco, cada bloco numa página, item retirado sai riscado (registro da conversa).
+// Exportar PDF (19/10) = o arquivo no padrão do PICASSO (molde da vitrine da Poly), gerado no navegador e já nomeado; na atual, o retirado sai riscado com o selo RETIRAR.
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto, preço, bloqueio moram no banco.
 (function(){
 const IMG = "img/mini/";
@@ -103,12 +103,12 @@ async function carregarVitrine(sb){
   }
   if (VIT.cliente && VIT.carregadoPara !== VIT.cliente) {
     const [r, a, sg, cd] = await Promise.all([tudo(sb.from("vitrine").select("colecao,marca,referencia,cor,estado,grade,pares,pares6,pares_mes,grade_texto,pares6_mes,grades").eq("cliente", VIT.cliente)), sb.rpc("vitrine_atual_consulta", { p_cliente: VIT.cliente, p_colecao: null }),
-      tudo(sb.from("vitrine_sugestao").select("marca,referencia,cor,pares_mes,inicio_faturamento,motivo").eq("cliente", VIT.cliente)),
+      tudo(sb.from("vitrine_sugestao").select("marca,referencia,cor,pares_mes,inicio_faturamento,motivo,classe,tipo_item,venda_media_mes,continuidade").eq("cliente", VIT.cliente)),
       tudo(sb.from("cliente_condicao").select("marca,tipo,prazo,markup").eq("cliente", VIT.cliente))]);
     if (r.error) { VIT.erro = "não consegui ler a vitrine: " + r.error.message; return; }
     VIT.marcas = new Map(); VIT.grades = new Map(); VIT.pares = new Map(); VIT.pares6 = new Map(); VIT.meses = new Map(); VIT.meses6 = new Map(); VIT.gradesL = new Map(); VIT.gradeTx = new Map(); VIT.sug = new Map();
     for (const x of r.data) { const k = x.marca + "|" + x.referencia + "|" + x.cor; marcas(x.colecao).set(k, x.estado || "escolhida"); if (x.grade) VIT.grades.set(k, x.grade); if (x.pares != null) VIT.pares.set(k, x.pares); if (x.pares6) VIT.pares6.set(k, x.pares6); if (x.pares_mes) VIT.meses.set(k, x.pares_mes); if (x.pares6_mes) VIT.meses6.set(k, x.pares6_mes); if (x.grade_texto) VIT.gradeTx.set(k, x.grade_texto); if (Array.isArray(x.grades) && x.grades.length) VIT.gradesL.set(k, x.grades); }
-    for (const x of (sg && sg.data) || []) VIT.sug.set(x.marca + "|" + x.referencia + "|" + x.cor, { pm: x.pares_mes || {}, inicio: x.inicio_faturamento || "", motivo: x.motivo || "" });
+    for (const x of (sg && sg.data) || []) VIT.sug.set(x.marca + "|" + x.referencia + "|" + x.cor, { pm: x.pares_mes || {}, inicio: x.inicio_faturamento || "", motivo: x.motivo || "", classe: x.classe || "", tipo: x.tipo_item || "", vmm: x.venda_media_mes == null ? null : +x.venda_media_mes, cont: !!x.continuidade });
     // a condição do cliente (ele, 19/10 16:1x: "clientes grandes que eu acompanho, você já tem o markup: abre automaticamente com o markup e o prazo dele")
     VIT.cond = new Map(); for (const x of (cd && cd.data) || []) VIT.cond.set(x.marca + "|" + x.tipo, { prazo: x.prazo, markup: +x.markup });
     VIT.atual = (!a.error && a.data && a.data.n > 0) ? a.data : null;
@@ -206,9 +206,24 @@ function desenhar(){
 
 // a foto: miniatura local → URL pública → "sem foto"
 const srcFoto = it => it.i ? IMG + it.i + ".jpg" : (it.u || "");
+// o C de CONTINUIDADE (ele pela IA, 19/10 20:02: "um C amarelo no canto superior esquerdo dos produtos que dá para dar continuidade, na vitrine
+// base, para a gente decidir se sobe"). Regra do NÚCLEO (20/10): o carregador grava `continuidade`; cheio = SUGERIDA, contorno = AVALIAR.
+// Ao passar/tocar: o motivo e os pares sugeridos por mês. Nada sobe sozinho — ele decide produto a produto.
+function contC(it){
+  const sg = VIT.sug.get(chaveCor(it)); if (!sg || !sg.cont) return "";
+  const meses = Object.values(sg.pm || {}).filter(v => +v > 0), media = meses.length ? Math.round(meses.reduce((a, b) => a + +b, 0) / meses.length) : 0;
+  const txt = (sg.classe === "SUGERIDA" ? "continuidade sugerida" : "continuidade a avaliar") + (media ? " · sugerido " + media + " pares/mês" : "") + (sg.vmm && !/gira/i.test(sg.motivo || "") ? " · gira " + Math.round(sg.vmm) + " pares/mês" : "") + (sg.motivo ? " — " + sg.motivo.replace(/^(SUGERIDA|AVALIAR)\s*[·-]\s*/i, "") : "");
+  return `<i class="cont-c${sg.classe === "SUGERIDA" ? " cheio" : " contorno"}" title="${esc(txt)}" data-txt="${esc(txt)}" onclick="Colecao.verC(this, event)">C</i>`;
+}
+function verC(el, ev){   // no celular não há "passar o mouse": o toque abre a bolha com o motivo; outro toque fecha
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  document.querySelectorAll(".cont-bolha").forEach(b => { if (b.previousSibling !== el) b.remove(); });
+  const atual = el.nextSibling; if (atual && atual.classList && atual.classList.contains("cont-bolha")) { atual.remove(); return; }
+  const b = document.createElement("div"); b.className = "cont-bolha"; b.textContent = el.dataset.txt || ""; el.after(b);
+}
 function fotoHtml(it){
   const src = srcFoto(it);
-  const tri = ehNova(it) ? `<i class="tri" title="cor nova"></i>` : "";
+  const tri = (ehNova(it) ? `<i class="tri" title="cor nova"></i>` : "") + contC(it);
   if (!src) return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><div class="sem">sem foto</div>${tri}</div>`;
   return `<div class="foto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}"><img loading="lazy" src="${esc(src)}" alt="" data-passo="${it.i ? "jpg" : "url"}" data-url="${esc(it.u || "")}" onerror="Colecao.fotoFalhou(this)">${tri}<div class="sem oculto">sem foto</div></div>`;
 }
@@ -285,59 +300,173 @@ function desenharPagina(){
   EL.querySelector("#col-conta").textContent = `${modelos} modelo(s) · ${lista.length} cor(es) · coleção ${DADOS.colecao || "?"} · pacote de ${DADOS.base_em ? DADOS.base_em.split("-").reverse().join("/") : "?"}` + (VIT.cliente ? ` · vitrine ${nomeCli(VIT.cliente)}: ${contaEscolhidas()} cor(es)` : "");
   ligarPagina(EL, pg, "colecao");
 }
-// o PDF da vitrine (19/10, ele testou duas vezes: "ainda não funcionou baixar o PDF"): imprimir a página inteira dependia de um emaranhado de
-// regras @media print e saía em branco; agora abre uma JANELA PRÓPRIA só com a vitrine (A4 deitado, 6 cartões por linha, título por seção,
-// placar por tipo), espera as fotos e manda imprimir — Chrome: "Salvar como PDF"
+// ---------- o PDF da vitrine no PADRÃO DO PICASSO (19/10, ordem dele: o mesmo PDF da vitrine da Poly). Molde: CATALOGO_GESTOR\VITRINE_MOLDE_PDF
+// (molde_vitrine_poly_1s27.html = gabarito página por página; gera_vitrine_pdf.py = a lógica). Página de 338,7 × 190,5 mm deitada, cinza, cartão
+// branco; CAPA preta com o resumo POR TIPO, sem total geral (chinelo nunca soma com tênis); no tênis um BLOCO por família oficial da circular,
+// na ordem dela, 8 cartões por página (título e faixa de preço repetidos a cada quebra); depois as PAREDES, uma página por gênero (feminino ·
+// masculino · unissex · infantil · chinelos), fotos pequenas, para enxergar a distribuição de cores. Só Arial / Courier New; paleta oficial.
+// Gerado no próprio navegador (GestorLib.pdfDePaginas: html2canvas página a página + jsPDF), já nomeado "MM,AA CLIENTE - VITRINE 1S27.pdf";
+// no celular abre o compartilhar. Sem janela nova, sem pop-up, sem a impressora do navegador (19/10, ele testou duas vezes: "ainda não
+// funcionou baixar o PDF"). A foto: a miniatura local (mesma origem — o canvas desenha) e, se faltar, a URL pública; o catálogo não manda
+// CORS, então a foto da URL aparece na tela mas NÃO entra no canvas — aí o cartão diz "sem foto", em vez de sair em branco calado.
+const PDF_TIPOS = [["TENIS", "TÊNIS"], ["CONFECCAO", "CONFECÇÃO"], ["ACESSORIOS", "ACESSÓRIOS"], ["MEIAS", "MEIAS"], ["CHINELOS", "CHINELOS"]];   // ordem do gerador do PICASSO: chinelo por último, à parte
+const PDF_POR_PAGINA = 8;             // 4 colunas × 2 linhas
+const PDF_PAREDES = ["FEMININO", "MASCULINO", "UNISSEX", "INFANTIL", "CHINELOS"];
+const PDF_FORMATO = [338.7, 190.5];   // mm, deitado: o tamanho de página do molde
+// chinelo pelos três sinais do gerador: tipo Chinelos OU família/bloco com CHINELO OU referência começando por 54
+const pdfEhChinelo = it => it.t === "CHINELOS" || /CHINELO/i.test(familiaDe(it) || "") || String(it.r || "").startsWith("54");
+const pdfTipo = it => pdfEhChinelo(it) ? "CHINELOS" : it.t;
+const pdfTipoIdx = t => { const i = PDF_TIPOS.findIndex(([v]) => v === t); return i < 0 ? 9 : i; };
+const pdfNomeTipo = t => (PDF_TIPOS.find(([v]) => v === t) || [t, String(t).toUpperCase()])[1];
+const pdfFamilia = it => pdfTipo(it) === "TENIS" ? String(familiaDe(it) || "").toUpperCase() : "";
+const pdfPdv = it => it.p == null ? -1 : +it.p;
+const pdfModelos = lista => new Set(lista.map(it => it.m + "|" + it.r)).size;
+// a PAREDE (gênero) da cor: chinelo à parte; o gênero do cadastro decide; unissex vai para o lado da GRADE que ele escolheu na vitrine
+// (feminina → feminino; masculina ou especial → masculino) ou do bloco do catálogo (… FEMININO / … MASCULINO); sem lado, UNISSEX — nunca duplicado
+const pdfParede = it => { if (pdfEhChinelo(it)) return "CHINELOS"; if (ehFem(it)) return "FEMININO"; if (ehMasc(it)) return "MASCULINO"; if (ehInf(it)) return "INFANTIL";
+  const g = VIT.grades.get(chaveCor(it)); if (g === "feminina") return "FEMININO"; if (g === "masculina" || g === "especial") return "MASCULINO"; if (g === "infantil") return "INFANTIL";
+  const f = semAcento(familiaDe(it)); return f.includes("FEMININO") ? "FEMININO" : f.includes("MASCULINO") ? "MASCULINO" : "UNISSEX"; };
+// a foto do PDF: miniatura local primeiro, URL pública depois. crossorigin em TODAS: a foto que o canvas não puder desenhar (origem sem CORS)
+// já falha no carregamento e vira "sem foto" — nada sai em branco calado; a conta de "sem foto" vai para o botão
+const pdfFoto = it => { const mini = it.i ? IMG + it.i + ".jpg" : "", url = it.u || "", src = mini || url;
+  return src ? `<img src="${esc(src)}" crossorigin="anonymous" alt="" data-url="${esc(mini && url ? url : "")}" onerror="Colecao.fotoPdfFalhou(this)">` : `<span class="sem">sem foto</span>`; };
+function fotoPdfFalhou(img){ const u = img.dataset.url; if (u) { img.dataset.url = ""; img.src = u; return; } img.replaceWith(Object.assign(document.createElement("span"), { className: "sem", textContent: "sem foto" })); }
+// o CSS do molde (CSS + CSS_MOSAICO do gera_vitrine_pdf.py), tudo sob .vit-pdf para não vazar na página nem herdar dela (o .card do Gestor)
+const PDF_CSS = `
+.vit-pdf{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:16px;line-height:normal;font-weight:400;text-align:left}
+.vit-pdf *{box-sizing:border-box;margin:0;padding:0}
+.vit-pdf .pg{width:338.7mm;height:190.5mm;background:rgb(230,231,232);display:flex;flex-direction:column;overflow:hidden;padding:7mm 9mm 5mm;position:relative}
+.vit-pdf .capa{justify-content:center;background:#000;color:#F6F5F0;padding:0 22mm}
+.vit-pdf .capa h1{font-size:34pt;line-height:1.1;letter-spacing:.5pt;color:inherit;font-weight:700;margin:0}
+.vit-pdf .capa h1 em{font-style:normal;color:#000;background:#FFFF1A;padding:0 2mm}
+.vit-pdf .capa p{margin-top:8mm;font-size:12pt;color:#ADAEB3;line-height:1.6}
+.vit-pdf .topo{display:flex;align-items:baseline;justify-content:space-between;border-left:1.4mm solid #FFFF1A;padding-left:3mm;margin-bottom:4mm}
+.vit-pdf .topo h2{font-size:15pt;letter-spacing:.6pt;color:#000;font-weight:700;margin:0}
+.vit-pdf .topo span{font-size:9pt;color:#787B86}
+.vit-pdf .grade{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr);gap:4mm;min-height:0}
+.vit-pdf .card{background:#fff;border:0;border-radius:1.8mm;box-shadow:0 .2mm .6mm rgba(0,0,0,.12);padding:3mm;margin:0;display:flex;flex-direction:column;min-height:0}
+.vit-pdf .ft{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.vit-pdf .ft img{max-width:100%;max-height:100%;object-fit:contain}
+.vit-pdf .sem{color:#787B86;font-size:9pt}
+.vit-pdf .nome{font-size:10pt;font-weight:700;margin-top:2mm;line-height:1.15;height:2.3em;overflow:hidden;text-wrap:balance}
+.vit-pdf .ref{font-family:"Courier New",monospace;font-weight:700;color:#2E3EFC;font-size:10pt;margin-top:.8mm}
+.vit-pdf .cor{font-size:8pt;color:#000;margin-top:.6mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vit-pdf .cor b{font-family:"Courier New",monospace}
+.vit-pdf .lin{display:flex;align-items:center;gap:1.5mm;margin-top:1.4mm;flex-wrap:wrap}
+.vit-pdf .pdv{font-size:13pt;font-weight:700;color:#2E3EFC}
+.vit-pdf .tag{font-size:6.5pt;font-weight:700;padding:.4mm 1.2mm;border-radius:.8mm;background:#FFFF1A;color:#000}
+.vit-pdf .tag.ini{background:#ADAEB3}
+.vit-pdf .tag.ret{background:#000;color:#FFFF1A}
+.vit-pdf .det{font-size:7pt;color:#787B86;margin-top:.8mm}
+.vit-pdf .g{font-size:7pt;font-weight:700;color:#2E3EFC;margin-top:.6mm}
+.vit-pdf .card.ret .ft img{opacity:.35}.vit-pdf .card.ret .nome,.vit-pdf .card.ret .ref{text-decoration:line-through}
+.vit-pdf .rod{display:flex;justify-content:space-between;font-size:7.5pt;color:#787B86;margin-top:3mm}
+.vit-pdf .parede{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:3mm 4mm;min-height:0;position:relative}
+.vit-pdf .mod{background:#fff;border-radius:1.8mm;box-shadow:0 .2mm .6mm rgba(0,0,0,.12);padding:1.6mm 2mm 1.4mm}
+.vit-pdf .mod .cab{display:flex;align-items:baseline;gap:1.6mm;font-size:7.5pt;white-space:nowrap}
+.vit-pdf .mod .cab b{font-size:8pt}
+.vit-pdf .mod .cab .p{color:#2E3EFC;font-weight:700}
+.vit-pdf .mod .cab .r{font-family:"Courier New",monospace;font-weight:700;color:#2E3EFC}
+.vit-pdf .tiras{display:flex;gap:1.2mm;margin-top:1mm}
+.vit-pdf .tile{width:27mm;text-align:center}
+.vit-pdf .tile .im{height:15mm;display:flex;align-items:center;justify-content:center}
+.vit-pdf .tile img{max-width:100%;max-height:100%;object-fit:contain}
+.vit-pdf .tile .c{font-family:"Courier New",monospace;font-weight:700;font-size:6.5pt;margin-top:.4mm}
+.vit-pdf .tile.pe{width:20mm}.vit-pdf .tile.pe .im{height:20mm}
+.vit-pdf .resumo{font-size:8pt;color:#787B86;margin:-2mm 0 3mm 4.4mm}`;
+// o cartão do molde: foto · nome · referência · cor (código em Courier + descrição) · PDV com os selos · gênero · numeração · família;
+// ctx.linha = a linha a mais desta vitrine (meses e pares do cliente; pares e grade no GTM); ctx.retirada = marcada "retirar" na atual
+function pdfCartao(it, ctx){
+  const sg = VIT.sug.get(chaveCor(it)), inicio = it.if || (sg && sg.inicio) || "";
+  const selos = (ehLanc(it) ? `<span class="tag">LANÇAMENTO</span>` : "") + (inicio ? `<span class="tag ini">${esc(inicio)}</span>` : "") + (it.sl ? `<span class="tag ini">CONVENÇÃO</span>` : "") + (ctx.retirada ? `<span class="tag ret">RETIRAR</span>` : "");
+  const cor = `<b>${esc(it.c)}</b>` + (it.cd && it.cd !== it.c ? ` · ${esc(it.cd)}` : "");
+  const det = [it.ge, it.nu, pdfFamilia(it)].filter(Boolean).map(x => esc(x)).join(" · ");
+  return `<div class="card${ctx.retirada ? " ret" : ""}"><div class="ft">${pdfFoto(it)}</div><div class="nome">${esc(it.n)}</div>
+<div class="ref">${esc(it.r)}</div><div class="cor">${cor}</div>
+<div class="lin"><span class="pdv">${esc(dinheiro(it.p))}</span>${selos}</div><div class="det">${det}</div>${ctx.linha ? `<div class="g">${ctx.linha}</div>` : ""}</div>`;
+}
+// os BLOCOS: por tipo; no tênis um bloco por família oficial (a lista já vem na ordem tipo → família → PDV); 8 por página, o título e a faixa
+// de preço (do primeiro ao último da página) repetidos a cada quebra; rodapé com cliente · coleção e k/n
+function pdfBlocos(lista, ctxDe, rod){
+  const out = [];
+  for (const [tv] of PDF_TIPOS) {
+    const doTipo = lista.filter(it => pdfTipo(it) === tv); if (!doTipo.length) continue;
+    const fams = new Map(); for (const it of doTipo) { const f = pdfFamilia(it); if (!fams.has(f)) fams.set(f, []); fams.get(f).push(it); }
+    for (const [fam, bloco] of fams) {
+      const tit = fam || pdfNomeTipo(tv), pags = []; for (let i = 0; i < bloco.length; i += PDF_POR_PAGINA) pags.push(bloco.slice(i, i + PDF_POR_PAGINA));
+      pags.forEach((grupo, k) => out.push(`<div class="pg"><div class="topo"><h2>${esc(tit)}</h2><span>${esc(dinheiro(grupo[0].p))} a ${esc(dinheiro(grupo[grupo.length - 1].p))}</span></div>
+<div class="grade">${grupo.map(it => pdfCartao(it, ctxDe(it))).join("")}</div>
+<div class="rod"><span>${rod.esq}</span><span><b>${rod.dir}</b> &nbsp; ${k + 1}/${pags.length}</span></div></div>`));
+    }
+  }
+  return out;
+}
+// as PAREDES: uma página por gênero; dentro, um bloco por modelo (do mais caro ao mais barato) com as cores em tiras; chinelo em pé (tile.pe)
+function pdfParedes(lista, rod){
+  const out = [];
+  for (const p of PDF_PAREDES) {
+    const cores = lista.filter(it => pdfParede(it) === p).sort((a, b) => (pdfPdv(b) - pdfPdv(a)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
+    if (!cores.length) continue;
+    const mods = new Map(); for (const it of cores) { const k = it.m + "|" + it.r + "|" + it.n; if (!mods.has(k)) mods.set(k, []); mods.get(k).push(it); }
+    const pe = p === "CHINELOS" ? " pe" : "";
+    const blocos = [...mods.values()].map(cs => `<div class="mod"><div class="cab"><b>${esc(cs[0].n)}</b><span class="r">${esc(cs[0].r)}</span><span class="p">${esc(dinheiro(cs[0].p))}</span></div><div class="tiras">${cs.map(c => `<div class="tile${pe}"><div class="im">${pdfFoto(c)}</div><div class="c">${esc(c.c)}</div></div>`).join("")}</div></div>`).join("");
+    const ps = cores.map(pdfPdv).filter(x => x >= 0), faixa = ps.length ? `${dinheiro(Math.max(...ps))} a ${dinheiro(Math.min(...ps))}` : "";
+    const nota = p === "UNISSEX" ? " · gênero unissex no cadastro, sem lado definido na grade" : "";
+    out.push(`<div class="pg"><div class="topo"><h2>VITRINE ${p}</h2><span>${esc(faixa)}</span></div>
+<div class="resumo">${cores.length} cores · ${mods.size} modelos · do mais caro ao mais barato${nota}</div>
+<div class="parede">${blocos}</div>
+<div class="rod"><span>a parede: distribuição de cores · ${rod.esq}</span><span><b>${rod.dir}</b></span></div></div>`);
+  }
+  return out;
+}
+// a parede NÃO corta calada (o molde é overflow hidden): o que não coube na página vai para uma página "(cont.)" — medido no palco, antes de fotografar
+function pdfRepaginarParedes(palco){
+  for (let n = 0; n < 40; n++) {
+    const pg = [...palco.querySelectorAll(".pg")].find(p => { const w = p.querySelector(".parede"); return w && w.scrollHeight > w.clientHeight + 1; });
+    if (!pg) return;
+    const w = pg.querySelector(".parede"), lim = w.clientHeight, sobra = [...w.children].filter(m => m.offsetTop + m.offsetHeight > lim);
+    if (!sobra.length || sobra.length === w.children.length) return;   // um bloco só, maior que a página: fica como está
+    const nova = pg.cloneNode(true), nw = nova.querySelector(".parede"); nw.innerHTML = ""; for (const m of sobra) nw.appendChild(m);
+    const h2 = nova.querySelector("h2"); if (h2 && !/\(cont\.\)$/.test(h2.textContent)) h2.textContent += " (cont.)";
+    pg.after(nova);
+  }
+}
 async function imprimirVitrine(){
   if (!VIT.cliente || !DADOS) return;
   const atual = VIT.vista === "atual" && VIT.atual, gtm = ehGtm(), mes = gtmMes();
   const f = (!atual && !gtm) ? filtroDaTela() : null;
   const lista = atual ? VIT.atual.itens.slice() : (f ? cartoesFiltrados() : escolhidas());
-  if (!lista.length) { alert(f ? "Com esse filtro não sobra nenhuma cor para o PDF." : "A vitrine está vazia: nada para imprimir."); return; }
-  if (f && !(await confirmar("PDF com o filtro da tela", `Deseja realmente imprimir apenas ${f.texto} — ${lista.length} cor(es) de ${escolhidas().length}?`))) return;
-  const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col);
-  lista.sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
-  const abs = src => { try { return new URL(src, location.href).href; } catch (e) { return src; } };
-  const hoje = new Date().toLocaleDateString("pt-BR"), T = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#000";
-  const placar = TIPOS.filter(([v]) => v && lista.some(it => it.t === v)).map(([v, r]) => { const its = lista.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
-    const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
-    const pmT = {}; if (!gtm) for (const it of its) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const kk of MESES_V) if (m[kk]) pmT[kk] = (pmT[kk] || 0) + m[kk]; }
-    return `<div class="pl"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b> cor(es)</span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b> modelo(s)</span>${gtm || atual ? `<span><b>${esc(dinheiro(soma))}</b> em PDV</span>` : ""}${gtm ? `<span><b>${pares.toLocaleString("pt-BR")}</b> pares ${esc(mes)}</span>` : ""}${!gtm && !atual ? MESES_V.filter(kk => pmT[kk]).map(kk => `<span><b>${pmT[kk].toLocaleString("pt-BR")}</b> ${kk}</span>`).join("") + (Object.keys(pmT).length ? `<span><b>${Object.values(pmT).reduce((a, b) => a + b, 0).toLocaleString("pt-BR")}</b> pares</span>` : "") : ""}</div>`; }).join("");
-  let html = "", sec = null;
-  for (const it of lista) {
-    const s = secaoDe(it);
-    if (s !== sec) { sec = s; const its = lista.filter(x => secaoDe(x) === s); html += `<h2>${esc(s)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></h2>`; }
-    const src = srcFoto(it), k = chaveCor(it), retirada = atual && M.get(k) === "retirar", g = gtm ? gtmDe(it) : null, gr = VIT.grades.get(k); let p = VIT.pares.get(k);
-    const pm0 = VIT.meses.get(k), pm = (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : pm0, sg = VIT.sug.get(k), inicio = it.if || (sg && sg.inicio) || "";
-    if (pm && f && f.mes) p = Object.values(pm).reduce((x, y) => x + y, 0);
-    if (!gtm && !atual) {   // vitrine de CLIENTE = apresentação ao cliente (NÚCLEO, 19/10): só foto, modelo, cor, data de início e pares por mês — nada interno
-      html += `<div class="c"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
-        <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${inicio ? `<i>início ${esc(inicio)}</i>` : (ehLanc(it) ? `<i>lanç. · sem data</i>` : "")}</div>
-        ${pm ? `<div class="g">${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}</div>` : `<div class="m">meses a definir</div>`}</div>`;
-      continue;
-    }
-    html += `<div class="c${retirada ? " ret" : ""}"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
-      <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${esc(dinheiro(it.p))}${ehLanc(it) ? ` <i>lanç.</i>` : ""}${it.if ? ` <i>${esc(it.if)}</i>` : ""}</div>
-      ${gr ? `<div class="g">${esc(ROTULO_GRADE[gr] || gr)}</div>` : ""}${g && p != null ? `<div class="g"><b>${p.toLocaleString("pt-BR")}</b> pares${g.vm[mes] ? ` · ${Math.round(p * 100 / g.vm[mes])}% de ${g.vm[mes].toLocaleString("pt-BR")}` : ""}</div>` : ""}
-      <div class="m">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}${retirada ? " · RETIRAR" : ""}</div></div>`;
-  }
-  const doc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Vitrine ${esc(nomeCli(VIT.cliente))} ${esc(col)}</title>
-<style>@page{size:A4 landscape;margin:0}html,body{margin:0;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{padding:8mm}h1{font-size:15pt;font-weight:900;margin:0 0 2px}.sub{font-size:8pt;color:${T("--cinza-escuro")};margin:0 0 6px}
-.placar{display:flex;flex-wrap:wrap;gap:6px 18px;margin:0 0 8px}.pl{display:flex;gap:6px;align-items:center;font-size:8pt}.pl em{font-style:normal;font-weight:900;border-left:3px solid ${T("--amarelo")};padding-left:5px;margin-right:4px}.pl span{background:${T("--off-white")};padding:3px 8px;border-radius:6px}.pl b{font-size:10pt}
-.g6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}h2{grid-column:1/-1;font-size:8.5pt;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:6px 0 0;padding-top:5px;border-top:2px solid ${T("--azul")};break-after:avoid}h2:first-child{border-top:0;margin-top:0;padding-top:0}h2 small{font-weight:600;color:${T("--cinza-escuro")};text-transform:none;letter-spacing:0}
-.c{border:1px solid ${T("--cinza-claro")};border-radius:6px;padding:4px;break-inside:avoid;min-width:0}.f{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;border-radius:5px}.f img{width:100%;height:100%;object-fit:contain}.sem{font-size:6pt;color:${T("--cinza-escuro")}}
-.n{font-weight:800;font-size:7.5pt;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.r{font-size:6.5pt;color:${T("--cinza-escuro")};font-family:Consolas,monospace}.p{font-size:8.5pt;font-weight:800}.p i{font-style:normal;font-size:5.5pt;background:#000;color:#fff;padding:1px 4px;border-radius:3px;vertical-align:middle}
-.g{font-size:6.5pt;font-weight:800;color:${T("--azul")}}.m{font-size:6pt;color:${T("--cinza-escuro")}}.c.ret .f img{opacity:.35}.c.ret .n,.c.ret .r{text-decoration:line-through}.c.ret .m{color:${T("--vermelho-ua")};font-weight:800}</style></head>
-<body><h1>Vitrine ${esc(nomeCli(VIT.cliente))} · ${esc(col)}${atual ? " (atual)" : ""}</h1><div class="sub">${lista.length} cor(es) · ${new Set(lista.map(it => it.m + "|" + it.r)).size} modelo(s) · ${esc(hoje)} · Gestor</div>
-<div class="placar">${placar}</div><div class="g6">${html}</div>
-<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,done=false;function go(){if(done)return;done=true;setTimeout(function(){window.focus();window.print();},150);}
-if(!n){go();return;}imgs.forEach(function(i){if(i.complete){if(--n<=0)go();}else{i.onload=i.onerror=function(){if(--n<=0)go();};}});setTimeout(go,6_000);})();<\/script></body></html>`;
-  const w = JANELA_PDF || window.open("", "_blank"); JANELA_PDF = null;
-  if (!w) { alert("O navegador bloqueou a janela do PDF. Libere pop-ups para o Gestor e tente de novo."); return; }
-  w.document.open(); w.document.write(doc); w.document.close();
+  if (!lista.length) { alert(f ? "Com esse filtro não sobra nenhuma cor para o PDF." : "A vitrine está vazia: nada para o PDF."); return; }
+  if (f && !(await confirmar("PDF com o filtro da tela", `Deseja realmente gerar o PDF apenas com ${f.texto} — ${lista.length} cor(es) de ${escolhidas().length}?`))) return;
+  const bt = ELV && ELV.querySelector("#vit-pdf"), antes = bt ? bt.textContent : "", avisa = t => { if (bt) bt.textContent = t; };
+  try {
+    avisa("montando…");
+    const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col), cli = nomeCli(VIT.cliente);
+    // a ordem do gerador: tipo → família oficial (ordem da circular; as outras por nome) → do mais caro ao mais barato → modelo → cor
+    lista.sort((a, b) => (pdfTipoIdx(pdfTipo(a)) - pdfTipoIdx(pdfTipo(b))) || (famOrd(pdfFamilia(a) ? familiaDe(a) : "") - famOrd(pdfFamilia(b) ? familiaDe(b) : "")) || pdfFamilia(a).localeCompare(pdfFamilia(b))
+      || (pdfPdv(b) - pdfPdv(a)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
+    // a linha a mais de cada cartão: no GTM pares, % do teto e grade (a lista de digitação); na vitrine do cliente os meses e pares (NÚCLEO, 19/10:
+    // "só foto, modelo, cor, data de início e pares por mês — nada interno"), com o filtro de mês da tela; na atual só o selo RETIRAR
+    const ctxDe = it => { const k = chaveCor(it), ctx = { retirada: !!(atual && M.get(k) === "retirar"), linha: "" };
+      if (gtm) { const g = gtmDe(it), p = VIT.pares.get(k), gr = VIT.grades.get(k); ctx.linha = p == null ? "pares a definir" : `<b>${p.toLocaleString("pt-BR")}</b> pares${g && g.vm[mes] ? ` · ${Math.round(p * 100 / g.vm[mes])}% de ${g.vm[mes].toLocaleString("pt-BR")}` : ""}${gr ? ` · ${esc(ROTULO_GRADE[gr] || gr)}` : ""}`; }
+      else if (!atual) { const pm0 = VIT.meses.get(k), pm = (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : pm0; let p = VIT.pares.get(k); if (pm && f && f.mes) p = Object.values(pm).reduce((x, y) => x + y, 0);
+        ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir"; }
+      return ctx; };
+    // a capa: uma linha por tipo (cores · modelos · pares quando há), nunca somando chinelo com tênis — sem total geral
+    const paresDe = it => { const k = chaveCor(it); if (atual) return 0; if (gtm) return VIT.pares.get(k) || 0; const pm = VIT.meses.get(k); return (pm && f && f.mes) ? f.mes.reduce((s, m) => s + (pm[m] || 0), 0) : (VIT.pares.get(k) || 0); };
+    const linhas = PDF_TIPOS.map(([v, r]) => { const its = lista.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const p = its.reduce((s, it) => s + paresDe(it), 0);
+      return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${p ? ` · ${p.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : ""}`; }).filter(Boolean);
+    const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)}` };
+    const paginas = [`<div class="pg capa"><h1>VITRINE<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
+<p>${linhas.join("<br>")}<br>Do mais caro ao mais barato, por tipo · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
+      ...pdfBlocos(lista, ctxDe, rod), ...pdfParedes(lista, rod)];
+    const r = await GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, "VITRINE " + col),
+      { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: pdfRepaginarParedes, avisa: t => avisa("gerando o PDF… " + t) });
+    const semFoto = r.semFoto ? ` · ${r.semFoto} sem foto` : "";
+    if (r.modo === "cancelado") { avisa(antes); return; }
+    avisa((r.modo === "compartilhado" ? "compartilhado ✓" : "baixado: " + r.nome) + ` · ${r.paginas} pág.` + semFoto); setTimeout(() => avisa(antes), 6e3);
+  } catch (e) { avisa(antes); alert("não montei o PDF da vitrine: " + (e.message || e)); }
 }
-let JANELA_PDF = null;   // aberta no clique (antes da pergunta), senão o navegador bloqueia o pop-up
 const contaEscolhidas = () => [...marcas(DADOS.colecao).values()].filter(v => v === "escolhida").length;
 const contaRetiradas = () => VIT.atual ? [...marcas(VIT.atual.colecao).values()].filter(v => v === "retirar").length : 0;
 
@@ -356,7 +485,7 @@ function desenharVitrine(){
       <div class="pagina" id="vit-pagina"></div>
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
-    el.querySelector("#vit-pdf").onclick = () => { if (!ehGtm() && VIT.vista !== "atual" && filtroDaTela()) { JANELA_PDF = window.open("", "_blank"); if (JANELA_PDF) JANELA_PDF.document.write("<p style=\"font-family:Arial;padding:20px\">Confirme na outra janela…</p>"); } imprimirVitrine().then(() => { if (JANELA_PDF) { JANELA_PDF.close(); JANELA_PDF = null; } }); };
+    el.querySelector("#vit-pdf").onclick = () => imprimirVitrine();   // 19/10: PDF no padrão do PICASSO, gerado aqui mesmo (sem janela nova)
     // "todos" = os três arquivos + o PDF (ele, 19/10 15:3x: "bota exportar PDF junto, e todos — tudo pertinho, senão fica dessincronizado")
     for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = async () => { await pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) el.querySelector("#vit-pdf").onclick(); };
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
@@ -560,7 +689,7 @@ function desenharEsquerda(pg){
     modelos++;
     html += `<div class="mcard" data-kc="${esc(chaveCor(m))}"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}${m.nu ? " " + esc(m.nu) : ""}</span>` : ""}${grandeEspecial(m) && !ehInf(m) ? `<span class="selo ate48" title="numeração até o ${numMax(m)}: cabe grade especial">até ${numMax(m)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div>${gtm ? tetoDoModelo(m) : ""}</div>
       <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida", g = gtm ? gtmDe(it) : null; const mix = g ? (g.mf != null ? g.mf : g.mx) : 0;
-        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${g && g.e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
+        return `${gtm ? `<div class="mcol">` : ""}<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (g && g.mot ? g.mot : (sel ? "tirar da vitrine" : "pôr na vitrine")))}">${fotoMini(it)}${contC(it)}${g && g.e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${mix ? Math.round(mix) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>${gtm ? distDaCor(it) + `</div>` : ""}`; }).join("")}</div>
     </div>`;
   }
   const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
@@ -678,7 +807,7 @@ function desenharDireita(pg){
     const gE = e ? e.grade : VIT.grades.get(chaveCor(it)), txE = e ? e.tx : VIT.gradeTx.get(chaveCor(it));
     html += `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}${n > 1 ? " dupla" : ""}" data-kc="${esc(chaveCor(it))}" data-gi="${i}">
       <button type="button" class="mais tira" data-kc="${esc(chaveCor(it))}" data-gi="${i}" title="${n > 1 ? "tirar esta grade da vitrine" : "tirar da vitrine"}">×</button>${n > 1 ? `<i class="vdup" title="esta cor está em ${n} grades">${i + 1}/${n}</i>` : ""}
-      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}</div>
+      <div class="vfoto ${it.t === "TENIS" ? "deitada" : "empe"}" data-k="${esc(chave(it))}">${fotoMini(it)}${ehNova(it) ? `<i class="tri" title="cor nova"></i>` : ""}${contC(it)}${gtm && gtmDe(it) && gtmDe(it).e ? `<i class="estrela-v" title="estrela da Vulcabras">★</i>` : ""}</div>
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${it.p != null && condDe(it) ? `<span class="vcusto" title="custo: PDV ÷ markup ${condDe(it).markup.toFixed(2)}${condDe(it).prazo ? " · prazo " + condDe(it).prazo + " d" : ""}">custo ${esc(dinheiro(+it.p / condDe(it).markup))}</span>` : ""}${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : (!gtm && VIT.sug.get(chaveCor(it)) && VIT.sug.get(chaveCor(it)).inicio ? `<span class="selo inicio">${esc(VIT.sug.get(chaveCor(it)).inicio)}</span>` : (ehLanc(it) ? `<span class="selo inicio">sem data</span>` : ""))}</div>
@@ -1008,5 +1137,5 @@ function fotoFalhouGrande(img){ img.replaceWith(Object.assign(document.createEle
 function fecharLuz(raiz){ raiz.querySelector(".luz").classList.add("oculto"); }
 
 const estadoVitrine = () => ({ cliente: VIT.cliente, vista: VIT.vista });   // 19/10: para "abrir em outra janela" levar o cliente e a vista
-window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande, estadoVitrine, irVitrine: c => { if (c) { VIT.cliente = c; MF.tipo = ""; MF.bloco.clear(); } } };   // irVitrine (19/10): a aba Cliente abre a vitrine já no cliente
+window.Colecao = { abrir, abrirVitrine, fotoFalhou, fotoFalhouGrande, fotoPdfFalhou, estadoVitrine, verC, irVitrine: c => { if (c) { VIT.cliente = c; MF.tipo = ""; MF.bloco.clear(); } } };   // irVitrine (19/10): a aba Cliente abre a vitrine já no cliente
 })();

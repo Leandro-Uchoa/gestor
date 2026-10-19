@@ -385,7 +385,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .mnome{font-weight:800;font-size:.9rem;line-height:1.15}.mref{font-size:.74rem;color:var(--cinza-escuro);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.mpdv{color:var(--azul);font-weight:800}
 .mcard .ref{background:transparent;color:var(--azul);font-size:.76rem;padding:1px 4px;border-radius:var(--raio-selo);border:0;margin:0;width:auto;cursor:copy;font-weight:800;font-family:var(--fonte-mono);user-select:all}.mcard .ref.copiado{background:var(--amarelo);color:var(--preto)}
 .mthumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.mthumb{width:76px;position:relative;text-align:center;cursor:pointer}.mthumb img{width:76px;height:76px;object-fit:contain;background:var(--cartao);border-radius:var(--raio-cartao);display:block;box-shadow:var(--sombra-cartao)}
+.mthumb{width:76px;position:relative;text-align:center;cursor:pointer}.mthumb .cont-c{top:2px;left:2px;width:18px;height:18px;line-height:14px;font-size:.66rem}.mthumb .cont-bolha{top:22px;left:0;right:0;width:150px;max-width:60vw}.mthumb img{width:76px;height:76px;object-fit:contain;background:var(--cartao);border-radius:var(--raio-cartao);display:block;box-shadow:var(--sombra-cartao)}
 .mthumb .sem{width:76px;height:76px;border-radius:var(--raio-cartao);background:var(--cartao);display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--cinza-escuro)}
 .mthumb.sel img{outline:3px solid var(--azul);outline-offset:-3px}.mthumb.fora{opacity:.4;cursor:not-allowed}
 .mthumb .ok{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--azul);color:var(--off-white);font-style:normal;font-weight:800;font-size:.75rem;display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra-cartao)}
@@ -447,6 +447,8 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .mont-tipos{grid-column:1/-1;font-size:.72rem;color:var(--cinza-escuro);font-weight:600;margin-top:-2px}.mont-tipos b{color:var(--preto);font-size:.8rem}
 .vcard{position:relative;background:var(--cartao);border-radius:var(--raio-cartao);box-shadow:var(--sombra-cartao);padding:6px;min-width:0}
 .vfoto{position:relative;aspect-ratio:4/3;width:100%;background:var(--cartao);border-radius:var(--raio-cartao);overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:zoom-in}.vfoto img{width:100%;height:100%;object-fit:contain;display:block}.vfoto img.oculto{display:none}
+/* o C de CONTINUIDADE (20/10): círculo amarelo no canto superior ESQUERDO; cheio = SUGERIDA, contorno = AVALIAR; a estrela da Vulcabras, quando há as duas, corre para a direita do C */
+.cont-c{position:absolute;top:3px;left:3px;z-index:3;width:20px;height:20px;border-radius:50%;font-style:normal;font-weight:900;font-size:.72rem;line-height:18px;text-align:center;cursor:help;border:2px solid var(--amarelo);box-sizing:border-box}.cont-c.cheio{background:var(--amarelo);color:var(--preto)}.cont-c.contorno{background:var(--cartao);color:var(--preto)}.cont-c+.estrela-v,.cont-c+.cont-bolha+.estrela-v{left:26px}.cont-bolha{position:absolute;top:26px;left:3px;right:3px;z-index:4;background:var(--preto);color:var(--off-white);font-size:.62rem;line-height:1.3;padding:6px 8px;border-radius:8px;text-align:left;white-space:normal}
 .vfoto .sem{color:var(--cinza-escuro);font-size:.62rem}.vfoto .tri{position:absolute;top:0;right:0;width:0;height:0;border-top:16px solid var(--azul);border-left:16px solid transparent}
 .vtx{min-width:0;margin-top:4px}.vnome{font-weight:800;font-size:.74rem;line-height:1.1;padding-right:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vlinha{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:2px;min-width:0}.vcor{font-size:.62rem;color:var(--cinza-escuro);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -485,7 +487,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.72</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.74</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -561,10 +563,10 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="gestor_lib.js?v=2"></script>
+<script src="gestor_lib.js?v=3"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=46"></script>
+<script src="colecao.js?v=48"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=9"></script>
 <script src="cliente.js?v=7"></script>
@@ -629,7 +631,7 @@ const ABAS = {
   atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
   colecao: { subtitulo: "· coleção", rodape: "Visão geral da coleção, na ordem da apresentação. Toque na referência para copiar; toque no + para pôr a cor na vitrine do cliente escolhido. Exclusivos online e DTC ficam fora. Exportar PDF = imprimir a grade." },
-  vitrine: { subtitulo: "· vitrine", rodape: "As cores escolhidas para o cliente, gravadas no banco atrás do login: fecha e volta, no celular ou no computador, e estão aqui. × tira da vitrine. Exportar PDF = imprimir." },
+  vitrine: { subtitulo: "· vitrine", rodape: "As cores escolhidas para o cliente, gravadas no banco atrás do login: fecha e volta, no celular ou no computador, e estão aqui. × tira da vitrine. Exportar PDF = o arquivo no padrão da vitrine da Poly, já nomeado; no celular abre o compartilhar." },
   raiox: { subtitulo: "· raio-x clientes", rodape: "O raio-x do cliente, loja a loja: cluster, regulador, categorias, sazonalidade e pirâmide de PDV. Calculado da AG PORTA pelo NÚCLEO; mora no banco, atrás do login. Imprimir = exportar." },
   topics: { subtitulo: "· topics", rodape: "TO-DO LIST TOPICS: cliente → assunto → mini-demandas. Marca feito no quadradinho; a resposta se escreve na linha azul e grava com Enter. Mora no banco, atrás do login; só o seu login vê." },
 };
