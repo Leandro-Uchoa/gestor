@@ -220,46 +220,116 @@ function vistaPir(d){
   return `<div class="card"><div class="sec-tit">PIRÂMIDE DE PDV <small>${esc(d.periodo_piramide || d.base.serie)}</small></div><div class="pirs">${fams.map(bloco).join("")}</div>
     <div class="legenda mu">tênis nas faixas dele: base 189,99 a 229,99 · meio 249,99 a 299,99 · topo acima de 299,99 — as outras famílias pelos pontos de preço</div></div>`;
 }
-// ---- A APRESENTAÇÃO (ele, 19/10 20:3x: "o botão de gerar apresentação, como geramos para a Polyélle"; e 23:5x, pelo NÚCLEO: "é ruim de
-// salvar; quero gerar pelo celular; já poderia vir nomeado"): um toque = ARQUIVO PDF já com o nome da casa (MM,AA CLIENTE - RAIO-X.pdf),
-// gerado no próprio navegador (html2pdf, carregado na hora de uma CDN fixa); no celular abre o compartilhar (WhatsApp, Arquivos); sem
-// compartilhar, baixa. Uma página por vista: capa, lojas, cada categoria, sazonalidade por família, pirâmide, ponta, leitura.
-// as duas bibliotecas (versões fixas, cdnjs), carregadas na hora: html2canvas fotografa UMA página por vez (o documento inteiro num canvas
-// só passa do limite de altura do navegador e sai em branco — medido em 19/10), e o jsPDF monta o arquivo
+// ---- A APRESENTAÇÃO = ANÁLISE COMERCIAL no padrão da Polyélle (ele, 20/10 00:5x: "não ficou parecido nada com a Poly; até a cor ficou
+// preta; os meses de cabeça para baixo; refaz tudo"). O molde é o deck da Poly feito pelo NÚCLEO (deck_poly: capa azul com a barra
+// amarela, páginas off-white 1_920×1_080, Barlow, kicker azul em caixa alta, título 64px, tabelas de 24px com cabeçalho preto, cluster A
+// em azul claro, sazonalidade em barras — amarelo = pico, cinza = vale —, cartões de número grande). Uma página por slide, teto de 18.
 const CDN_CANVAS = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", CDN_JSPDF = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+const FONTE_BARLOW = "https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap";
 const carregaScript = src => new Promise((ok, falha) => { const sc = document.createElement("script"); sc.src = src; sc.onload = () => ok(); sc.onerror = () => falha(new Error("não carreguei " + src.split("/").slice(-2)[0] + " (sem internet?)")); document.head.appendChild(sc); });
-async function carregarPdfLib(){ if (!window.html2canvas) await carregaScript(CDN_CANVAS); if (!(window.jspdf && window.jspdf.jsPDF)) await carregaScript(CDN_JSPDF); }
+async function carregarPdfLib(){
+  if (!document.getElementById("fonte-barlow")) { const l = document.createElement("link"); l.id = "fonte-barlow"; l.rel = "stylesheet"; l.href = FONTE_BARLOW; document.head.appendChild(l); }
+  if (!window.html2canvas) await carregaScript(CDN_CANVAS);
+  if (!(window.jspdf && window.jspdf.jsPDF)) await carregaScript(CDN_JSPDF);
+  try { await document.fonts.load("700 64px Barlow"); await document.fonts.load("400 24px Barlow"); } catch (e) {}
+}
+// a paleta oficial, como no deck
+const AZUL = "#2E3EFC", AMARELO = "#FFFF1A", PRETO = "#000", CINZA = "#787B86", CINZA2 = "#ADAEB3", OFF = "#F6F5F0";
+const n0 = v => v == null ? "—" : Math.round(v).toLocaleString("pt-BR");
+const n1 = v => v == null ? "—" : Number(v).toFixed(1).replace(".", ",");
+const pc = v => v == null ? "—" : Math.round(v * 100) + "%";
+const mmaa = m => MESES[+m.slice(5, 7) - 1] + "/" + m.slice(2, 4);
+const clTint = c => c === "A" ? "rgba(46,62,252,0.14)" : c === "B" ? "rgba(46,62,252,0.06)" : "transparent";
+function slide(kicker, titulo, nota, corpo, extra){
+  return `<section class="pg" style="background:${OFF};color:${PRETO};font-family:'Barlow',Arial,Helvetica,sans-serif;padding:72px 128px 96px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box;width:1920px;height:1080px;overflow:hidden;position:relative">
+    <div style="display:flex;flex-direction:column;gap:8px"><p style="margin:0;font-size:24px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:${AZUL}">${kicker}</p>
+      <div style="display:flex;flex-direction:row;align-items:baseline;gap:24px"><h2 style="margin:0;font-size:64px;font-weight:700;line-height:1.1;color:${PRETO}">${titulo}</h2>${nota ? `<p style="margin:0;font-size:24px;color:${CINZA}">${nota}</p>` : ""}</div></div>
+    ${corpo}${extra || ""}
+    <p style="position:absolute;left:128px;bottom:40px;margin:0;font-size:22px;color:${CINZA}">Olympikus · ${esc(S._nomeDeck || "")} · Análise Comercial</p></section>`;
+}
+const th = (t, al, w) => `<th style="${w ? "width:" + w + ";" : ""}text-align:${al || "center"};color:${OFF};font-weight:600;padding:5px 10px;font-size:24px">${t}</th>`;
+const td = (t, al, estilo) => `<td style="text-align:${al || "center"};padding:4px 10px;font-size:24px;${estilo || ""}">${t}</td>`;
+const tabela = (cab, linhas, larg) => `<table style="width:${larg || 1_664}px;border-collapse:collapse;color:${PRETO}"><tr style="background:${PRETO}">${cab}</tr>${linhas}</table>`;
+const cartao = (num, rotulo, azul) => `<div style="flex:1;${azul ? "background:" + AZUL + ";" : "border:2px solid " + PRETO + ";"}padding:28px 32px;border-radius:8px;display:flex;flex-direction:column;gap:8px"><p style="margin:0;font-size:72px;font-weight:800;line-height:1;color:${azul ? AMARELO : PRETO}">${num}</p><p style="margin:0;font-size:26px;line-height:1.3;color:${azul ? OFF : PRETO}">${rotulo}</p></div>`;
+
 function montarApresentacao(d){
-  const palco = document.createElement("div"); palco.className = "raiox"; palco.style.cssText = "position:absolute;left:-9999px;top:0;width:1400px"; document.body.appendChild(palco);
-  const guardado = { cat: S.cat, fam: S.fam, sub: S.sub, pf: Object.assign({}, PF) };
-  const limpa = html => html.replace(/<div class="card filtros">[\s\S]*?<\/div>\s*(?=<div id=|<div class="card">|$)/g, "");
-  const paginas = []; RAIZ = palco;
-  try {
-    const pag = (titulo, html) => paginas.push(`<section class="pg"><div class="pg-cab"><b>${esc(d.nome)}</b> · raio-x · ${esc(titulo)}</div>${html}</section>`);
-    paginas.push(`<section class="pg capa"><div><small>RAIO-X DO CLIENTE</small><h1>${esc(d.nome)}</h1><p>${d.base.lojas_ativas} lojas ativas · ${esc(d.base.fonte)}<br>${esc(d.base.lojas)}<br>${esc(d.base.serie)}</p><p class="mu">gerado em ${new Date().toLocaleDateString("pt-BR")} pelo Gestor</p></div></section>`);
-    // TETO de 18 páginas (ele, 20/10 00:1x, pelo NÚCLEO: "64 páginas, ninguém merece"): loja nunca ganha página — todas numa tabela (duas
-    // páginas só se a rede passar de 30 lojas); categorias = as 8 que mais vendem; sazonalidade = as 3 famílias que mais vendem
-    const lojasHtml = vistaLojas(d);
-    if ((d.lojas || []).length > 30) { const metade = Math.ceil(d.lojas.length / 2); for (const [k, fatia] of [["1/2", d.lojas.slice(0, metade)], ["2/2", d.lojas.slice(metade)]]) { const dd = Object.assign({}, d, { lojas: fatia }); pag("resumo por loja " + k, vistaLojas(dd)); } }
-    else pag("resumo por loja", lojasHtml);
-    const catsTop = (d.cats || []).slice().sort((a, b) => ((d.totais[b] || {}).v || 0) - ((d.totais[a] || {}).v || 0)).slice(0, 8);
-    for (const c of catsTop) { S.cat = c; vistaCat(d, palco); pag("categoria · " + c, palco.querySelector("#rx-cat-corpo").innerHTML); }
-    const somaFam = f => Object.values((d.sazonal[f] || {}).mensal || {}).reduce((a, b) => a + b, 0);
-    const famsTop = ordenar(Object.keys(d.sazonal || {}), ORD_FAM).sort((a, b) => somaFam(b) - somaFam(a)).slice(0, 3);
-    for (const f of famsTop) { S.fam = f; S.sub = ""; vistaSaz(d, palco); pag("sazonalidade · " + f, palco.querySelector("#rx-saz-corpo").innerHTML); }
-    if (d.piramide) pag("pirâmide de PDV", vistaPir(d));
-    if (d.ponta) { PF.sit = "fora de linha"; PF.marca = ""; PF.busca = ""; vistaPonta(d, palco); pag("ponta de estoque · fora de linha", limpa(palco.innerHTML)); }
-    if (d.leitura && Object.keys(d.leitura).length) pag("a leitura", `<div class="card">${Object.entries(d.leitura).map(([k, v]) => `<div class="leitura"><b>${esc(k)}</b> ${esc(v)}</div>`).join("")}</div>`);
-  } finally { S.cat = guardado.cat; S.fam = guardado.fam; S.sub = guardado.sub; Object.assign(PF, guardado.pf); palco.remove(); RAIZ = null; }
-  const css = [...document.querySelectorAll("style")].map(s => s.textContent).join("\n") + `
-    html,body{background:#000;color:#F6F5F0;margin:0;font-family:Arial,Helvetica,sans-serif}
-    .pg{page-break-after:always;break-after:page;min-height:180mm;padding:14px 18px;box-sizing:border-box;background:#000}.pg:last-child{page-break-after:auto;break-after:auto}
-    .pg-cab{font-size:.78rem;color:#ADAEB3;letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid #787B86}.pg-cab b{color:#FFFF1A}
-    .capa{display:flex;align-items:center;justify-content:center;text-align:center;min-height:180mm}.capa small{color:#FFFF1A;letter-spacing:.2em;font-weight:900}.capa h1{font-size:3.2rem;margin:10px 0}.capa p{color:#ADAEB3;font-size:1rem;line-height:1.5}
-    .raiox .card{background:rgba(120,123,134,.14)}.raiox .filtros{display:none}.rolagem{overflow:visible}table.rx{min-width:0;width:100%}
-    .barra-imprimir{position:fixed;right:12px;top:12px}@media print{.barra-imprimir{display:none}}`;
-  const mes = new Date(); const nomeArq = (String(mes.getMonth() + 1).padStart(2, "0") + "," + String(mes.getFullYear()).slice(2) + " " + String(d.nome).toUpperCase() + " - RAIO-X").replace(/[\/:*?"<>|]+/g, "-");
-  return { css, paginas, nomeArq };
+  S._nomeDeck = d.nome;
+  const pags = [], ESC = d.escopo || {}, reg = ESC.regulador || {}, L = (d.lojas || []).slice().sort((a, b) => (b.v || 0) - (a.v || 0)), rede = L.length === 1;
+  const cob = ESC.v ? ESC.e / ESC.v : null;
+  const mesesSerie = (() => { const f = d.sazonal && d.sazonal[Object.keys(d.sazonal)[0]]; const ms = f ? Object.keys(f.mensal).sort() : []; return ms.length ? mmaa(ms[0]) + " a " + mmaa(ms[ms.length - 1]) : ""; })();
+  // 1 · capa
+  pags.push(`<section class="pg" style="background:${AZUL};color:${OFF};font-family:'Barlow',Arial,Helvetica,sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;width:1920px;height:1080px;overflow:hidden">
+    <div style="display:flex;flex-direction:column;gap:32px"><div style="width:160px;height:12px;background:${AMARELO}"></div><p style="margin:0;font-size:32px;font-weight:700;letter-spacing:4px;text-transform:uppercase">Olympikus</p></div>
+    <div style="display:flex;flex-direction:column;gap:40px"><h1 style="margin:0;font-size:120px;font-weight:800;line-height:1.02">${esc(d.nome)}<br>Análise Comercial</h1>
+      <p style="margin:0;font-size:36px;font-weight:500;line-height:1.35">${esc(d.base.serie || "")}${d.base.lojas ? " · " + esc(d.base.lojas) : ""}</p></div>
+    <p style="margin:0;font-size:28px">${new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(/^./, c => c.toUpperCase())}</p></section>`);
+  // 2 · posicionamento: venda × estoque, cobertura, regulador
+  const faixa = cob == null ? "" : cob < 4 ? "abaixo de 4 meses: ruptura" : cob > 5 ? "acima de 5 meses: excesso" : "entre 4 e 5 meses: saudável";
+  pags.push(slide("Posicionamento · " + esc(reg.escopo || "tênis Olympikus"), "O que importa é a razão venda × estoque", "cobertura saudável entre 4 e 5 meses",
+    `<p style="margin:0;font-size:32px;line-height:1.4">A rede vende <b>${n0(ESC.v)} pares/mês</b> no escopo e tem <b>${n0(ESC.e)} pares</b> em estoque: cobertura de <b>${n1(cob)} meses</b>${faixa ? " — " + faixa : ""}. ${reg.total ? "Regulador proposto: <b>" + n0(reg.total) + " pares</b> (" + esc(reg.regra || "") + ")." : ""}</p>
+     <div style="display:flex;flex-direction:row;gap:24px">${cartao(n0(ESC.v), "pares/mês de venda média no escopo")}${cartao(n0(ESC.e), "estoque atual nas lojas")}${cartao(n1(cob) + " m", "cobertura atual (estoque ÷ venda)", true)}${reg.total ? cartao(n0(reg.total), "regulador proposto") : cartao(String(L.length), rede ? "rede (sem visão por loja)" : "lojas ativas")}</div>`));
+  // 3 · lojas (duas páginas acima de 30)
+  const linhaLoja = l => { const sit = l.dif == null ? "—" : l.dif < 0 ? "pede entrada" : (l.reg && l.e / l.reg > 1.1) ? "acima" : "na faixa";
+    return `<tr style="background:${clTint(l.cluster)}">${rede ? "" : td(esc(l.cluster || ""), "left")}${td(esc(l.loja), "left")}${td(esc(l.nome || ""), "left")}${td(n0(l.v))}${td(pc(l.part))}${td(n0(l.e))}${td(n1(l.cob))}${td(n0(l.reg))}${td((l.dif < 0 ? "−" : "+") + n0(Math.abs(l.dif || 0)))}${td(sit, "center", l.dif < 0 ? "color:" + AZUL : "")}</tr>`; };
+  const cabLoja = `${rede ? "" : th("Cl.", "left", "5%")}${th("Loja", "left", "8%")}${th("Nome", "left", "22%")}${th("Venda/mês")}${th("Partic.")}${th("Estoque")}${th("Cob.")}${th("Regulador")}${th("Diferença")}${th("Situação")}`;
+  const totLoja = `<tr style="background:${CINZA2}">${rede ? "" : td("", "left")}${td("<b>Total</b>", "left")}${td(L.length + " lojas", "left")}${td("<b>" + n0(ESC.v) + "</b>")}${td("100%")}${td("<b>" + n0(ESC.e) + "</b>")}${td("<b>" + n1(cob) + "</b>")}${td(n0(L.reduce((s, l) => s + (l.reg || 0), 0)))}${td("")}${td("")}</tr>`;
+  const fatias = L.length > 30 ? [L.slice(0, Math.ceil(L.length / 2)), L.slice(Math.ceil(L.length / 2))] : [L];
+  fatias.forEach((f, i) => pags.push(slide("Lojas e clusters · " + esc(reg.escopo || ""), "Estoque por porta" + (fatias.length > 1 ? " " + (i + 1) + "/" + fatias.length : ""), "em pares · cobertura em meses · regulador = estoque oficial × participação",
+    tabela(cabLoja, f.map(linhaLoja).join("") + (i === fatias.length - 1 ? totLoja : "")))));
+  // 4 · categorias (as 8 que mais vendem): tabela por loja + a leitura
+  const cats = (d.cats || []).slice().sort((a, b) => ((d.totais[b] || {}).v || 0) - ((d.totais[a] || {}).v || 0)).slice(0, 8);
+  for (const c of cats) {
+    const t = d.totais[c] || {}, un = (d.unidade || {})[c] || "pares";
+    const linhas = L.slice(0, 30).map(l => { const x = (l.cat || {})[c] || {}; return `<tr style="background:${clTint(l.cluster)}">${rede ? "" : td(esc(l.cluster || ""), "left")}${td(esc(l.loja), "left")}${td(n0(x.v))}${td(pc(x.part))}${td(n0(x.e))}${td(n1(x.cob), "center", x.cob != null && x.cob >= 9 ? "color:" + AZUL + ";font-weight:700" : "")}${td(x.idx == null ? "—" : String(x.idx), "center", x.idx >= 110 ? "color:" + AZUL + ";font-weight:700" : "")}</tr>`; }).join("");
+    const cab = `${rede ? "" : th("Cl.", "left", "5%")}${th("Loja", "left", "10%")}${th("Venda/mês (" + esc(un) + ")")}${th("Partic.")}${th("Estoque")}${th("Cob.")}${th("Índice")}`;
+    pags.push(slide("Categoria · " + esc(c), esc(c), n0(t.v) + " " + esc(un) + "/mês na rede · estoque " + n0(t.e) + " · cobertura " + n1(t.v ? t.e / t.v : null) + " meses",
+      `<div style="display:flex;flex-direction:row;gap:32px;align-items:flex-start"><div style="flex:0 0 ${d.leitura && d.leitura[c] ? "1100px" : "1664px"}">${tabela(cab, linhas, d.leitura && d.leitura[c] ? 1_100 : 1_664)}</div>${d.leitura && d.leitura[c] ? `<div style="flex:1;background:${AZUL};color:${OFF};padding:28px 32px;border-radius:8px"><p style="margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${AMARELO}">Leitura</p><p style="margin:0;font-size:26px;line-height:1.4">${esc(d.leitura[c])}</p></div>` : ""}</div>`));
+  }
+  // 5 · sazonalidade (as 3 famílias que mais vendem): barras SVG, meses na horizontal, picos em amarelo e vales em cinza
+  const somaFam = f => Object.values((d.sazonal[f] || {}).mensal || {}).reduce((a, b) => a + b, 0);
+  const fams = ordenar(Object.keys(d.sazonal || {}), ORD_FAM).sort((a, b) => somaFam(b) - somaFam(a)).slice(0, 3);
+  for (const f of fams) {
+    const serie = d.sazonal[f].mensal, meses = Object.keys(serie).sort(), vals = meses.map(m => serie[m] || 0);
+    const media = vals.reduce((a, b) => a + b, 0) / (vals.length || 1), max = Math.max(...vals, 1), W = 1_664, H = 300, n = meses.length, lw = W / n, bw = Math.min(40, lw * 0.68);
+    const barras = meses.map((m, i) => { const h = vals[i] / max * (H - 44), x = i * lw + (lw - bw) / 2, y = H - 40 - h, pico = vals[i] >= media * 1.15, vale = vals[i] <= media * 0.85;
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${pico ? AMARELO : vale ? CINZA2 : AZUL}" ${pico ? `stroke="${PRETO}" stroke-width="2"` : ""}/><text x="${(x + bw / 2).toFixed(1)}" y="${H - 18}" font-size="${n > 24 ? 15 : 18}" text-anchor="middle" fill="${CINZA}" font-family="Barlow, Arial">${mmaa(m)}</text>${n <= 36 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 6).toFixed(1)}" font-size="15" text-anchor="middle" fill="${PRETO}" font-family="Barlow, Arial">${n0(vals[i])}</text>` : ""}`; }).join("");
+    const anos = [...new Set(meses.map(m => m.slice(0, 4)))]; const linhasAno = anos.slice(1).map(a => { const i = meses.findIndex(m => m.startsWith(a)); return `<line x1="${(i * lw).toFixed(1)}" y1="0" x2="${(i * lw).toFixed(1)}" y2="${H - 40}" stroke="${CINZA2}" stroke-width="2"/>`; }).join("");
+    const porMes = Array.from({ length: 12 }, () => []); meses.forEach((m, i) => porMes[+m.slice(5, 7) - 1].push(vals[i]));
+    const idx = porMes.map(a => a.length ? (a.reduce((x, y) => x + y, 0) / a.length) / media * 100 : null);
+    const picos = MESES.filter((_, i) => idx[i] != null && idx[i] >= 115), vales = MESES.filter((_, i) => idx[i] != null && idx[i] <= 85);
+    const sem = new Map(); meses.forEach((m, i) => { const k = (+m.slice(5, 7) <= 6 ? "1S" : "2S") + m.slice(2, 4); const x = sem.get(k) || { k, n: 0, s: 0 }; x.n++; x.s += vals[i]; sem.set(k, x); });
+    const sems = [...sem.values()].map(x => { const ant = sem.get(x.k.slice(0, 2) + String(+x.k.slice(2) - 1).padStart(2, "0")); const v = ant ? (x.s / x.n) / (ant.s / ant.n) - 1 : null; return `<tr>${td(x.k + (x.n < 6 ? " (parcial)" : ""), "left")}${td(n0(x.s / x.n))}${td(n0(x.s))}${td(v == null ? "—" : (v < 0 ? "−" : "+") + Math.abs(Math.round(v * 100)) + "%", "center", v != null && v < 0 ? "color:" + CINZA : "")}</tr>`; }).join("");
+    pags.push(slide("Sazonalidade · rede · " + esc(mesesSerie), esc(f), "pares/mês · amarelo = pico · cinza = vale · média do período: " + n0(media),
+      `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2_000/svg">${linhasAno}${barras}<line x1="0" y1="${H - 40}" x2="${W}" y2="${H - 40}" stroke="${CINZA}" stroke-width="2"/></svg>
+       <div style="display:flex;flex-direction:row;gap:32px;margin-top:8px"><div style="flex:1"><p style="margin:0 0 8px;font-size:24px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${AZUL}">Picos e vales · índice por mês do ano (100 = média)</p>
+         <div style="display:flex;flex-direction:row;gap:8px">${MESES.map((m, i) => `<div style="flex:1;text-align:center;padding:10px 0;border-radius:6px;background:${idx[i] == null ? "transparent" : idx[i] >= 115 ? AMARELO : idx[i] <= 85 ? CINZA2 : "rgba(46,62,252,0.10)"}"><p style="margin:0;font-size:22px;font-weight:700">${m}</p><p style="margin:0;font-size:22px">${idx[i] == null ? "—" : Math.round(idx[i])}</p></div>`).join("")}</div>
+         <p style="margin:10px 0 0;font-size:24px">picos: <b>${picos.length ? esc(picos.join(", ")) : "nenhum"}</b> · vales: <b>${vales.length ? esc(vales.join(", ")) : "nenhum"}</b></p></div>
+       <div style="flex:0 0 620px"><p style="margin:0 0 8px;font-size:24px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${AZUL}">Semestres</p>${tabela(th("Semestre", "left") + th("Média/mês") + th("Total") + th("Variação"), sems, 620)}</div></div>`));
+  }
+  // 6 · pirâmide de PDV
+  if (d.piramide && Object.keys(d.piramide).length) {
+    const blocos = ordenar(Object.keys(d.piramide), ORD_FAM).slice(0, 4).map(f => { const fx = d.piramide[f], ent = Object.entries(fx), tot = ent.reduce((s, [, n]) => s + n, 0), un = (d.unidade || {})[f] || "pares";
+      const ordem = ent.slice().sort((a, b) => nivel(b[0]) - nivel(a[0]));
+      return `<div style="min-width:0"><p style="margin:0 0 10px;font-size:28px;font-weight:700">${esc(f)} <span style="font-size:22px;color:${CINZA};font-weight:500">${n0(tot)} ${esc(un)}</span></p>${ordem.map(([k, n]) => `<div style="display:grid;grid-template-columns:260px 1fr 100px;gap:12px;align-items:center;margin:6px 0"><div style="font-size:22px">${esc(k)}</div><div style="height:28px;background:rgba(173,174,179,0.35)"><div style="width:${tot ? (n / tot * 100).toFixed(1) : 0}%;height:28px;background:${nivelNome(k) === "topo" ? AZUL : nivelNome(k) === "meio" ? AMARELO : CINZA2}"></div></div><div style="font-size:22px;text-align:right"><b>${pc(tot ? n / tot : null)}</b></div></div>`).join("")}</div>`; }).join("");
+    pags.push(slide("Pirâmide de PDV · " + esc(d.periodo_piramide || d.base.serie || ""), "Preço: o que a rede vende em cada faixa", "tênis: base 189,99 a 229,99 · meio 249,99 a 299,99 · topo acima de 299,99",
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px 64px">${blocos}</div>`));
+  }
+  // 7 · ponta de estoque (fora de linha, as 18 maiores)
+  if (d.ponta && d.ponta.itens && d.ponta.itens.length) {
+    const its = d.ponta.itens.filter(i => i.situacao === "fora de linha").sort((a, b) => (b.estoque || 0) - (a.estoque || 0)).slice(0, 18);
+    const T = d.ponta.totais || {}, fdl = T["fora de linha"] || {};
+    pags.push(slide("Ponta de estoque · fora de linha · giro até " + esc(mmaa((d.ponta.base.giro_ate || "") + "-01")), "Produto parado para rebaixar", n0(fdl.pares) + " pares em " + (fdl.cores || 0) + " cores fora de linha · " + esc(dinheiroCurto(fdl.valor_pdv)) + " em PDV",
+      tabela(th("Modelo", "left", "22%") + th("Ref.", "left") + th("Cor", "left") + th("PDV") + th("Estoque") + th("Venda/mês") + th("Cobertura") + th("Último fat.") + th("Sugestão", "left", "20%"),
+        its.map(i => `<tr>${td(esc(i.desc), "left")}${td(esc(i.ref), "left")}${td(esc(i.cor), "left")}${td(i.pdv == null ? "—" : esc(dinheiro(i.pdv)))}${td("<b>" + n0(i.estoque) + "</b>")}${td(i.venda_mes == null ? "—" : n1(i.venda_mes))}${td(n1(i.cobertura), "center", i.cobertura >= 9 ? "color:" + AZUL + ";font-weight:700" : "")}${td(i.ultimo_fat ? esc(mmaa(i.ultimo_fat + "-01")) : "nunca")}${td(esc(i.sugestao || ""), "left")}</tr>`).join(""))));
+  }
+  // 8 · a leitura (fecho)
+  if (d.leitura && Object.keys(d.leitura).length) {
+    const ks = Object.keys(d.leitura).slice(0, 6);
+    pags.push(slide("Leitura · o que fazer", "Próximos passos por categoria", "",
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">${ks.map(k => `<div style="border:2px solid ${PRETO};border-radius:8px;padding:20px 24px"><p style="margin:0 0 6px;font-size:24px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${AZUL}">${esc(k)}</p><p style="margin:0;font-size:24px;line-height:1.35">${esc(d.leitura[k])}</p></div>`).join("")}</div>`));
+  }
+  const mes = new Date(); const nomeArq = (String(mes.getMonth() + 1).padStart(2, "0") + "," + String(mes.getFullYear()).slice(2) + " " + String(d.nome).toUpperCase() + " - ANÁLISE COMERCIAL").replace(/[\\/:*?"<>|]+/g, "-");
+  return { paginas: pags, nomeArq, css: "" };
 }
 async function apresentacao(){
   const bt = EL.querySelector("#rx-apres"); const antes = bt ? bt.textContent : "";
@@ -268,26 +338,20 @@ async function apresentacao(){
     let d; try { d = await doc(S.cliente); } catch (e) { alert("O banco recusou: " + e.message); return; }
     if (!d || !d.lojas) { alert("este cliente ainda não tem o raio-x de lojas (o NÚCLEO calcula pela AG PORTA)."); return; }
     avisa("montando…"); await carregarPdfLib();
-    const { css, paginas, nomeArq } = montarApresentacao(d);
-    // o documento inteiro num quadro escondido, do tamanho de uma página paisagem; o html2pdf fotografa página a página
-    const q = document.createElement("div"); q.className = "raiox"; q.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:1123px;background:#000;color:#F6F5F0;pointer-events:none"; q.innerHTML = `<style>${css}</style>${paginas.join("")}`; document.body.appendChild(q);
-    avisa("gerando o PDF…");
-    const pgs = [...q.querySelectorAll(".pg")], pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-    const LW = 297, LH = 210;
+    const { paginas, nomeArq } = montarApresentacao(d);
+    if (paginas.length > 18) throw new Error("a apresentação passou do teto de 18 páginas (" + paginas.length + ")");
+    // o palco: 1_920 px de largura, atrás da página (fora da tela sai em branco); uma foto por página
+    const q = document.createElement("div"); q.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:1920px;background:" + OFF + ";pointer-events:none"; q.innerHTML = paginas.join(""); document.body.appendChild(q);
+    const pgs = [...q.querySelectorAll(".pg")], pdf = new window.jspdf.jsPDF({ unit: "px", format: [1_920, 1_080], orientation: "landscape", hotfixes: ["px_scaling"] });
     for (let k = 0; k < pgs.length; k++) {
       avisa("gerando o PDF… " + (k + 1) + "/" + pgs.length);
-      const cv = await window.html2canvas(pgs[k], { scale: 1.3, backgroundColor: "#000", useCORS: true, logging: false });
-      let w = LW, h = LW * cv.height / cv.width; if (h > LH) { h = LH; w = LH * cv.width / cv.height; }
-      if (k) pdf.addPage("a4", "landscape");
-      pdf.setFillColor(0, 0, 0); pdf.rect(0, 0, LW, LH, "F");
-      pdf.addImage(cv.toDataURL("image/jpeg", 0.8), "JPEG", (LW - w) / 2, 0, w, h);
+      const cv = await window.html2canvas(pgs[k], { scale: 1, width: 1_920, height: 1_080, backgroundColor: k === 0 ? AZUL : OFF, useCORS: true, logging: false });
+      if (k) pdf.addPage([1_920, 1_080], "landscape");
+      pdf.addImage(cv.toDataURL("image/jpeg", 0.86), "JPEG", 0, 0, 1_920, 1_080);
     }
-    const blob = pdf.output("blob");
-    q.remove();
-    if (pdf.getNumberOfPages() !== paginas.length) throw new Error("o PDF saiu com " + pdf.getNumberOfPages() + " páginas e a apresentação tem " + paginas.length + " — não entrego página a mais");
-    if (paginas.length > 18) throw new Error("a apresentação passou do teto de 18 páginas (" + paginas.length + ")");
+    const blob = pdf.output("blob"); q.remove();
+    if (pdf.getNumberOfPages() !== paginas.length) throw new Error("o PDF saiu com " + pdf.getNumberOfPages() + " páginas e a apresentação tem " + paginas.length);
     const arquivo = new File([blob], nomeArq + ".pdf", { type: "application/pdf" });
-    // no celular: compartilhar (WhatsApp, Arquivos); senão, baixa já nomeado
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) { try { await navigator.share({ files: [arquivo], title: nomeArq }); avisa("compartilhado ✓"); setTimeout(() => avisa(antes), 2.5e3); return; } catch (e) { if (e && e.name === "AbortError") { avisa(antes); return; } } }
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = nomeArq + ".pdf"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30e3);
     avisa("baixado: " + nomeArq + ".pdf"); setTimeout(() => avisa(antes), 4e3);
