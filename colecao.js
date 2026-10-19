@@ -308,8 +308,8 @@ async function imprimirVitrine(){
     const s = secaoDe(it);
     if (s !== sec) { sec = s; const its = lista.filter(x => secaoDe(x) === s); html += `<h2>${esc(s)} <small>${new Set(its.map(x => x.m + "|" + x.r)).size} modelo(s) · ${its.length} cor(es)</small></h2>`; }
     const src = srcFoto(it), k = chaveCor(it), retirada = atual && M.get(k) === "retirar", g = gtm ? gtmDe(it) : null, gr = VIT.grades.get(k); let p = VIT.pares.get(k);
-    const pm0 = VIT.meses.get(k), pm = (pm0 && f && f.mes) ? { [f.mes]: pm0[f.mes] || 0 } : pm0, sg = VIT.sug.get(k), inicio = it.if || (sg && sg.inicio) || "";
-    if (pm && f && f.mes) p = pm[f.mes] || 0;
+    const pm0 = VIT.meses.get(k), pm = (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : pm0, sg = VIT.sug.get(k), inicio = it.if || (sg && sg.inicio) || "";
+    if (pm && f && f.mes) p = Object.values(pm).reduce((x, y) => x + y, 0);
     if (!gtm && !atual) {   // vitrine de CLIENTE = apresentação ao cliente (NÚCLEO, 19/10): só foto, modelo, cor, data de início e pares por mês — nada interno
       html += `<div class="c"><div class="f">${src ? `<img src="${esc(abs(src))}" alt="">` : `<span class="sem">sem foto</span>`}</div>
         <div class="n">${esc(it.n)}</div><div class="r">${esc(it.r)} · ${esc(it.c)}</div><div class="p">${inicio ? `<i>início ${esc(inicio)}</i>` : (ehLanc(it) ? `<i>lanç. · sem data</i>` : "")}</div>
@@ -387,10 +387,10 @@ function desenharVitrine(){
 const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", ebm: "Excel pedido EBM" };
 // o FILTRO da tela (ele, 19/10 16:5x: "o Excel e o PDF do cliente saem de acordo com o que estou filtrando — e você pergunta antes:
 // deseja subir apenas tênis Olympikus de janeiro?"). Vazio = a vitrine inteira. O GTM não pergunta (é uma vez por semestre).
-const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v) f.mes = VF_MES.v; if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) f.gen = [...VF.gen]; if (VF.bloco.size) f.familia = [...VF.bloco];
-  const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen) partes.push(f.gen.map(g => g.toLowerCase()).join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes);
+const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v.size) f.mes = MESES_V.filter(m => VF_MES.v.has(m)); if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) f.gen = [...VF.gen]; if (VF.bloco.size) f.familia = [...VF.bloco];
+  const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen) partes.push(f.gen.map(g => g.toLowerCase()).join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes.join(" e "));
   f.texto = partes.length ? partes.join(" · ") : ""; return Object.keys(f).length > 1 || f.texto ? f : null; };
-const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && (!f.gen || f.gen.includes(it.ge || "")) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes in (e.pm || {}))))); };
+const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && (!f.gen || f.gen.includes(it.ge || "")) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes.some(m => m in (e.pm || {})))))); };
 function confirmar(titulo, texto){
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
@@ -440,7 +440,8 @@ const VF = { gen: new Set(), bloco: new Set(), tipo: new Set(), marca: new Set()
 // custo para a CMS (ele, 19/10 16:0x): "markup 2,0, padrão para o prazo médio de 63 dias" → custo = PDV ÷ 2; no GTM o placar mostra custo × pares, não PDV
 const MARKUP_CMS = 2;
 const condDe = it => ehGtm() ? { markup: MARKUP_CMS, prazo: 63 } : (VIT.cond.get(it.m + "|" + it.t) || VIT.cond.get(it.m + "|TENIS") || null);
-const VF_MES = { v: "" };   // filtro de mês na vitrine de cliente (ele, 16:1x: "aperto janeiro, aparecem só os produtos de janeiro; total aparece tudo")                      // filtros da direita (a vitrine)
+const VF_MES = { v: new Set() };   // meses marcados na linha "mês / pares" do placar (ele, 17:1x): vazio = tudo; vários ao mesmo tempo
+const mesCasa = kc => !VF_MES.v.size || entradasDe(kc).some(e => [...VF_MES.v].some(m => m in (e.pm || {})));                      // filtros da direita (a vitrine)
 let PAINEL = "esq";                                                                    // no celular: qual metade está na tela
 const GEN_ORDEM = ["Feminino", "Masculino", "Unissex", "Infantil"];
 const genOrd = g => { const i = GEN_ORDEM.indexOf(g); return i < 0 ? 9 : i; };
@@ -493,7 +494,6 @@ function desenharMontador(pg){
         <div class="mont-cab">
           <div class="mont-tit" id="vf-tit"></div><div class="vf-confere"><button type="button" class="sec" id="vf-reler" title="relê o que está gravado no banco">↻ conferir no banco</button><span class="mu" id="vf-lido"></span></div>
           <div class="mont-placar" id="vf-placar"></div>
-          <div class="frow"><span class="fl">mês</span><div class="chips" id="vf-mes"></div></div>
           <div class="frow"><span class="fl">marca</span><div class="chips" id="vf-marca"></div></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
           <div class="frow"><span class="fl">gênero</span><div class="chips" id="vf-gen"></div></div>
@@ -616,9 +616,7 @@ function desenharDireita(pg){
   for (const it of ordenar(todas)) { ct.set(it.t, (ct.get(it.t) || 0) + 1); if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1); const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
   // filtro de MARCA na vitrine (ele, 19/10 16:0x: "deixa o filtro de Under Armour e de Olympikus, já me confundi uma vez")
   const cm = new Map(); for (const it of todas) cm.set(it.m, (cm.get(it.m) || 0) + 1);
-  { const cmes = {}; for (const it of todas) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (k in m) cmes[k] = (cmes[k] || 0) + 1; }
-    chips(pg, "vf-mes", [["", "total", todas.length], ...MESES_V.filter(k => cmes[k]).map(k => [k, k, cmes[k]])], new Set(VF_MES.v ? [VF_MES.v] : []), v => { VF_MES.v = v; desenharDireita(pg); });
-    const f = pg.querySelector("#vf-mes").closest(".frow"); if (f) f.classList.toggle("oculto", ehGtm()); if (ehGtm()) VF_MES.v = ""; }
+  if (ehGtm()) VF_MES.v.clear();
   chips(pg, "vf-marca", [["", "as duas"], ...[["OLY", "Olympikus"], ["UA", "Under Armour"]].filter(([v]) => cm.has(v)).map(([v, r]) => [v, r, cm.get(v)])], VF.marca, v => { if (v === "") VF.marca.clear(); else if (VF.marca.has(v)) VF.marca.delete(v); else VF.marca.add(v); desenharDireita(pg); });
   chips(pg, "vf-tipo", [["", "tudo"], ...TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => [v, r, ct.get(v)])], VF.tipo, v => { if (v === "") VF.tipo.clear(); else if (VF.tipo.has(v)) VF.tipo.delete(v); else VF.tipo.add(v); desenharDireita(pg); });
   chips(pg, "vf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], VF.gen, v => { if (v === "") VF.gen.clear(); else if (VF.gen.has(v)) VF.gen.delete(v); else VF.gen.add(v); desenharDireita(pg); });
@@ -628,7 +626,7 @@ function desenharDireita(pg){
   // do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const gtm = ehGtm(), mes = gtmMes();
   // na DISTRIBUIÇÃO: por tipo, dentro do tipo o modelo junto (todas as cores), a cor com mais pares primeiro
-  const lista = todas.filter(it => (!VF_MES.v || (VIT.meses.get(chaveCor(it)) && VF_MES.v in VIT.meses.get(chaveCor(it)))) && (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
+  const lista = todas.filter(it => mesCasa(chaveCor(it)) && (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
     .sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || (gtm ? (String(a.n).localeCompare(String(b.n)) || ((VIT.pares.get(chaveCor(b)) || 0) - (VIT.pares.get(chaveCor(a)) || 0))) : 0)
       || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
@@ -639,24 +637,27 @@ function desenharDireita(pg){
   // no GTM o placar é a digitação: pares DISTRIBUÍDOS (o que ele respondeu) contra o TETO (soma do volume do mês dos modelos que já têm cor)
   // o placar segue TODOS os filtros (ele, 16:2x: "quando eu selecionar por mês, só o que ele vai faturar naquele mês; só feminino, só masculino — todos os
   // filtros têm que atualizar"); com mês marcado, os pares e o custo são os daquele mês
-  const base = lista, paresDe = it => VF_MES.v ? (((VIT.meses.get(chaveCor(it)) || {})[VF_MES.v]) || 0) : (VIT.pares.get(chaveCor(it)) || 0);
+  const base = lista, paresDe = it => VF_MES.v.size ? [...VF_MES.v].reduce((s, m) => s + (((VIT.meses.get(chaveCor(it)) || {})[m]) || 0), 0) : (VIT.pares.get(chaveCor(it)) || 0);
+  // a linha "mês / pares": os meses de TODAS as cores do tipo que passam nos outros filtros (para o mês não sumir quando é desmarcado)
+  const semMes = todas.filter(it => (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))));
   const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = base.filter(it => it.t === v); if (!its.length) return "";
     const temCond = gtm || its.some(it => condDe(it));
     const soma = temCond ? its.reduce((s, it) => { const c = condDe(it); return s + (c ? paresDe(it) * ((+it.p || 0) / c.markup) : 0); }, 0) : its.reduce((s, it) => s + (+it.p || 0), 0);
     const c0 = its.map(condDe).find(Boolean), rotCusto = temCond ? (gtm ? "custo · markup 2,0 · 63 d" : `custo · markup ${c0 ? c0.markup.toFixed(2).replace(".", ",") : "?"}${c0 && c0.prazo ? ` · ${c0.prazo} d` : ""}`) : "em PDV";
     const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
     const teto = gtm ? [...new Map(its.map(it => [it.m + "|" + it.r, it])).values()].reduce((s, it) => s + (((gtmDe(it) || { vm: {} }).vm[mes]) || 0), 0) : null;
-    const pm = {}; if (!gtm) for (const it of its) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (m[k] && (!VF_MES.v || k === VF_MES.v)) pm[k] = (pm[k] || 0) + m[k]; }
-    const totMes = Object.values(pm).reduce((a, b) => a + b, 0);
-    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>${esc(rotCusto)}</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>${!gtm && totMes ? `<div class="pl-meses"><em>pares</em>${MESES_V.filter(k => pm[k]).map(k => `<span><b>${pm[k].toLocaleString("pt-BR")}</b><small>${k}</small></span>`).join("")}<span class="tot"><b>${totMes.toLocaleString("pt-BR")}</b><small>total</small></span></div>` : ""}`; });
+    const pm = {}; if (!gtm) for (const it of semMes.filter(x => x.t === v)) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (k in m) pm[k] = (pm[k] || 0) + (m[k] || 0); }
+    const totMes = MESES_V.filter(k => k in pm && (!VF_MES.v.size || VF_MES.v.has(k))).reduce((a, k) => a + pm[k], 0);
+    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>${esc(rotCusto)}</small></span>${gtm ? `<span class="${pares > teto ? "passou" : ""}"><b>${pares.toLocaleString("pt-BR")}</b><small>de ${teto.toLocaleString("pt-BR")} pares ${esc(mes)}</small></span>` : ""}</div>${!gtm && Object.keys(pm).length ? `<div class="pl-meses"><em>mês / pares</em>${MESES_V.filter(k => k in pm).map(k => `<button type="button" class="pl-mes${VF_MES.v.has(k) ? " ativa" : ""}" data-m="${k}" title="aperta para filtrar; de novo para tirar"><b>${pm[k].toLocaleString("pt-BR")}</b><small>${k}</small></button>`).join("")}<span class="tot"><b>${totMes.toLocaleString("pt-BR")}</b><small>${VF_MES.v.size ? "nos meses marcados" : "total"}</small></span></div>` : ""}`; });
   pg.querySelector("#vf-placar").innerHTML = placar.join("") || `<div class="pl-tipo"><em>—</em><span><b>0</b><small>cor(es)</small></span><span><b>0</b><small>modelo(s)</small></span><span><b>—</b><small>em PDV</small></span></div>`;
+  for (const b of pg.querySelectorAll("#vf-placar .pl-mes")) b.onclick = () => { const m = b.dataset.m; if (VF_MES.v.has(m)) VF_MES.v.delete(m); else VF_MES.v.add(m); desenharDireita(pg); };
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
   // cartão PEQUENO (19/10, ele: "está muito grande, um formato ruim; preciso ver a composição da vitrine") e um título por tipo
   let secAtual = null, html = "";
   // um CARTÃO POR GRADE (ele, 16:2x): cor com grade feminina e masculina aparece duas vezes, cada uma na sua seção, com os seus meses
   const cartoes = gtm ? lista.map(it => ({ it, e: null, i: 0, n: 1 })) : lista.flatMap(it => { const L = entradasDe(chaveCor(it)); return L.length ? L.map((e, i) => ({ it, e, i, n: L.length })) : [{ it, e: null, i: 0, n: 1 }]; })
-    .filter(c => !VF_MES.v || !c.e || (VF_MES.v in (c.e.pm || {})))
+    .filter(c => !VF_MES.v.size || !c.e || [...VF_MES.v].some(m => m in (c.e.pm || {})))
     .sort((a, b) => (secOrd(secaoDe(a.it, a.e ? a.e.grade : undefined)) - secOrd(secaoDe(b.it, b.e ? b.e.grade : undefined))) || ((b.it.p == null ? -1 : +b.it.p) - (a.it.p == null ? -1 : +a.it.p)) || String(a.it.n).localeCompare(String(b.it.n)) || String(a.it.c).localeCompare(String(b.it.c)) || (a.i - b.i));
   for (const { it, e, i, n } of cartoes) {
     const sec = secaoDe(it, e ? e.grade : undefined);
