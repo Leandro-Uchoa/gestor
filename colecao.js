@@ -33,7 +33,14 @@ const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").
 const dinheiro = v => v == null ? "PDV a confirmar" : "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const titulo = s => String(s || "").toLowerCase().replace(/(^|\s|\/)\S/g, c => c.toUpperCase());
 const semViuva = n => { const p = String(n || "").trim().split(/\s+/); if (p.length < 2) return p.join(" "); const u = p[p.length - 1]; if (u.length <= 5) { p[p.length - 2] += NBSP + u; p.pop(); } return p.join(" "); };
-const nomeCli = c => (typeof NOME_CLI !== "undefined" && NOME_CLI[c]) || titulo(c);
+// 19/10 (urgente, ele via NÚCLEO): GTM DISTRIBUIÇÃO = pseudo-cliente por mês de faturamento ("GTM 1S27 JAN"…): ele seleciona o que vai
+// digitar; a escolha grava na tabela vitrine como a de um cliente. A lista da esquerda passa a ser só as cores do GTM (gtm_consulta),
+// com estrela da Vulcabras, mix dos vendedores e pares sugeridos do mês. Material interno da CMS.
+const gtmPref = () => "GTM " + (DADOS ? DADOS.colecao : "") + " ";
+const ehGtm = () => !!(VIT.cliente && DADOS && VIT.cliente.startsWith(gtmPref()));
+const gtmMes = () => ehGtm() ? VIT.cliente.slice(gtmPref().length) : null;
+const gtmDe = it => (VIT.gtm && VIT.gtm.mapa.get(chaveCor(it))) || null;
+const nomeCli = c => (c && DADOS && c.startsWith(gtmPref())) ? "GTM " + c.slice(gtmPref().length) + "/" + String(DADOS.colecao).slice(-2) : ((typeof NOME_CLI !== "undefined" && NOME_CLI[c]) || titulo(c));
 async function tudo(consulta) {
   const PAG = 1000; let de = 0, out = [];
   for (;;) { const { data, error } = await consulta.range(de, de + PAG - 1); if (error) return { data: out, error }; out = out.concat(data || []); if (!data || data.length < PAG) return { data: out, error: null }; de += PAG; }
@@ -85,6 +92,10 @@ async function carregarVitrine(sb){
     const [cob, cg, vc, bl] = await Promise.all([tudo(sb.from("v_cobertura").select("cliente")), tudo(sb.from("v_cobertura_giro").select("cliente")), tudo(sb.from("vitrine").select("cliente")), tudo(sb.from("vitrine_bloqueio").select("cliente,marca,referencia"))]);
     const nomes = new Set([...(cob.data || []).map(r => r.cliente), ...(cg.data || []).map(r => r.cliente), ...(vc.data || []).map(r => r.cliente)].filter(Boolean));
     VIT.clientes = [...nomes].sort();
+    // o GTM DISTRIBUIÇÃO da coleção (se carregado): um pseudo-cliente por mês, no fim da lista
+    const g = await sb.rpc("gtm_consulta", { p_colecao: DADOS.colecao });
+    if (!g.error && g.data && g.data.itens) { VIT.gtm = g.data; VIT.gtm.mapa = new Map(g.data.itens.map(i => [i.m + "|" + i.r + "|" + i.c, i])); VIT.clientes = VIT.clientes.filter(c => !c.startsWith(gtmPref())).concat(VIT.gtm.meses.map(m => gtmPref() + m)); }
+    else VIT.gtm = null;
     VIT.bloq = new Set((bl.data || []).map(r => r.cliente + "|" + r.marca + "|" + r.referencia));
     const h = new URLSearchParams(location.hash.slice(1));            // 19/10: #cliente=…&vista=montando abre a vitrine certa de cara
     if (!VIT.cliente && h.get("cliente") && VIT.clientes.includes(h.get("cliente"))) { VIT.cliente = h.get("cliente"); VIT.vistaPedida = h.get("vista") || null; }
@@ -128,7 +139,7 @@ function chips(raiz, id, lista, sel, aoClicar){
   el.innerHTML = lista.map(([v, r, n]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(r)}${n != null ? ` <small>${n}</small>` : ""}</button>`).join("");
   for (const b of el.querySelectorAll("button")) b.onclick = () => aoClicar(b.dataset.v);
 }
-const chipsClientes = (raiz, id) => chips(raiz, id, VIT.clientes.map(c => [c, nomeCli(c)]), new Set(VIT.cliente ? [VIT.cliente] : []), async v => { VIT.cliente = v; await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); });
+const chipsClientes = (raiz, id) => chips(raiz, id, VIT.clientes.map(c => [c, nomeCli(c)]), new Set(VIT.cliente ? [VIT.cliente] : []), async v => { VIT.cliente = v; MF.tipo = ""; MF.bloco.clear(); await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); });
 
 function desenhar(){
   const el = EL;
@@ -334,11 +345,14 @@ function desenharMontador(pg){
 }
 
 function desenharEsquerda(pg){
-  const daMarca = DADOS.itens.filter(it => it.m === MF.marca);
+  const gtm = ehGtm(), mes = gtmMes();
+  if (!gtm && MF.tipo === "estrela") MF.tipo = "";
+  const daMarca = DADOS.itens.filter(it => it.m === MF.marca && (!gtm || gtmDe(it)));
   chips(pg, "mf-marca", [["OLY", "Olympikus"], ["UA", "Under Armour"]], new Set([MF.marca]), v => { MF.marca = v; MF.tipo = ""; MF.bloco.clear(); MF.gen.clear(); desenharEsquerda(pg); });
   const ct = new Map(); for (const it of daMarca) ct.set(it.t, (ct.get(it.t) || 0) + 1);
-  chips(pg, "mf-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(MF.tipo ? [MF.tipo] : []), v => { MF.tipo = v; MF.bloco.clear(); desenharEsquerda(pg); });
-  const base = MF.tipo ? daMarca.filter(it => it.t === MF.tipo) : daMarca;
+  if (gtm) chips(pg, "mf-tipo", [["", "todas", daMarca.length], ["estrela", "★ estrela Vulcabras", daMarca.filter(it => gtmDe(it).e).length]], new Set(MF.tipo ? [MF.tipo] : []), v => { MF.tipo = v; desenharEsquerda(pg); });
+  else chips(pg, "mf-tipo", TIPOS.filter(([v]) => !v || ct.has(v)).map(([v, r]) => [v, r, v ? ct.get(v) : daMarca.length]), new Set(MF.tipo ? [MF.tipo] : []), v => { MF.tipo = v; MF.bloco.clear(); desenharEsquerda(pg); });
+  const base = gtm ? (MF.tipo === "estrela" ? daMarca.filter(it => gtmDe(it).e) : daMarca) : (MF.tipo ? daMarca.filter(it => it.t === MF.tipo) : daMarca);
   const cb = new Map(); for (const it of ordenar(base)) { const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
   chips(pg, "mf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], MF.bloco, v => { if (v === "") MF.bloco.clear(); else if (MF.bloco.has(v)) MF.bloco.delete(v); else MF.bloco.add(v); desenharEsquerda(pg); });
   const cgn = new Map(); for (const it of base) if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1);
@@ -354,8 +368,9 @@ function desenharEsquerda(pg){
     const m = cores[0];
     if (familiaDe(m) !== bloco) { bloco = familiaDe(m); html += `<div class="mont-sec">${esc(NOME_TIPO[m.t] || m.t)}${bloco ? " · " + esc(bloco) : ""}</div>`; }
     modelos++;
-    html += `<div class="mcard"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}</div></div>
-      <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida"; return `<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (sel ? "tirar da vitrine" : "pôr na vitrine"))}">${fotoMini(it)}<div class="mcod">${esc(it.c)}</div>${sel ? `<i class="ok">✓</i>` : ""}</div>`; }).join("")}</div>
+    const gm = gtm ? gtmDe(m) : null;
+    html += `<div class="mcard"><div class="mcab"><div class="mnome">${esc(m.n)}</div><div class="mref"><button type="button" class="ref" data-ref="${esc(m.r)}">${esc(m.r)}</button> <span class="mpdv">${esc(dinheiro(m.p))}</span>${m.ge ? `<span class="mu"> · ${esc(m.ge)}</span>` : ""}${m.if ? `<span class="selo inicio">${esc(m.if)}</span>` : ""}${gm ? `<span class="mgtm-mod">modelo ${esc(mes)}: <b>${(gm.vm[mes] || 0).toLocaleString("pt-BR")}</b> pares</span>` : ""}</div></div>
+      <div class="mthumbs">${cores.map(it => { const k = chaveCor(it), fora = foraDaVitrine(it), sel = M.get(k) === "escolhida", g = gtm ? gtmDe(it) : null; return `<div class="mthumb${sel ? " sel" : ""}${fora ? " fora" : ""}" data-kc="${esc(k)}" title="${esc(fora || (sel ? "tirar da vitrine" : "pôr na vitrine"))}">${fotoMini(it)}<div class="mcod">${esc(it.c)}</div>${g ? `<div class="mgtm${g.e ? " estrela" : ""}">${g.e ? "★ " : ""}${g.mx ? Math.round(g.mx) + "%" : "—"} · <b>${g.ps[mes] || 0}</b></div>` : ""}${sel ? `<i class="ok">✓</i>` : ""}</div>`; }).join("")}</div>
     </div>`;
   }
   const L = pg.querySelector("#mf-lista"); L.innerHTML = html || `<div class="card mu">Nenhum produto com esses filtros.</div>`;
@@ -380,8 +395,10 @@ function desenharDireita(pg){
   // nunca soma com o tênis. O valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
   const dinheiroCheio = s => s ? "R$ " + Number(s).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
   const dinheiroCurto = s => !s ? "—" : (s >= 1e6 ? "R$ " + (s / 1e6).toFixed(2).replace(".", ",") + " mi" : (s >= 1e3 ? "R$ " + (s / 1e3).toFixed(1).replace(".", ",") + " mil" : "R$ " + Math.round(s)));
+  const gtm = ehGtm(), mes = gtmMes();
   const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = todas.filter(it => it.t === v), soma = its.reduce((s, it) => s + (+it.p || 0), 0);
-    return `<div class="pl-tipo"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>em PDV</small></span></div>`; });
+    const pares = gtm ? its.reduce((s, it) => s + (((gtmDe(it) || { ps: {} }).ps[mes]) || 0), 0) : null;
+    return `<div class="pl-tipo${gtm ? " gtm" : ""}"><em>${esc(r.toUpperCase())}</em><span><b>${its.length}</b><small>cor(es)</small></span><span><b>${new Set(its.map(it => it.m + "|" + it.r)).size}</b><small>modelo(s)</small></span><span><b class="cheio">${esc(dinheiroCheio(soma))}</b><b class="curto">${esc(dinheiroCurto(soma))}</b><small>em PDV</small></span>${gtm ? `<span><b>${pares.toLocaleString("pt-BR")}</b><small>pares ${esc(mes)}</small></span>` : ""}</div>`; });
   pg.querySelector("#vf-placar").innerHTML = placar.join("") || `<div class="pl-tipo"><em>—</em><span><b>0</b><small>cor(es)</small></span><span><b>0</b><small>modelo(s)</small></span><span><b>—</b><small>em PDV</small></span></div>`;
   const n = pg.querySelector("#mont-n"); if (n) n.textContent = todas.length ? String(todas.length) : "";
   const V = pg.querySelector("#vf-lista");
@@ -395,6 +412,7 @@ function desenharDireita(pg){
       <div class="vtx"><div class="vnome">${esc(it.n)}</div>
         <div class="vlinha"><button type="button" class="ref" data-ref="${esc(it.r)}">${esc(it.r)}</button><span class="vcor">${esc(it.c)}</span></div>
         <div class="vlinha"><span class="vpdv">${esc(dinheiro(it.p))}</span>${ehLanc(it) ? `<span class="selo lanc">lanç.</span>` : ""}${it.if ? `<span class="selo inicio">${esc(it.if)}</span>` : ""}</div>
+        ${gtm && gtmDe(it) ? `<div class="vgtm${gtmDe(it).e ? " estrela" : ""}">${gtmDe(it).e ? "★ " : ""}mix ${Math.round(gtmDe(it).mx)}% · <b>${(gtmDe(it).ps[mes] || 0).toLocaleString("pt-BR")}</b> pares ${esc(mes)}</div>` : ""}
         <div class="mu">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}</div></div>
     </div>`;
   }

@@ -307,6 +307,11 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 /* 19/10: um placar por tipo (tênis, chinelos…), sem total geral — regra dele: chinelo nunca soma com tênis */
 .mont-placar{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px}.pl-tipo{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}
 .pl-tipo em{font-style:normal;font-weight:900;font-size:.72rem;letter-spacing:.06em;color:var(--preto);align-self:center;min-width:70px;border-left:3px solid var(--amarelo);padding-left:6px}
+/* GTM DISTRIBUIÇÃO (19/10): estrela da Vulcabras, mix dos vendedores e pares sugeridos do mês, na miniatura, no cartão e no placar */
+.pl-tipo.gtm{grid-template-columns:auto repeat(4,minmax(0,1fr))}
+.mgtm{font-size:.6rem;color:var(--cinza-escuro);font-weight:700;text-align:center;margin-top:1px;white-space:nowrap}.mgtm b{color:var(--preto)}.mgtm.estrela{color:var(--preto)}
+.mgtm-mod{font-size:.68rem;color:var(--cinza-escuro);font-weight:700;margin-left:6px}.mgtm-mod b{color:var(--preto)}
+.vgtm{font-size:.62rem;color:var(--cinza-escuro);font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vgtm b{color:var(--preto);font-size:.72rem}.vgtm.estrela{color:var(--preto)}
 .mont-placar span{background:var(--off-white);border-radius:10px;padding:8px 10px;min-width:0;display:flex;flex-direction:column;align-items:flex-start}.mont-placar b{color:var(--preto);font-size:1.15rem;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.mont-placar small{color:var(--cinza-escuro);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 /* 19/10, ele: cartão PEQUENO para ver a composição da vitrine — 4 por linha no computador, 3 em tela média, 2 no celular; um título por tipo */
 .mont-vitrine{background:var(--pagina);border-radius:10px;padding:8px;margin-top:8px;max-height:72vh;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;align-content:start}
@@ -352,7 +357,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.19</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.20</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -414,7 +419,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=1"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=15"></script>
+<script src="colecao.js?v=16"></script>
 <script src="atas.js?v=1"></script>
 <script src="raiox.js?v=3"></script>
 <script>
