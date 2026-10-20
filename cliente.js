@@ -268,8 +268,21 @@ async function desenharCarteira(corpo, d){
     <div class="filtros">${chip("mes", CF.mes, conta(mesDe), "prev. fat.")}${chip("marca", CF.marca, conta(x => x.m || ""), "marca")}${chip("porta", CF.porta, conta(x => x.porta || ""), "porta")}${chip("acao", CF.acao, conta(x => grupoAcao(efetiva(x)) || "(vazia)"), "ação")}
       <div class="linha"><label>mostrar</label><div class="chips" data-f="so"><button type="button" data-v="cart" class="${CF.so === "cart" ? "ativa" : ""}">só carteira aberta</button><button type="button" data-v="tudo" class="${CF.so === "tudo" ? "ativa" : ""}">com faturado recente</button></div><input type="search" id="cl-cart-busca" placeholder="referência, descrição, cor, GCI, OC, porta…" value="${esc(CF.busca)}" autocomplete="off"></div></div>
     <div class="num"><div><b>${fmt(cart)}</b><small>pares na tela</small></div><div><b>${fmt(lista.length)}</b><small>linhas</small></div>${[...porAcao.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, n]) => `<div><b>${fmt(n)}</b><small>${esc(g.toLowerCase())}</small></div>`).join("")}</div>
-    <div class="rolagem"><table class="mini cart"><thead><tr><th>porta</th><th>produto</th><th>GCI</th><th class="n">prev</th><th class="n">CART</th><th class="n">FAT</th><th>ação</th><th class="n">vol.</th><th>destinatário</th><th>status</th><th>nota</th></tr></thead>
-      <tbody>${lista.slice(0, 400).map(x => { const dif = x.a && x.axl && x.a !== x.axl; return `<tr data-k="${esc(x.k)}" class="${x.a ? "decidida" : ""}">
+    <div class="rolagem"><table class="mini cart">${CAB_CART}
+      <tbody>${lista.slice(0, 400).map(linhaCarteira).join("")}</tbody></table></div>
+    ${lista.length > 400 ? `<div class="mu" style="font-size:.74rem">mostrando 400 de ${lista.length} — afine o filtro</div>` : ""}
+    <div id="cl-cart-msg"></div>`;
+  box.querySelector(".expandir").onclick = () => { S.cartAberta = false; desenharCarteira(corpo, d); };
+  for (const b of box.querySelectorAll(".filtros .chips button")) b.onclick = () => { const f = b.parentElement.dataset.f, v = b.dataset.v; if (f === "so") CF.so = v; else { const sel = CF[f]; if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); } desenharCarteira(corpo, d); };
+  box.querySelector("#cl-cart-busca").oninput = ev => { CF.busca = ev.target.value; clearTimeout(desenharCarteira._t); desenharCarteira._t = setTimeout(() => desenharCarteira(corpo, d), 150); };
+  ligarDecisao(box, L, box.querySelector("#cl-cart-msg"));
+}
+// a LINHA da carteira e o GRAVADOR da decisão são um só (20/10): servem à mesa inteira (acima) e ao quadro que a Análise de giro abre
+// ao tocar numa célula de carteira (carteiraMini, abaixo). Mudar a coluna aqui muda nos dois.
+const CAB_CART = `<thead><tr><th>porta</th><th>produto</th><th>GCI</th><th class="n">prev</th><th class="n">CART</th><th class="n">FAT</th><th>ação</th><th class="n">vol.</th><th>destinatário</th><th>status</th><th>nota</th></tr></thead>`;
+function linhaCarteira(x){
+  const dif = x.a && x.axl && x.a !== x.axl;
+  return `<tr data-k="${esc(x.k)}" class="${x.a ? "decidida" : ""}">
         <td>${esc(x.porta || "")}<small>${esc(x.m || "")}${x.fx ? " · " + esc(x.fx) : ""}</small></td>
         <td><b>${esc(x.d || x.r)}</b> ${esc(x.c)}<small>${esc(x.r)}${x.oc ? " · OC " + esc(x.oc) : ""}${x.lin ? " · linha " + x.lin : ""}</small></td>
         <td>${esc(x.gci || "")}</td><td class="n">${x.prev ? dmy(x.prev) : "—"}</td><td class="n c">${fmt(x.cart)}</td><td class="n">${x.fat ? fmt(x.fat) + (x.dfat ? `<small>${dmy(x.dfat)}</small>` : "") : "—"}</td>
@@ -277,12 +290,9 @@ async function desenharCarteira(corpo, d){
         <td class="n"><input type="number" class="dec" data-campo="volume" min="0" value="${x.v != null ? x.v : ""}" placeholder="${x.cart}"></td>
         <td><input type="text" class="dec" data-campo="destinatario" value="${esc(x.dest || "")}" placeholder="${esc(x.dxl || "")}"></td>
         <td><select class="dec" data-campo="status">${STATUS_C.map(s => `<option value="${s}" ${(x.s || "").split(" ")[0] === s ? "selected" : ""}>${s || "—"}</option>`).join("")}</select>${x.sxl ? `<small class="xl">planilha: ${esc(x.sxl)}</small>` : ""}${x.s && x.s.startsWith("SOLICITADO") ? `<small>${esc(x.s)}</small>` : ""}</td>
-        <td><input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota">${x.q ? `<small class="mu">${esc(x.q.split("@")[0])} · ${dmy(x.em)}</small>` : ""}</td></tr>`; }).join("")}</tbody></table></div>
-    ${lista.length > 400 ? `<div class="mu" style="font-size:.74rem">mostrando 400 de ${lista.length} — afine o filtro</div>` : ""}
-    <div id="cl-cart-msg"></div>`;
-  box.querySelector(".expandir").onclick = () => { S.cartAberta = false; desenharCarteira(corpo, d); };
-  for (const b of box.querySelectorAll(".filtros .chips button")) b.onclick = () => { const f = b.parentElement.dataset.f, v = b.dataset.v; if (f === "so") CF.so = v; else { const sel = CF[f]; if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); } desenharCarteira(corpo, d); };
-  box.querySelector("#cl-cart-busca").oninput = ev => { CF.busca = ev.target.value; clearTimeout(desenharCarteira._t); desenharCarteira._t = setTimeout(() => desenharCarteira(corpo, d), 150); };
+        <td><input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota">${x.q ? `<small class="mu">${esc(x.q.split("@")[0])} · ${dmy(x.em)}</small>` : ""}</td></tr>`;
+}
+function ligarDecisao(box, L, msg){
   for (const el of box.querySelectorAll(".dec")) el.onchange = async () => {
     const tr = el.closest("tr"), k = tr.dataset.k, campo = el.dataset.campo; let v = el.value.trim();
     if (campo === "volume") v = v === "" ? null : Number(v);
@@ -290,11 +300,31 @@ async function desenharCarteira(corpo, d){
     else if (v === "") v = null;
     const patch = { [campo]: v, decidido_por: (await email()) || null, decidido_em: new Date().toISOString() };
     const r = await SB.from("carteira_linha").update(patch).match({ escritorio_id: ESC, chave: k });
-    const msg = box.querySelector("#cl-cart-msg");
     if (r.error) { msg.innerHTML = `<div class="msg erro">O banco recusou: ${esc(r.error.message)}</div>`; return; }
     const x = L.find(y => y.k === k); if (x) { x[{ acao: "a", volume: "v", destinatario: "dest", status: "s", nota: "n" }[campo]] = v; x.q = patch.decidido_por; x.em = patch.decidido_em; }
     tr.classList.add("decidida"); msg.innerHTML = `<div class="msg ok">gravado · ${esc(campo)} da linha ${esc(x && x.lin ? x.lin : k)} · a planilha não muda sozinha: a rotina do dia leva</div>`;
   };
+}
+// o QUADRO da Análise de giro (ele, 20/10 00:5x: tocar na carteira de MARTE PRETO out/26 abre a detalhada daquele mês): as linhas de
+// carteira_consulta(cliente) da referência (+ cor, quando é a filha) cuja PREV. FAT. cai no mês — com os mesmos controles e o mesmo
+// gravador da mesa acima. Funciona sem a aba Cliente ter sido aberta (recebe o sb). `irCliente` leva à aba Cliente com a mesa já aberta.
+async function carteiraMini(sel, container, sb, irCliente){
+  if (!SB) SB = sb;
+  if (!ESC) { const e = await SB.from("escritorio").select("id").limit(1); ESC = (e.data && e.data[0] && e.data[0].id) || null; }
+  let c; try { c = await carteiraDoc(sel.cliente); } catch (e) { container.innerHTML = `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
+  const L = c.linhas || [], mes = String(sel.mes).slice(0, 7);
+  const lista = L.filter(x => x.r === sel.referencia && (!sel.cor || x.c === sel.cor) && x.prev && String(x.prev).slice(0, 7) === mes);
+  const vai = () => { S.cliente = sel.cliente; S.cartAberta = true; if (irCliente) irCliente(sel.cliente); };
+  if (!lista.length) {
+    container.innerHTML = `<div class="vazio">sem linha na carteira detalhada para ${mesBR(mes)}${L.length ? "" : " — este cliente não tem carteira detalhada no banco (a DETALHADA só tem Ban Ban, Noroeste, Sapataria Nova, Polyélle, Casa Pio e CMS)"}.</div><button type="button" class="sec ir-cli">abrir a aba Cliente ›</button>`;
+    container.querySelector(".ir-cli").onclick = vai; return;
+  }
+  const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), fat = lista.reduce((s, x) => s + (x.fat || 0), 0), pend = lista.filter(x => !(x.a || x.axl)).length;
+  container.innerHTML = `<div class="num"><div><b>${fmt(cart)}</b><small>pares em carteira</small></div><div><b>${fmt(fat)}</b><small>faturados</small></div><div><b>${fmt(lista.length)}</b><small>linhas em ${mesBR(mes)}</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${dmy(c.base_em)}</b><small>base</small></div></div>
+    <div class="rolagem"><table class="mini cart">${CAB_CART}<tbody>${lista.map(linhaCarteira).join("")}</tbody></table></div>
+    <div class="cm-msg"></div><button type="button" class="sec ir-cli">tratar a carteira inteira na aba Cliente ›</button>`;
+  container.querySelector(".ir-cli").onclick = vai;
+  ligarDecisao(container, L, container.querySelector(".cm-msg"));
 }
 
 // ---------- PEDIDOS ORIGINAIS do cliente (BOSS, 19/10: as 28 páginas escaneadas da Casa Pio no banco, com a imagem; "pedidos de
@@ -347,5 +377,5 @@ async function desenharPedidos(corpo, d){
   };
 }
 
-window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao, recarregar: () => { DOCS = {}; } };
+window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao, recarregar: () => { DOCS = {}; }, carteiraMini, ACOES };
 })();
