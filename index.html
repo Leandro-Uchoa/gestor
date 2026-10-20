@@ -82,24 +82,25 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cg button.mm{background:var(--off-white);color:var(--preto);border-color:var(--cinza-escuro)}
 .cg thead tr.tot th{position:sticky;background:var(--preto);color:var(--off-white);font-weight:800;font-variant-numeric:tabular-nums;text-align:right;box-shadow:inset 0 -2px 0 var(--amarelo)}.cg thead tr.tot th.fixa{text-align:left;background:var(--preto);color:var(--amarelo)}.cg thead tr.tot th.ct,.cg thead tr.tot th.ctf{background:var(--amarelo);color:var(--preto)}.cg thead tr.tot th.col{background:var(--preto)}
 .cg thead tr.tot th .cob{display:block;font-size:.66rem;font-weight:600;color:var(--cinza-claro)}.cg thead tr.tot th.ct .cob,.cg thead tr.tot th.ctf .cob{color:var(--preto)}
-/* v5.83 (19/10 22:3x) — tabela da Análise de giro pela especificação do PICASSO: fundo branco, números tabulares à direita, escuro só no cabeçalho */
-.cg{background:#fff}.cg table{background:#fff;color:var(--preto);font-family:var(--fonte-sans);font-size:13px}
+/* v5.84 (19/10 22:4x) — RÉPLICA da AG do Excel (ordem dele; leitura do PICASSO na AG da Poly + legendas dos 4 clientes). Cores do Excel
+   como exceção à paleta: a carteira se lê pelo matiz (verdes, azul, vermelho, amarelo) e a paleta Olympikus não tem verde. */
+.cg{background:#fff}.cg table{background:#fff;color:#000;font-family:var(--fonte-sans);font-size:13px}
 .cg td,.cg th{font-variant-numeric:tabular-nums;padding:4px 8px;height:28px;box-sizing:border-box;white-space:nowrap}.cg td.n,.cg th.n,.cg thead tr.tot th{text-align:right}
-.cg thead tr.tot th{background:var(--preto);color:var(--off-white);font-weight:700;font-size:13px;box-shadow:none}.cg thead tr.tot th.ini{color:var(--amarelo)}.cg thead tr.tot th .cob{color:var(--cinza-claro);font-size:.66rem;font-weight:700}
-.cg thead tr.tot th.fixa{background:var(--preto);color:var(--off-white)}.cg thead tr.tot th.ct,.cg thead tr.tot th.ctf{background:var(--preto);color:var(--amarelo)}
-.cg thead tr.meses th{background:var(--azul);color:#fff;font-weight:700;font-size:14px;text-align:center;box-shadow:none}.cg thead tr.meses th.fixa{background:var(--azul);color:#fff}.cg thead tr.meses th.g,.cg thead tr.meses th.c{background:var(--azul);color:#fff;box-shadow:none}
-.cg thead tr.rotulos th{background:var(--off-white);color:var(--preto);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--preto);box-shadow:none}.cg thead tr.rotulos th.g,.cg thead tr.rotulos th.c,.cg thead tr.rotulos th.fixa,.cg thead tr.rotulos th.col{background:var(--off-white);color:var(--preto);box-shadow:none}
-.cg td.fixa{background:#fff;color:var(--preto)}.cg td.fixa.ref{font-family:var(--fonte-mono);font-weight:700;color:var(--azul)}.cg td.fixa.nome{font-weight:700}.cg td.fixa.cor{font-family:var(--fonte-mono);color:var(--preto)}.cg td.fixa.cor,.cg th.fixa.cor{border-right:2px solid var(--preto)}
-.cg td.fat{background:rgba(46,62,252,.10);color:var(--azul);font-weight:700}.cg td.est{background:#fff;color:var(--preto);font-weight:400}.cg td.cob{color:var(--preto);font-weight:400}.cg td.cob.cob-r{background:var(--amarelo);font-weight:700}.cg td.cob.cob-a{background:var(--cinza-claro);color:var(--preto)}
-.cg td.ct{background:rgba(255,255,26,.30);color:var(--preto);box-shadow:none}.cg td.ctf{background:var(--amarelo);color:var(--preto);font-weight:700}
-.cg td.zero{color:var(--cinza-escuro)}.cg td.sem{color:var(--cinza-claro)}.cg td.neg{color:var(--preto);font-weight:700}
-.cg tr.mae td{background:var(--off-white);font-weight:700;border-top:1px solid var(--cinza-claro)}.cg tr.mae td.fixa{background:var(--off-white)}.cg tr.mae td.fat{background:rgba(46,62,252,.10)}.cg tr.mae td.est{background:var(--off-white)}
-.cg tr.filha td{background:#fff;font-weight:400;font-size:13px}.cg tr.filha td.fixa{background:#fff}.cg tr.filha:nth-child(even) td{background:rgba(173,174,179,.12)}.cg tr.filha:nth-child(even) td.fixa{background:rgba(226,227,229,1)}.cg tr.filha td.fat{background:rgba(46,62,252,.10)}
-.cg tr.filha td.ct,.cg tr.mae td.ct{background:rgba(255,255,26,.30);color:var(--preto)}.cg tr.filha td.ctf,.cg tr.mae td.ctf{background:var(--amarelo);color:var(--preto)}.cg tr.filha td.cob-r,.cg tr.mae td.cob-r{background:var(--amarelo)}.cg tr.filha td.cob-a,.cg tr.mae td.cob-a{background:var(--cinza-claro)}
-.cg tbody tr:hover td{outline:2px solid var(--azul);outline-offset:-2px}
-.cg td{border-bottom:0;border-left:1px solid rgba(173,174,179,.4)}.cg td.ini,.cg th.mes{border-left:2px solid var(--preto)}.cg td.fixa{border-left:0}
-.cg button.mm{width:28px;height:28px;background:transparent;border:0;color:var(--azul);font-size:16px;font-weight:800}
-.cg th.col,.cg td.col{background:var(--off-white)}
+.cg thead tr.tot th{font-weight:700;font-size:13px;box-shadow:none;background:#f2f2f2;color:#000}.cg thead tr.tot th.fixa{background:#f2f2f2;color:#000;text-align:left}.cg thead tr.tot th.tv{background:rgb(16,37,63);color:#fff}.cg thead tr.tot th.te{background:#ff0;color:#f00}.cg thead tr.tot th.tcart{background:#f2f2f2;color:#000}
+.cg thead tr.meses th{font-weight:700;font-size:13px;text-align:center;box-shadow:none;background:rgb(16,37,63);color:#fff}.cg thead tr.meses th.fixa{background:rgb(16,37,63);color:#fff}.cg thead tr.meses th.g{background:rgb(16,37,63);color:#fff;box-shadow:none}.cg thead tr.meses th.c.s1{background:#ff0;color:#000;box-shadow:none}.cg thead tr.meses th.c.s2{background:#ffc000;color:#000;box-shadow:none}
+.cg thead tr.rotulos th{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;box-shadow:none;background:#d9d9d9;color:#1f497d;border-bottom:2px solid #000}.cg thead tr.rotulos th.rv{background:rgb(16,37,63);color:#fff}.cg thead tr.rotulos th.re{background:#ff0;color:#f00}.cg thead tr.rotulos th.rg,.cg thead tr.rotulos th.rc{background:#d9d9d9;color:#1f497d}.cg thead tr.rotulos th.c{background:#d9d9d9;color:#1f497d;box-shadow:none}.cg thead tr.rotulos th.fixa,.cg thead tr.rotulos th.col{background:#d9d9d9;color:#1f497d;box-shadow:none}
+.cg td.fixa{background:#fff;color:#000}.cg td.fixa.ref{font-family:var(--fonte-mono);font-weight:700;color:#1f497d}.cg td.fixa.nome{font-weight:700}.cg td.fixa.cor{font-family:var(--fonte-mono);color:#000}.cg td.fixa.cor,.cg th.fixa.cor{border-right:2px solid #000}
+.cg td.vd,.cg td.est{background:#fff;color:#000;font-weight:400}.cg td.gi,.cg td.cob{background:#f2f2f2;color:#000;font-weight:700}
+.cg td.cob.cob-a{background:#e6b9b8;color:#000}.cg td.cob.cob-r{color:#f00}.cg td.gi.gi-r{color:#f00}.cg td.gi.gi-g{color:#00b050}
+.cg td.ct-fat{background:#e2efda;color:#000}.cg td.ct-conf{background:#92d050;color:#000;font-weight:700}
+.cg td.zero{color:#787b86}.cg td.sem{color:#adaeb3}.cg td.neg{color:#000;font-weight:700}
+.cg tr.mae td{font-weight:700;border-top:1px solid #adaeb3}.cg tr.mae td.vd,.cg tr.mae td.est{background:#fff}.cg tr.mae td.gi,.cg tr.mae td.cob{background:#f2f2f2}.cg tr.mae td.cob-a{background:#e6b9b8}.cg tr.mae td.ct-fat{background:#e2efda}.cg tr.mae td.ct-conf{background:#92d050}
+.cg tr.filha td{background:#fff;font-weight:400;font-size:13px}.cg tr.filha td.fixa{background:#fff}.cg tr.filha td.gi,.cg tr.filha td.cob{background:#f2f2f2;font-weight:700}.cg tr.filha td.cob-a{background:#e6b9b8}.cg tr.filha td.ct-fat{background:#e2efda}.cg tr.filha td.ct-conf{background:#92d050;font-weight:700}
+.cg tbody tr:hover td{outline:2px solid #1f497d;outline-offset:-2px}
+.cg td{border-bottom:0;border-left:1px solid #d9d9d9}.cg td.ini,.cg th.mes{border-left:2px solid #000}.cg td.fixa{border-left:0}
+.cg button.mm{width:28px;height:28px;background:transparent;border:0;color:#1f497d;font-size:16px;font-weight:800}
+.cg th.col,.cg td.col{background:#d9d9d9}
+.legenda .lg{display:inline-block;width:11px;height:11px;border:1px solid #adaeb3;vertical-align:-1px;margin:0 3px 0 6px;border-radius:2px}.lg-r{background:#f00}.lg-g{background:#00b050}.lg-rosa{background:#e6b9b8}.lg-fat{background:#e2efda}.lg-conf{background:#92d050}
 /* abas e o seletor venda/estoque: botões pequenos, lado a lado */
 .abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
@@ -508,7 +509,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.83</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.84</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -983,24 +984,31 @@ function desenharCG(linhas, pedidos, bases){
   const cel = (v, cls) => v == null ? semDado : (v ? `<td class="n ${cls}${v < 0 ? " neg" : ""}">${fmt(v).replace("-", "−")}</td>` : `<td class="n zero">0</td>`);
   // cobertura do mês = estoque ÷ venda do mês (em meses); sem venda, não há cobertura
   // cobertura na régua dele (PICASSO 22:3x): abaixo de 4 = ruptura (amarelo), 4 a 5 normal, acima de 5 = acima do teto (cinza)
-  const cob = (c) => { if (c.estoque == null || !c.venda) return semDado; const v = c.estoque / c.venda; return `<td class="n cob${v < 4 ? " cob-r" : v > 5 ? " cob-a" : ""}">${v.toFixed(1).replace(".", ",").replace("-", "−")}</td>`; };
-  const celC = c => { const fat = c.fat || 0, cart = c.cart || 0, v = fat + cart; if (!v) return `<td class="n mu">0</td>`; return `<td class="n ${fat ? "ctf" : "ct"}">${fmt(v)}</td>`; };
+  // as condicionais da AG do Excel (PICASSO leu a 70273_AG POLYÉLLE MA, 22:4x): cob ≥ 3,5 = rosa (alta, chama atenção) · cob < 2,5 = vermelho;
+  // giro = venda ÷ estoque: ≤ 0,2 vermelho · ≥ 0,3 verde
+  const dec = v => v.toFixed(1).replace(".", ",").replace("-", "−");
+  const cob = (c) => { if (c.estoque == null || !c.venda) return semDado; const v = c.estoque / c.venda; return `<td class="n cob${v >= 3.5 ? " cob-a" : v < 2.5 ? " cob-r" : ""}">${dec(v)}</td>`; };
+  const giro = (c) => { if (c.venda == null || !c.estoque) return semDado; const v = c.venda / c.estoque; return `<td class="n gi${v <= 0.2 ? " gi-r" : v >= 0.3 ? " gi-g" : ""}">${dec(v)}</td>`; };
+  // carteira pelo ESTADO, legenda do cliente na AG (PICASSO 22:4x): verde claro = já FATURADA · verde médio = CONFIRMADA (firme, não faturada);
+  // mista (parte faturada, parte firme) = verde médio. O estado vem do DADO, nunca do valor ("valor > 0 → verde" foi removido da AG em 30/06).
+  // Ainda sem fonte no banco: aporte (verde escuro), sugestão (azul), atenção (amarelo), cancelar (vermelho) — ficam sem cor até a regra do NÚCLEO.
+  const celC = c => { const fat = c.fat || 0, cart = c.cart || 0, v = fat + cart; if (!v) return `<td class="n zero">0</td>`; return `<td class="n ${cart ? "ct-conf" : "ct-fat"}" title="${cart ? (fat ? "parte faturada, parte confirmada" : "carteira confirmada (firme, não faturada)") : "carteira já faturada"}">${fmt(v)}</td>`; };
   const fechada = `<td class="col"></td>`;
-  const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
+  const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "vd").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + giro(c) + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
-  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda">por mês: venda · estoque (cinza) · cob = estoque ÷ venda · carteira em amarelo (amarelo cheio = já tem faturado) · a linha preta no alto é o total do que está filtrado · toque no mês para esconder a coluna; toque no + para trazer de volta</div></div>`;
+  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda">por mês, como na AG: venda · estoque · giro (venda ÷ estoque: <i class="lg lg-r"></i>≤ 0,2 · <i class="lg lg-g"></i>≥ 0,3) · cob (estoque ÷ venda: <i class="lg lg-rosa"></i>≥ 3,5 alta · <i class="lg lg-r"></i>&lt; 2,5) · carteira: <i class="lg lg-fat"></i>já faturada · <i class="lg lg-conf"></i>confirmada (firme) · a linha do alto é o total do que está filtrado · toque no mês para esconder a coluna; no + para trazer de volta</div></div>`;
   // a linha de TOTAIS vem ANTES do mês (ele, 19/10 22:1x: "a linha da venda, estoque, cobertura está abaixo da indicação do mês; é para estar acima")
   let totHtml = `<tr class="tot"><th class="fixa ref">total</th><th class="fixa nome">${linhas.length} ref.</th><th class="fixa cor"></th>`;
-  for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}; totHtml += `<th class="ini">${t.venda != null ? fmt(t.venda) : "—"}</th><th>${t.estoque != null ? fmt(t.estoque) : "—"}</th><th>${(t.estoque != null && t.venda) ? (t.estoque / t.venda).toFixed(1).replace(".", ",") : "—"}<span class="cob">cob</span></th>`; }
-  for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}, v = (t.fat || 0) + (t.cart || 0); totHtml += `<th class="ini ${t.fat ? "ctf" : "ct"}">${v ? fmt(v) : "0"}</th>`; }
+  for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}; totHtml += `<th class="ini tv">${t.venda != null ? fmt(t.venda) : "—"}</th><th class="te">${t.estoque != null ? fmt(t.estoque) : "—"}</th><th class="tg">${(t.venda != null && t.estoque) ? dec(t.venda / t.estoque) : "—"}</th><th class="tc">${(t.estoque != null && t.venda) ? dec(t.estoque / t.venda) : "—"}</th>`; }
+  for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}, v = (t.fat || 0) + (t.cart || 0); totHtml += `<th class="ini tcart">${v ? fmt(v) : "0"}</th>`; }
   totHtml += `</tr>`;
   html += `<div class="card cg"><table><thead>${totHtml}<tr class="meses"><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   const cabMes = (m, cls, span) => COLAPSADOS.has(cls + m) ? `<th class="mes col ${cls}" data-m="${cls + m}" title="mostrar ${mesBR(m)}">+</th>` : `<th class="mes ${cls}" data-m="${cls + m}" colspan="${span}" title="esconder ${mesBR(m)}">${mesBR(m)}</th>`;
-  for (const m of mesesGiro) html += cabMes(m, "g", 3);
-  for (const m of mesesCart) html += cabMes(m, "c", 1);
+  for (const m of mesesGiro) html += cabMes(m, "g", 4);
+  for (const m of mesesCart) html += cabMes(m, "c", 1).replace('class="mes c"', `class="mes c ${+m.slice(5, 7) <= 6 ? "s1" : "s2"}"`);   // 1S amarelo · 2S laranja, como na AG
   html += `</tr><tr class="rotulos"><th class="fixa ref"></th><th class="fixa nome"></th><th class="fixa cor"></th>`;
-  for (const m of mesesGiro) html += COLAPSADOS.has("g" + m) ? `<th class="col g">${mesBR(m)}</th>` : `<th class="n ini g">venda</th><th class="n g">estoque</th><th class="n g">cob</th>`;
+  for (const m of mesesGiro) html += COLAPSADOS.has("g" + m) ? `<th class="col g">${mesBR(m)}</th>` : `<th class="n ini g rv">venda</th><th class="n g re">estoque</th><th class="n g rg">giro</th><th class="n g rc">cob</th>`;
   for (const m of mesesCart) html += COLAPSADOS.has("c" + m) ? `<th class="col c">${mesBR(m)}</th>` : `<th class="n ini c">cart</th>`;
   html += `</tr>`;
   html += `</tr></thead><tbody>`;
