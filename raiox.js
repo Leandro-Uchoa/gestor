@@ -497,8 +497,20 @@ function montarApresentacao(d, modo){
     const lin = catsTenis.map(c => { const t = T[c] || {}; return { bg: "transparent", cells: [[`<b>${esc(bonito(c))}</b>`, ""], [n0(t.v), ""], [pc1(tt ? t.v / tt : null), ""], [n0(t.e), ""], cobCel(t.v ? t.e / t.v : null), ...(porLoja ? [[puxa(c) || "—", "font-size:22px"]] : [])] }; });
     lin.push({ bg: CINZA2, cells: [["<b>Tênis Olympikus</b>", ""], [`<b>${n0(tt)}</b>`, ""], ["<b>100%</b>", ""], [`<b>${n0(te)}</b>`, ""], [`<b>${n1(tt ? te / tt : null)}</b>`, ""], ...(porLoja ? [["", ""]] : [])] });
     const ordC = catsTenis.slice().sort((a, b) => ((T[b] || {}).v || 0) - ((T[a] || {}).v || 0)), lei = []; let soma = 0;
-    for (const c of ordC) { const t = (d.leitura || {})[c]; if (!t) continue; if (soma + t.length > 900) break; soma += t.length; lei.push(`<b>${esc(bonito(c))}:</b> ${texto(t)}`); }
-    pags.push(pagina(cabec("Tênis · categorias · nas lojas", "O que vende e como gira", "venda média/mês nas lojas · cobertura em meses: amarelo abaixo de 4, cinza acima de 8") + tabela(cols, lin, LG, 24, "7px 10px") + (lei.length ? leitura(lei, 22) : ""), FONTE_LJ, 18));
+    // na consolidada a leitura é só da rede: participação e cobertura de cada categoria pelos totais; do texto do banco ficam só as frases
+    // que não citam loja (código ou nome), cluster ("as A", "B e C") nem índice por loja (PICASSO, 20/10)
+    const citaLoja = (() => { const cods = L.map(l => String(l.loja)), nomes = L.map(l => bonito(l.nome || "")).filter(Boolean);
+      const re = new RegExp("\\b(" + [...cods, ...nomes].map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b", "i");
+      return f => (cods.length && re.test(f)) || /índice/i.test(f) || /\b(lojas?|as|nas|das|cluster)\s+[ABC]\b/i.test(f) || /\b[ABC]\s+(e|ou)\s+[ABC]\b/.test(f) || /\b[ABC]\s+(estão|está|vendem|vende|giram|gira|dependem|têm|tem|seguram|puxam)\b/.test(f); })();
+    const sóRede = t => String(t || "").split(/(?<=[.!?])\s+/).filter(f => f.trim() && !citaLoja(f)).join(" ");
+    if (consolidada) {
+      const partes = ordC.map(c => { const t = T[c] || {}; return `${esc(bonito(c))} ${pc1(tt ? t.v / tt : null)}${t.v ? ` (${n1(t.e / t.v)} meses)` : ""}`; });
+      lei.push(`<b>Participação no tênis e cobertura:</b> ${partes.join(" · ")}.`);
+      const cobs = ordC.map(c => [c, (T[c] || {}).v ? T[c].e / T[c].v : null]).filter(([, v]) => v != null), pes = cobs.filter(([, v]) => v > 8).sort((a, b) => b[1] - a[1]), lev = cobs.slice().sort((a, b) => a[1] - b[1])[0];
+      lei.push((pes.length ? `${lista(pes.map(([c, v]) => `${esc(bonito(c))} (${n1(v)} meses)`))} ${pes.length > 1 ? "estão pesados" : "está pesado"} na rede` : "Nenhuma categoria passa de 8 meses na rede") + (lev ? `; a ${esc(bonito(lev[0]))} gira em ${n1(lev[1])}.` : "."));
+      for (const c of ordC) { const t = sóRede((d.leitura || {})[c]); if (!t) continue; if (soma + t.length > 520) break; soma += t.length; lei.push(`<b>${esc(bonito(c))}:</b> ${texto(t)}`); }
+    } else for (const c of ordC) { const t = (d.leitura || {})[c]; if (!t) continue; if (soma + t.length > 900) break; soma += t.length; lei.push(`<b>${esc(bonito(c))}:</b> ${texto(t)}`); }
+    pags.push(pagina(cabec(consolidada ? "Tênis · categorias · rede" : "Tênis · categorias · nas lojas", "O que vende e como gira", `venda média/mês ${consolidada ? "da rede" : "nas lojas"} · cobertura em meses: amarelo abaixo de 4, cinza acima de 8`) + tabela(cols, lin, LG, 24, "7px 10px") + (lei.length ? leitura(lei, 22) : ""), FONTE_LJ, 18));
   }
   // 9 · índice por categoria e 10 · cobertura por categoria: tênis por loja, duas colunas
   if (porLoja && catsTenis.length) {
@@ -530,7 +542,7 @@ function montarApresentacao(d, modo){
     const idx = idxMes(vals, meses), ordem = ordemIdx(idx), vales = idx.map((v, i) => [v, i]).filter(([v]) => v != null && v <= 85).map(([, i]) => MESES[i]);
     const f1 = ordem.length ? `<b>${cap(MESES_LONGO[ordem[0][1]])} vale ${n1(ordem[0][0] / 100)} ${ordem[0][0] >= 200 ? "vezes" : "vez"} o mês médio (índice ${Math.round(ordem[0][0])})${vales.length ? `; vale em ${vales.join(", ")}` : ""}.</b>` : "";
     const ult = sems[sems.length - 1], f2 = ult && ult.v != null ? `Em ${esc(ult.nome)} a venda ficou ${vr(ult.v)} contra o mesmo período do ano anterior.` : "";
-    const t = cat && T[cat], f3 = t && t.v ? `Nas lojas: ${n0(t.v)} ${unid(cat)}/mês e ${n0(t.e)} em estoque, ${n1(t.e / t.v)} meses de cobertura.` : "";
+    const t = cat && T[cat], f3 = t && t.v ? `${consolidada ? "Na rede" : "Nas lojas"}: ${n0(t.v)} ${unid(cat)}/mês e ${n0(t.e)} em estoque, ${n1(t.e / t.v)} meses de cobertura.` : "";
     const linhas = (lojasPrimeiro ? [f3, f1] : [f1, f2 || f3]).filter(Boolean).slice(0, 2);
     return precoBarras(pirKey ? PIR[pirKey] : null) + linhas.map(x => `<p style="font-size:23px;line-height:1.3">${x}</p>`).join("");
   };
@@ -567,21 +579,26 @@ function montarApresentacao(d, modo){
     pags.push(pagina(cabec("Under Armour · tênis por loja", "Onde o UA gira", "pares · cobertura em meses · índice 100 = proporção do tênis da loja · azul: 110 ou mais · cinza: acima de 24 meses")
       + duas(tabela(cols, e1.map(lin), LG, fs, pad), tabela(cols, [...e2.map(lin), rede], LG, fs, pad)) + leitura(frases), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 16));
   }
-  // 18 · oportunidade de giro: os modelos fora de linha com mais pares (cores agrupadas) e, à direita, o número grande e os totais por família
+  // 18 · oportunidade de giro: os modelos fora de linha com mais pares (cores agrupadas) e, à direita, o número grande e os totais por família.
+  // NÚCLEO (regra definitiva, 20/10, aplicada na carga_ponta): item com `excluido` (referência na coleção vigente ou na lista manual
+  // ponta_excluir.json) sai da LISTA de modelos, mas continua nos totais. O número grande e a leitura somam só o que é PAR: tênis
+  // Olympikus, tênis Under Armour e chinelos (meias são packs e acessórios peças — ficam só na tabela de totais).
   const its = ((d.ponta || {}).itens || []).filter(i => i.situacao === "fora de linha" && (i.estoque || 0) > 0);
   if (its.length) {
     const tipo = m => /FTW/i.test(m) ? "tenis" : /MEIA/i.test(m) ? "meias" : /ACC/i.test(m) ? "acess" : /CHI/i.test(m) ? "chin" : "outro", ua = m => /^UA/i.test(m);
-    const grupo = f => { const g = new Map(); for (const i of its.filter(f)) { const x = g.get(i.desc) || { desc: i.desc, pares: 0, cores: new Set(), gen: i.genero }; x.pares += i.estoque || 0; x.cores.add(i.cor); g.set(i.desc, x); } return [...g.values()].sort((a, b) => b.pares - a.pares); };
-    const oly = grupo(i => tipo(i.marca) === "tenis" && !ua(i.marca)), principal = oly.length ? oly : grupo(() => true), top = principal.slice(0, 18);
-    const totP = principal.reduce((s, m) => s + m.pares, 0), totTop = top.reduce((s, m) => s + m.pares, 0);
+    const grupo = (f, base) => { const g = new Map(); for (const i of (base || its).filter(f)) { const x = g.get(i.desc) || { desc: i.desc, pares: 0, cores: new Set(), gen: i.genero }; x.pares += i.estoque || 0; x.cores.add(i.cor); g.set(i.desc, x); } return [...g.values()].sort((a, b) => b.pares - a.pares); };
+    const naLista = its.filter(i => !i.excluido), ehOly = i => tipo(i.marca) === "tenis" && !ua(i.marca);
+    const oly = grupo(ehOly, naLista), principal = oly.length ? oly : grupo(() => true, naLista), top = principal.slice(0, 18);
+    const emPares = i => tipo(i.marca) === "tenis" || tipo(i.marca) === "chin", totP = its.filter(emPares).reduce((s, i) => s + (i.estoque || 0), 0), nModP = new Set(its.filter(emPares).map(i => i.desc)).size, totTop = top.reduce((s, m) => s + m.pares, 0);
     const cols = [[`Modelo · ${oly.length ? "tênis Olympikus" : "fora de linha"}`, "left"], ["Gênero", "center"], ["Cores", "center"], ["Pares", "center"]];
+    const mP = medida(top.length, ALT_UTIL - altCabec - 20 - 35 - 20, 22, -1), padP = `${mP.pv}px 10px`;      // a mesma régua das tabelas por loja (PICASSO, 20/10)
     const lin = top.map((m, i) => ({ bg: i % 2 ? "transparent" : "rgba(46,62,252,0.06)", cells: [[esc(bonito(m.desc)), ""], [esc(bonito(m.gen || "")), ""], [String(m.cores.size), ""], [`<b>${n0(m.pares)}</b>`, ""]] }));
     const fams = [["Tênis Olympikus", i => tipo(i.marca) === "tenis" && !ua(i.marca), "pares"], ["Tênis Under Armour", i => tipo(i.marca) === "tenis" && ua(i.marca), "pares"], ["Meias", i => tipo(i.marca) === "meias", "packs"], ["Acessórios", i => tipo(i.marca) === "acess", "peças"], ["Chinelos", i => tipo(i.marca) === "chin", "pares"]]
       .map(([nm, f, un]) => { const g = grupo(f); return [nm, g.reduce((s, m) => s + m.pares, 0), un, g.length]; }).filter(([, q]) => q > 0);
     const resumo = fams.map(([a, b, c, k]) => `<div style="display:flex;flex-direction:row;justify-content:space-between;align-items:baseline;border-top:2px solid ${CINZA2};padding-top:6px"><p style="font-size:26px;font-weight:700">${a}</p><p style="font-size:26px"><b>${n0(b)}</b> ${c} · ${k} modelo${k > 1 ? "s" : ""}</p></div>`).join("");
-    const dir = `<div style="flex:1;border-left:2px solid ${CINZA2};padding-left:40px;display:flex;flex-direction:column;gap:18px">${kick("Leitura")}<div style="display:flex;flex-direction:column;gap:6px"><p style="font-size:112px;font-weight:800;line-height:1;color:${AZUL}">${n0(totP)}</p><p style="font-size:28px;line-height:1.3">pares ${oly.length ? "de tênis Olympikus " : ""}fora de linha em ${principal.length} modelos · ${pc(totP ? totTop / totP : null)} deles nos ${top.length} modelos ao lado</p></div>${resumo}<p style="font-size:26px;font-weight:700;line-height:1.35">Girar esse estoque antes ${preNatal ? "do Natal" : "da próxima coleção"} libera espaço na loja e caixa para a coleção nova.</p></div>`;
+    const dir = `<div style="flex:1;border-left:2px solid ${CINZA2};padding-left:40px;display:flex;flex-direction:column;gap:18px">${kick("Leitura")}<div style="display:flex;flex-direction:column;gap:6px"><p style="font-size:112px;font-weight:800;line-height:1;color:${AZUL}">${n0(totP)}</p><p style="font-size:28px;line-height:1.3">pares de tênis e chinelos fora de linha em ${nModP} modelos · ${pc(totP ? totTop / totP : null)} deles nos ${top.length} modelos ao lado</p></div>${resumo}<p style="font-size:26px;font-weight:700;line-height:1.35">Girar esse estoque antes ${preNatal ? "do Natal" : "da próxima coleção"} libera espaço na loja e caixa para a coleção nova.</p></div>`;
     const temUAponta = its.some(i => ua(i.marca));
-    pags.push(pagina(`<div style="flex:none;width:980px;display:flex;flex-direction:column;gap:20px">${cabec("Ponta de estoque · fora de linha", "Oportunidade de giro", "")}<p style="font-size:26px;line-height:1.35">Produtos fora de linha com estoque · os modelos com mais pares</p>${tabela(cols, lin, [560, 170, 110, 140], 21, "2px 10px")}</div>${dir}`,
+    pags.push(pagina(`<div style="flex:none;width:980px;display:flex;flex-direction:column;gap:20px">${cabec("Ponta de estoque · fora de linha", "Oportunidade de giro", "")}<p style="font-size:26px;line-height:1.35">Produtos fora de linha com estoque · os modelos com mais pares</p>${tabela(cols, lin, [560, 170, 110, 140], mP.fs, padP)}</div>${dir}`,
       `estoque com saldo, lido em ${dmy((d.ponta.base || {}).lido_em)} · status fora de linha na Olympikus${temUAponta ? " e na Under Armour" : ""}`, 56, { row: true }));
   }
   // fecho: o número da página na ordem final e a guarda do que não sai para o cliente
