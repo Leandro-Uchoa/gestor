@@ -1,4 +1,4 @@
-/* CLIENTE · a aba por cliente do Gestor (TI, 19/10/2026). Ordem dele: "abre clientes, seleciono o cliente, e dentro vai ter tudo
+/* CLIENTE · a aba por cliente do Gestor (TI, 19/10/2026; 20/10: a Carteira detalhada no formato do Excel — COLS, tabelaXl, autofiltro da GestorLib). Ordem dele: "abre clientes, seleciono o cliente, e dentro vai ter tudo
    referente a ele — raio-x, carteiras, vitrine, gestão e ações de trade, ata, assuntos pendentes; dashboards; um raio-x do cliente".
    Um painel por assunto, cada um com o resumo e o botão que abre a aba inteira já no cliente. Tudo vem de UMA chamada
    (cliente_consulta) — a página é desenho; número mora no banco. Sem número de 4+ dígitos aqui (vai ao repositório público). */
@@ -227,7 +227,7 @@ function ligarTopics(corpo, d){
 // de decisão; a planilha dele fica como *_xl, ao lado, e o histórico vai para carteira_decisao por gatilho). A página não escreve xlsx.
 const ACOES = ["", "OK", "CANCELAR", "CANCELAR PARCIAL", "TRANSFERIR", "TRANSF PARCIAL", "REPASSAR", "REPASSE PARCIAL", "ANALISAR", "DISTRIBUIR", "ANTECIPAR", "POSTERGAR", "AGUARDAR", "REVER"];
 const STATUS_C = ["", "PENDENTE", "SOLICITADO", "PROCESSANDO", "OK"];
-const CF = { mes: new Set(), marca: new Set(), porta: new Set(), acao: new Set(), busca: "", so: "cart" };
+const CF = { busca: "", so: "cart" };
 let CART = {};
 async function carteiraDoc(cliente, denovo){
   if (CART[cliente] && !denovo) return CART[cliente];
@@ -239,19 +239,123 @@ const grupoAcao = a => { const t = String(a || "").toUpperCase(); if (!t) return
 function carteiraDetalhada(d){
   return `<div class="card cartd${S.cartAberta ? " larga" : " fechada"}" id="cl-cart">${tit("Carteira detalhada", "", "")}<div class="mu">lendo a carteira…</div></div>`;
 }
+// ---------- a MESA no formato do Excel (ele, 20/10 01:5x: "a DETALHADA também no mesmo formato do Excel: subtotais em cima da carteira e do
+// faturamento; filtros na linha do cabeçalho; mesmas cores e formato. Tudo igual."). A spec é a leitura do PICASSO da DETALHADA BASE 2S26,
+// aba DETALHADA: subtotais na linha 2, cabeçalho na 3, dados da 4. As 28 colunas na ORDEM do Excel (A…AB), largura relativa do Excel (w),
+// grupo de cor do cabeçalho (g): ebm = cinza (espelho do EBM) · gci e saldos = laranja · dec = azul (a análise dele) · rep = verde ·
+// claude = amarelo (coluna interna: aparece na tela dele; nunca em exportação para cliente — a mesa não exporta). As 9 primeiras (A–I) ficam
+// travadas à esquerda e as duas linhas do topo (subtotal + cabeçalho) grudam, como o congelamento dele. Autofiltro em TODAS as colunas.
+// O que carteira_consulta ainda não traz fica vazio (FABRICA, FILIAL, NF, TOTAL DO PEDIDO, PDC UNITÁRIO, PDV) — a coluna já existe para
+// quando a consulta trouxer (x.fab, x.filial, x.nf, x.tot, x.pdc, x.pdv). CODIGO sai da chave (CODIGO|GCI|REFERENCIA|COR); SEMESTRE, da PREV FAT.
+// SALDOS = em_repasse (rep) e REPASSADO = repassado (repd) da carteira_linha — a leitura das colunas W e X do repasse.
+// Realces do corpo, os ÚNICOS do Excel: linha NOVA (amarela, x.nova — a consulta ainda não traz a marca) · linha EXCLUÍDA (vermelha,
+// x.excluida — a consulta hoje só traz as vivas; a fonte é v_excluidas) · GCI DUPLICADO entre as linhas visíveis (rosa, texto vinho).
+// Sem cor por valor em AÇÃO/STATUS: não existe no Excel. Ganchos sem cor, prontos: tr.acao-GRUPO · tr.sem-acao · tr.decidida · td.prev-vencida.
+const semDe = p => p ? (+String(p).slice(5, 7) <= 6 ? "1S" : "2S") + String(p).slice(2, 4) : "";
+const numXl = t => (t == null || t === "" || isNaN(t)) ? null : Number(t);
+const reais = n => n == null ? "—" : "R$ " + Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const COLS = [
+  { k: "sem", t: "SEMESTRE", w: 9, g: "ebm", fx: true, v: x => semDe(x.prev) },
+  { k: "nome", t: "NOME FANTASIA", w: 18, g: "ebm", fx: true, v: (x, c) => c.nomeCli },
+  { k: "cod", t: "CODIGO", w: 12, g: "ebm", fx: true, v: x => String(x.k || "").split("|")[0] },
+  { k: "porta", t: "PORTA", w: 14, g: "ebm", fx: true, v: x => x.porta || "" },
+  { k: "marca", t: "MARCA", w: 11, g: "ebm", fx: true, v: x => x.m || "" },
+  { k: "faixa", t: "FAIXA", w: 11, g: "ebm", fx: true, v: x => x.fx || "" },
+  { k: "fab", t: "FABRICA", w: 12, g: "ebm", fx: true, v: x => x.fab || "" },
+  { k: "filial", t: "FILIAL", w: 10, g: "ebm", fx: true, v: x => x.filial || "" },
+  { k: "nf", t: "NF", w: 12, g: "ebm", fx: true, v: x => x.nf || "" },
+  { k: "oc", t: "OC", w: 11, g: "ebm", v: x => x.oc || "" },
+  { k: "gci", t: "GCI", w: 11, g: "gci", v: x => x.gci || "" },
+  { k: "ref", t: "REFERENCIA", w: 11, g: "ebm", v: x => x.r || "" },
+  { k: "desc", t: "DESCRICAO", w: 26, g: "ebm", v: x => x.d || "" },
+  { k: "cor", t: "COR", w: 9, g: "ebm", v: x => x.c || "" },
+  { k: "prev", t: "PREV FAT", w: 13, g: "ebm", data: true, v: x => x.prev || "", sub: "conta", sc: "cinza" },
+  { k: "cart", t: "CART", w: 8, g: "ebm", num: true, v: x => x.cart, sub: "soma", sc: "cinza" },
+  { k: "fat", t: "FAT", w: 9, g: "ebm", num: true, v: x => x.fat, sub: "soma", sc: "cinza" },
+  { k: "dfat", t: "DATA FAT", w: 11, g: "ebm", data: true, v: x => x.dfat || "", sub: "cartfat" },
+  { k: "acao", t: "AÇÃO", w: 14, g: "dec", v: x => x.a || x.axl || "" },
+  { k: "vol", t: "VOLUME", w: 13, g: "dec", num: true, v: x => x.v != null ? x.v : numXl(x.vxl), sub: "soma", sc: "azul" },
+  { k: "dest", t: "DESTINATÁRIO", w: 17, g: "dec", v: x => x.dest || x.dxl || "" },
+  { k: "status", t: "STATUS", w: 13, g: "dec", v: x => x.s || x.sxl || "" },
+  { k: "saldos", t: "SALDOS", w: 12, g: "saldos", num: true, v: x => x.rep, sub: "soma", sc: "laranja" },
+  { k: "repd", t: "REPASSADO", w: 15, g: "rep", num: true, v: x => x.repd, sub: "soma", sc: "verde" },
+  { k: "tot", t: "TOTAL DO PEDIDO", w: 20, g: "dec", num: true, reais: true, v: x => numXl(x.tot), sub: "reais", sc: "azul" },
+  { k: "pdc", t: "PDC UNITÁRIO", w: 17, g: "dec", num: true, reais: true, v: x => numXl(x.pdc), sub: "reais", sc: "azul" },
+  { k: "pdv", t: "PDV", w: 9, g: "dec", num: true, reais: true, v: x => numXl(x.pdv), sub: "reais", sc: "azul" },
+  { k: "claude", t: "CLAUDE", w: 29, g: "claude", v: x => x.n || "" },
+];
+const COL = Object.fromEntries(COLS.map(c => [c.k, c]));
+const valorCol = (x, k, ctx) => COL[k].v(x, ctx);
+// o autofiltro da casa (GestorLib.autofiltro) com as colunas desta mesa: filtros = o Map de quem chama; base() = as linhas antes dos filtros
+function afDe(filtros, base, ctx, aplicar){
+  return window.GestorLib.autofiltro({ filtros, nomeCol: k => COL[k].t, ehNum: k => !!COL[k].num, rotulo: (k, ch) => COL[k].data && ch !== "(vazio)" ? dmy(ch) : ch, aplicar,
+    valores: k => { const af = ctx.af; return base().filter(x => af.passaTodos((y, c) => valorCol(y, c, ctx), x, k)).map(x => valorCol(x, k, ctx)); } });
+}
+const efetiva = x => x.a || x.axl || "";
+function celXl(x, c, ctx, gciN){
+  const v = c.v(x, ctx), cls = ["c-" + c.k, c.fx ? "fx" : "", c.num ? "n" : ""].filter(Boolean);
+  let h;
+  switch (c.k) {
+    case "gci": if (v && gciN.get(v) > 1) cls.push("gci-dup"); h = esc(v); break;
+    case "prev": if (v && v < hoje() && x.cart > 0) cls.push("prev-vencida"); h = v ? dmy(v) : ""; break;
+    case "dfat": h = v ? dmy(v) : ""; break;
+    case "cart": case "fat": case "saldos": case "repd": h = v != null ? fmt(v) : ""; break;
+    case "tot": case "pdc": case "pdv": h = v != null ? reais(v) : ""; break;
+    case "acao": { const dif = x.a && x.axl && x.a !== x.axl;
+      h = `<select class="dec" data-campo="acao">${ACOES.map(a => `<option value="${a}" ${(x.a || "") === a ? "selected" : ""}>${a || "—"}</option>`).join("")}</select>${x.axl ? `<small class="xl ${dif ? "dif" : ""}" title="o que está na planilha dele">planilha: ${esc(x.axl)}${x.vxl ? " " + esc(x.vxl) : ""}${x.dxl ? " → " + esc(x.dxl) : ""}</small>` : ""}`; break; }
+    case "vol": h = `<input type="number" class="dec" data-campo="volume" min="0" value="${x.v != null ? x.v : ""}" placeholder="${x.vxl != null && x.vxl !== "" ? esc(x.vxl) : x.cart}">`; break;
+    case "dest": h = `<input type="text" class="dec" data-campo="destinatario" value="${esc(x.dest || "")}" placeholder="${esc(x.dxl || "")}">`; break;
+    case "status": h = `<select class="dec" data-campo="status">${STATUS_C.map(s => `<option value="${s}" ${(x.s || "").split(" ")[0] === s ? "selected" : ""}>${s || "—"}</option>`).join("")}</select>${x.sxl ? `<small class="xl">planilha: ${esc(x.sxl)}</small>` : ""}${x.s && x.s.startsWith("SOLICITADO") ? `<small>${esc(x.s)}</small>` : ""}`; break;
+    case "claude": h = `<input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota">${x.q ? `<small class="mu">${esc(x.q.split("@")[0])} · ${dmy(x.em)}</small>` : ""}`; break;
+    case "desc": h = `${esc(v)}${x.lin ? `<small class="mu">linha ${x.lin}</small>` : ""}`; break;
+    default: h = esc(v);
+  }
+  return `<td class="${cls.join(" ")}">${h}</td>`;
+}
+function linhaXl(x, ctx, gciN){
+  const g = grupoAcao(efetiva(x));
+  const cls = [g ? "acao-" + g : "sem-acao", x.a ? "decidida" : "", x.nova ? "nova" : "", x.excluida ? "excluida" : "", x.cart > 0 ? "" : "cart-zero"].filter(Boolean);
+  return `<tr data-k="${esc(x.k)}" class="${cls.join(" ")}">${COLS.map(c => celXl(x, c, ctx, gciN)).join("")}</tr>`;
+}
+// a linha de SUBTOTAIS (linha 2 do Excel), recalculada com o que está visível: PREV FAT = contagem; CART, FAT, VOLUME, SALDOS, REPASSADO = soma;
+// DATA FAT = CART + FAT; TOTAL DO PEDIDO, PDC, PDV = soma em R$. Rótulo "subtotal · N linhas" nas duas primeiras colunas.
+function subXl(lista, ctx){
+  const soma = k => { let s = null; for (const x of lista) { const v = valorCol(x, k, ctx); if (v != null) s = (s || 0) + Number(v); } return s; };
+  return `<tr class="sub">${COLS.map(c => {
+    let h = "";
+    if (c.k === "sem") h = "subtotal"; else if (c.k === "nome") h = fmt(lista.length) + " linhas";
+    else if (c.sub === "conta") h = fmt(lista.length);
+    else if (c.sub === "soma") { const s = soma(c.k); h = s != null ? fmt(s) : ""; }
+    else if (c.sub === "cartfat") h = fmt((soma("cart") || 0) + (soma("fat") || 0));
+    else if (c.sub === "reais") { const s = soma(c.k); h = s != null ? reais(s) : "—"; }
+    return `<th class="c-${c.k}${c.fx ? " fx" : ""}${c.sc ? " s-" + c.sc : ""}" data-sub="${c.k}">${h}</th>`; }).join("")}</tr>`;
+}
+function tabelaXl(lista, ctx){
+  const gciN = new Map(); for (const x of lista) if (x.gci) gciN.set(x.gci, (gciN.get(x.gci) || 0) + 1);
+  const cab = COLS.map(c => `<th class="cab c-${c.k} g-${c.g}${c.fx ? " fx" : ""}" data-k="${c.k}" style="min-width:${c.w * 7}px">${esc(c.t)} ${ctx.af.botao(c.k)}</th>`).join("");
+  return `<div class="rolagem xl-rol"><table class="cart xl"><thead>${subXl(lista, ctx)}<tr class="cab">${cab}</tr></thead><tbody>${lista.map(x => linhaXl(x, ctx, gciN)).join("")}</tbody></table></div>`;
+}
+// o congelamento: o cabeçalho gruda logo abaixo do subtotal (altura medida); as 9 colunas A–I grudam à esquerda, cada uma depois da anterior
+function ajustarXl(raiz){
+  const t = raiz.querySelector("table.xl"); if (!t) return;
+  const sub = t.querySelector("tr.sub"), h = sub ? sub.offsetHeight : 0;
+  for (const th of t.querySelectorAll("tr.cab th")) th.style.top = h + "px";
+  let acc = 0; for (const th of t.querySelectorAll("tr.cab th.fx")) { t.style.setProperty("--f-" + th.dataset.k, acc + "px"); acc += th.getBoundingClientRect().width; }
+}
+const FC = new Map(); let MESA = null;                                 // os filtros da mesa inteira; MESA = o que a mesa precisa para se redesenhar
 async function desenharCarteira(corpo, d){
   const box = corpo.querySelector("#cl-cart"); if (!box) return;
   let c; try { c = await carteiraDoc(d.cliente); } catch (e) { box.innerHTML = tit("Carteira detalhada") + `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
   const L = c.linhas || [];
   if (!L.length) { box.innerHTML = tit("Carteira detalhada") + `<div class="vazio">sem linhas de carteira para este cliente no banco (a DETALHADA só tem Ban Ban, Noroeste, Sapataria Nova, Polyélle, Casa Pio e CMS).</div>`; return; }
-  const mesDe = x => x.prev ? String(x.prev).slice(0, 7) : "sem prev";
-  const efetiva = x => x.a || x.axl || "";
-  const passa = x => (CF.so !== "cart" || x.cart > 0) && (!CF.mes.size || CF.mes.has(mesDe(x))) && (!CF.marca.size || CF.marca.has(x.m || "")) && (!CF.porta.size || CF.porta.has(x.porta || "")) && (!CF.acao.size || CF.acao.has(grupoAcao(efetiva(x)) || "(vazia)"))
-    && (!CF.busca || (x.r + " " + (x.d || "") + " " + x.c + " " + (x.gci || "") + " " + (x.oc || "") + " " + (x.porta || "") + " " + efetiva(x) + " " + (x.dest || x.dxl || "")).toUpperCase().includes(CF.busca.toUpperCase()));
-  const vivas = L.filter(x => CF.so !== "cart" || x.cart > 0), lista = L.filter(passa);
-  const conta = f => { const m = new Map(); for (const x of vivas) { const k = f(x); m.set(k, (m.get(k) || 0) + 1); } return [...m.entries()].sort(); };
-  const chip = (id, sel, lista, rot) => `<div class="linha"><label>${rot}</label><div class="chips" data-f="${id}">${[["", "todos"], ...lista].map(([v, n]) => `<button type="button" data-v="${esc(v)}" class="${(v === "" ? !sel.size : sel.has(v)) ? "ativa" : ""}">${esc(v === "" ? "todos" : (id === "mes" && v !== "sem prev" ? mesBR(v + "-01") : v))}${n != null ? ` <small>${n}</small>` : ""}</button>`).join("")}</div></div>`;
-  const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), porAcao = new Map(); for (const x of lista) { const g = grupoAcao(efetiva(x)) || "(vazia)"; porAcao.set(g, (porAcao.get(g) || 0) + (x.cart || 0)); }
+  const ctx = { nomeCli: nomeDe(d.cliente) };
+  const vivas = L.filter(x => CF.so !== "cart" || x.cart > 0);
+  const naBusca = x => !CF.busca || (x.r + " " + (x.d || "") + " " + x.c + " " + (x.gci || "") + " " + (x.oc || "") + " " + (x.porta || "") + " " + (x.m || "") + " " + efetiva(x) + " " + (x.dest || x.dxl || "")).toUpperCase().includes(CF.busca.toUpperCase());
+  const base = vivas.filter(naBusca);
+  if (!MESA || MESA.cliente !== d.cliente) { FC.clear(); MESA = { cliente: d.cliente }; ctx.af = afDe(FC, () => MESA.base, ctx, () => desenharCarteira(MESA.corpo, MESA.d)); }
+  else ctx.af = MESA.ctx.af;
+  MESA.ctx = ctx; MESA.base = base; MESA.corpo = corpo; MESA.d = d;
+  const lista = base.filter(x => ctx.af.passaTodos((y, k) => valorCol(y, k, ctx), x));
   const btExp = `<button type="button" class="sec expandir">${S.cartAberta ? "recolher ▴" : "tratar a carteira ›"}</button>`;
   if (!S.cartAberta) {
     // o cartão PEQUENO: só o placar; apertar abre a mesa inteira
@@ -263,35 +367,23 @@ async function desenharCarteira(corpo, d){
     box.querySelector(".expandir").onclick = () => { S.cartAberta = true; box.className = "card cartd larga"; desenharCarteira(corpo, d); box.scrollIntoView({ behavior: "smooth", block: "start" }); };
     return;
   }
+  const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), porAcao = new Map(); for (const x of lista) { const g = grupoAcao(efetiva(x)) || "(vazia)"; porAcao.set(g, (porAcao.get(g) || 0) + (x.cart || 0)); }
   box.className = "card cartd larga";
-  box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco`, btExp + ir("cg", { cliente: d.cliente }, "abrir a AG")) + `
-    <div class="filtros">${chip("mes", CF.mes, conta(mesDe), "prev. fat.")}${chip("marca", CF.marca, conta(x => x.m || ""), "marca")}${chip("porta", CF.porta, conta(x => x.porta || ""), "porta")}${chip("acao", CF.acao, conta(x => grupoAcao(efetiva(x)) || "(vazia)"), "ação")}
-      <div class="linha"><label>mostrar</label><div class="chips" data-f="so"><button type="button" data-v="cart" class="${CF.so === "cart" ? "ativa" : ""}">só carteira aberta</button><button type="button" data-v="tudo" class="${CF.so === "tudo" ? "ativa" : ""}">com faturado recente</button></div><input type="search" id="cl-cart-busca" placeholder="referência, descrição, cor, GCI, OC, porta…" value="${esc(CF.busca)}" autocomplete="off"></div></div>
-    <div class="num"><div><b>${fmt(cart)}</b><small>pares na tela</small></div><div><b>${fmt(lista.length)}</b><small>linhas</small></div>${[...porAcao.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, n]) => `<div><b>${fmt(n)}</b><small>${esc(g.toLowerCase())}</small></div>`).join("")}</div>
-    <div class="rolagem"><table class="mini cart">${CAB_CART}
-      <tbody>${lista.slice(0, 400).map(linhaCarteira).join("")}</tbody></table></div>
-    ${lista.length > 400 ? `<div class="mu" style="font-size:.74rem">mostrando 400 de ${lista.length} — afine o filtro</div>` : ""}
+  box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco · no formato da DETALHADA`, btExp + ir("cg", { cliente: d.cliente }, "abrir a AG")) + `
+    <div class="filtros"><div class="linha"><label>mostrar</label><div class="chips" data-f="so"><button type="button" data-v="cart" class="${CF.so === "cart" ? "ativa" : ""}">só carteira aberta</button><button type="button" data-v="tudo" class="${CF.so === "tudo" ? "ativa" : ""}">com faturado recente</button></div><input type="search" id="cl-cart-busca" placeholder="referência, descrição, cor, GCI, OC, porta, marca…" value="${esc(CF.busca)}" autocomplete="off">${ctx.af.limpar()}</div></div>
+    <div class="num"><div><b>${fmt(cart)}</b><small>pares na tela</small></div><div><b>${fmt(lista.length)}</b><small>linhas${FC.size ? " de " + fmt(base.length) : ""}</small></div>${[...porAcao.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, n]) => `<div><b>${fmt(n)}</b><small>${esc(g.toLowerCase())}</small></div>`).join("")}</div>
+    ${tabelaXl(lista.slice(0, 400), ctx)}
+    ${lista.length > 400 ? `<div class="mu" style="font-size:.74rem">mostrando 400 de ${lista.length} — afine o filtro (o subtotal é das 400 na tela)</div>` : ""}
     <div id="cl-cart-msg"></div>`;
+  ajustarXl(box);
   box.querySelector(".expandir").onclick = () => { S.cartAberta = false; desenharCarteira(corpo, d); };
-  for (const b of box.querySelectorAll(".filtros .chips button")) b.onclick = () => { const f = b.parentElement.dataset.f, v = b.dataset.v; if (f === "so") CF.so = v; else { const sel = CF[f]; if (v === "") sel.clear(); else if (sel.has(v)) sel.delete(v); else sel.add(v); } desenharCarteira(corpo, d); };
+  for (const b of box.querySelectorAll(".filtros .chips button")) b.onclick = () => { CF.so = b.dataset.v; desenharCarteira(corpo, d); };
   box.querySelector("#cl-cart-busca").oninput = ev => { CF.busca = ev.target.value; clearTimeout(desenharCarteira._t); desenharCarteira._t = setTimeout(() => desenharCarteira(corpo, d), 150); };
+  ctx.af.ligar(box);
   ligarDecisao(box, L, box.querySelector("#cl-cart-msg"));
 }
-// a LINHA da carteira e o GRAVADOR da decisão são um só (20/10): servem à mesa inteira (acima) e ao quadro que a Análise de giro abre
-// ao tocar numa célula de carteira (carteiraMini, abaixo). Mudar a coluna aqui muda nos dois.
-const CAB_CART = `<thead><tr><th>porta</th><th>produto</th><th>GCI</th><th class="n">prev</th><th class="n">CART</th><th class="n">FAT</th><th>ação</th><th class="n">vol.</th><th>destinatário</th><th>status</th><th>nota</th></tr></thead>`;
-function linhaCarteira(x){
-  const dif = x.a && x.axl && x.a !== x.axl;
-  return `<tr data-k="${esc(x.k)}" class="${x.a ? "decidida" : ""}">
-        <td>${esc(x.porta || "")}<small>${esc(x.m || "")}${x.fx ? " · " + esc(x.fx) : ""}</small></td>
-        <td><b>${esc(x.d || x.r)}</b> ${esc(x.c)}<small>${esc(x.r)}${x.oc ? " · OC " + esc(x.oc) : ""}${x.lin ? " · linha " + x.lin : ""}</small></td>
-        <td>${esc(x.gci || "")}</td><td class="n">${x.prev ? dmy(x.prev) : "—"}</td><td class="n c">${fmt(x.cart)}</td><td class="n">${x.fat ? fmt(x.fat) + (x.dfat ? `<small>${dmy(x.dfat)}</small>` : "") : "—"}</td>
-        <td><select class="dec" data-campo="acao">${ACOES.map(a => `<option value="${a}" ${(x.a || "") === a ? "selected" : ""}>${a || "—"}</option>`).join("")}</select>${x.axl ? `<small class="xl ${dif ? "dif" : ""}" title="o que está na planilha dele">planilha: ${esc(x.axl)}${x.vxl ? " " + esc(x.vxl) : ""}${x.dxl ? " → " + esc(x.dxl) : ""}</small>` : ""}</td>
-        <td class="n"><input type="number" class="dec" data-campo="volume" min="0" value="${x.v != null ? x.v : ""}" placeholder="${x.cart}"></td>
-        <td><input type="text" class="dec" data-campo="destinatario" value="${esc(x.dest || "")}" placeholder="${esc(x.dxl || "")}"></td>
-        <td><select class="dec" data-campo="status">${STATUS_C.map(s => `<option value="${s}" ${(x.s || "").split(" ")[0] === s ? "selected" : ""}>${s || "—"}</option>`).join("")}</select>${x.sxl ? `<small class="xl">planilha: ${esc(x.sxl)}</small>` : ""}${x.s && x.s.startsWith("SOLICITADO") ? `<small>${esc(x.s)}</small>` : ""}</td>
-        <td><input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota">${x.q ? `<small class="mu">${esc(x.q.split("@")[0])} · ${dmy(x.em)}</small>` : ""}</td></tr>`;
-}
+// o GRAVADOR da decisão é um só (20/10): serve à mesa inteira (acima) e ao quadro que a Análise de giro abre ao tocar numa célula de
+// carteira (carteiraMini, abaixo). A linha também é uma só (linhaXl): mudar a coluna em COLS muda nos dois.
 function ligarDecisao(box, L, msg){
   for (const el of box.querySelectorAll(".dec")) el.onchange = async () => {
     const tr = el.closest("tr"), k = tr.dataset.k, campo = el.dataset.campo; let v = el.value.trim();
@@ -306,26 +398,57 @@ function ligarDecisao(box, L, msg){
   };
 }
 // o QUADRO da Análise de giro (ele, 20/10 00:5x: tocar na carteira de MARTE PRETO out/26 abre a detalhada daquele mês): as linhas de
-// carteira_consulta(cliente) da referência (+ cor, quando é a filha) cuja PREV. FAT. cai no mês — com os mesmos controles e o mesmo
-// gravador da mesa acima. Funciona sem a aba Cliente ter sido aberta (recebe o sb). `irCliente` leva à aba Cliente com a mesa já aberta.
+// carteira_consulta(cliente) da referência (+ cor, quando é a filha) cuja PREV. FAT. cai no mês — a mesma tabela do Excel (subtotal em cima,
+// autofiltro no cabeçalho, filtros próprios do quadro) e o mesmo gravador da mesa acima. Funciona sem a aba Cliente ter sido aberta
+// (recebe o sb). `irCliente` leva à aba Cliente com a mesa já aberta.
 async function carteiraMini(sel, container, sb, irCliente){
   if (!SB) SB = sb;
   if (!ESC) { const e = await SB.from("escritorio").select("id").limit(1); ESC = (e.data && e.data[0] && e.data[0].id) || null; }
   let c; try { c = await carteiraDoc(sel.cliente); } catch (e) { container.innerHTML = `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
   const L = c.linhas || [], mes = String(sel.mes).slice(0, 7);
-  const lista = L.filter(x => x.r === sel.referencia && (!sel.cor || x.c === sel.cor) && x.prev && String(x.prev).slice(0, 7) === mes);
+  const base = L.filter(x => x.r === sel.referencia && (!sel.cor || x.c === sel.cor) && x.prev && String(x.prev).slice(0, 7) === mes);
   const vai = () => { S.cliente = sel.cliente; S.cartAberta = true; if (irCliente) irCliente(sel.cliente); };
-  if (!lista.length) {
+  if (!base.length) {
     container.innerHTML = `<div class="vazio">sem linha na carteira detalhada para ${mesBR(mes)}${L.length ? "" : " — este cliente não tem carteira detalhada no banco (a DETALHADA só tem Ban Ban, Noroeste, Sapataria Nova, Polyélle, Casa Pio e CMS)"}.</div><button type="button" class="sec ir-cli">abrir a aba Cliente ›</button>`;
     container.querySelector(".ir-cli").onclick = vai; return;
   }
-  const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), fat = lista.reduce((s, x) => s + (x.fat || 0), 0), pend = lista.filter(x => !(x.a || x.axl)).length;
-  container.innerHTML = `<div class="num"><div><b>${fmt(cart)}</b><small>pares em carteira</small></div><div><b>${fmt(fat)}</b><small>faturados</small></div><div><b>${fmt(lista.length)}</b><small>linhas em ${mesBR(mes)}</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${dmy(c.base_em)}</b><small>base</small></div></div>
-    <div class="rolagem"><table class="mini cart">${CAB_CART}<tbody>${lista.map(linhaCarteira).join("")}</tbody></table></div>
-    <div class="cm-msg"></div><button type="button" class="sec ir-cli">tratar a carteira inteira na aba Cliente ›</button>`;
-  container.querySelector(".ir-cli").onclick = vai;
-  ligarDecisao(container, L, container.querySelector(".cm-msg"));
+  const FM = new Map(), ctx = { nomeCli: nomeDe(sel.cliente) };
+  const desenha = () => {
+    const lista = base.filter(x => ctx.af.passaTodos((y, k) => valorCol(y, k, ctx), x));
+    const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), fat = lista.reduce((s, x) => s + (x.fat || 0), 0), pend = lista.filter(x => !efetiva(x)).length;
+    container.innerHTML = `<div class="num"><div><b>${fmt(cart)}</b><small>pares em carteira</small></div><div><b>${fmt(fat)}</b><small>faturados</small></div><div><b>${fmt(lista.length)}</b><small>linhas em ${mesBR(mes)}${FM.size ? " de " + fmt(base.length) : ""}</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${dmy(c.base_em)}</b><small>base</small></div></div>
+      ${ctx.af.limpar()}${tabelaXl(lista, ctx)}
+      <div class="cm-msg"></div><button type="button" class="sec ir-cli">tratar a carteira inteira na aba Cliente ›</button>`;
+    ajustarXl(container);
+    container.querySelector(".ir-cli").onclick = vai;
+    ctx.af.ligar(container);
+    ligarDecisao(container, L, container.querySelector(".cm-msg"));
+  };
+  ctx.af = afDe(FM, () => base, ctx, desenha);
+  desenha();
 }
+// o CSS da mesa do Excel mora aqui, junto do desenho (o index é de outra frente): letra 10 pt, tudo centralizado, corpo branco com letra
+// preta, cabeçalho negrito nas cores do Excel (exceção à paleta, como na AG). Cores só em rgb() — a guarda do repositório não aceita hex longo.
+const CSS_XL = `
+.cliente .rolagem.xl-rol{overflow:auto;max-height:70vh;background:#fff;color:#000;border:1px solid rgb(217,217,217);margin-top:6px}
+.cliente table.xl{border-collapse:separate;border-spacing:0;font-family:var(--fonte-sans);font-size:10pt;color:#000;background:#fff;width:auto;margin:0}
+.cliente table.xl th,.cliente table.xl td{padding:2px 5px;text-align:center;vertical-align:middle;white-space:nowrap;border-right:1px solid rgb(217,217,217);border-bottom:1px solid rgb(217,217,217);color:#000;font-variant-numeric:tabular-nums;box-sizing:border-box;height:22px;font-size:10pt}
+.cliente table.xl thead th{position:sticky;top:0;z-index:3;font-weight:700;background:#fff}
+.cliente table.xl th.fx,.cliente table.xl td.fx{position:sticky;z-index:2;background:#fff}.cliente table.xl thead th.fx{z-index:4}
+.cliente table.xl .fx.c-sem{left:var(--f-sem,0)}.cliente table.xl .fx.c-nome{left:var(--f-nome,0)}.cliente table.xl .fx.c-cod{left:var(--f-cod,0)}.cliente table.xl .fx.c-porta{left:var(--f-porta,0)}.cliente table.xl .fx.c-marca{left:var(--f-marca,0)}.cliente table.xl .fx.c-faixa{left:var(--f-faixa,0)}.cliente table.xl .fx.c-fab{left:var(--f-fab,0)}.cliente table.xl .fx.c-filial{left:var(--f-filial,0)}.cliente table.xl .fx.c-nf{left:var(--f-nf,0)}
+.cliente table.xl th.c-nf,.cliente table.xl td.c-nf{border-right:2px solid #000}
+.cliente table.xl tr.cab th.g-ebm{background:rgb(166,166,166)}.cliente table.xl tr.cab th.g-gci,.cliente table.xl tr.cab th.g-saldos{background:rgb(255,192,0)}.cliente table.xl tr.cab th.g-dec{background:rgb(0,176,240)}.cliente table.xl tr.cab th.g-rep{background:rgb(146,208,80)}.cliente table.xl tr.cab th.g-claude{background:rgb(255,255,0);color:#000}
+.cliente table.xl tr.sub th{font-weight:700;background:#fff}.cliente table.xl tr.sub th.s-cinza{background:rgb(217,217,217)}.cliente table.xl tr.sub th.s-azul{background:rgb(0,176,240)}.cliente table.xl tr.sub th.s-laranja{background:rgb(255,192,0)}.cliente table.xl tr.sub th.s-verde{background:rgb(146,208,80)}
+.cliente table.xl tbody td{background:#fff;font-weight:400}
+.cliente table.xl tr.nova td{background:rgb(255,255,0)}.cliente table.xl tr.excluida td{background:rgb(255,0,0)}
+.cliente table.xl td.gci-dup{background:rgb(255,199,206);color:rgb(156,0,6);font-weight:700}
+.cliente table.xl td small{display:block;font-size:.66rem;color:var(--mu);white-space:nowrap;max-width:none;text-align:center}.cliente table.xl td small.xl.dif{color:rgb(156,0,6)}
+.cliente table.xl select.dec,.cliente table.xl input.dec{width:100%;min-width:0;margin:0;padding:1px 4px;font-size:10pt;font-family:inherit;background:#fff;color:#000;border:1px solid rgb(217,217,217);border-radius:2px;text-align:center;box-sizing:border-box}
+.cliente table.xl button.fl{width:16px;height:16px;padding:0;margin:0 0 0 4px;border:1px solid rgb(173,174,179);border-radius:2px;background:#fff;color:#000;font-size:9px;line-height:1;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center}.cliente table.xl button.fl.on{border-color:rgb(31,73,125)}.cliente table.xl button.fl svg{fill:rgb(31,73,125);width:10px;height:10px}
+.cliente .limpa-filtros{width:auto;margin:0 0 0 6px;padding:5px 10px;font-size:.74rem;border-color:var(--azul);color:var(--off-white);background:var(--azul)}
+.cart-quadro .limpa-filtros{margin:0 0 4px}
+`;
+if (typeof document !== "undefined" && !document.getElementById("css-xl")) { const st = document.createElement("style"); st.id = "css-xl"; st.textContent = CSS_XL; document.head.appendChild(st); }
 
 // ---------- PEDIDOS ORIGINAIS do cliente (BOSS, 19/10: as 28 páginas escaneadas da Casa Pio no banco, com a imagem; "pedidos de
 // outubro", "de meia", "UA do semestre", "mochila"). Riscadas aparecem, fora de totais e filtros; selo "conferir" na confiança baixa/dúvida.
@@ -377,5 +500,5 @@ async function desenharPedidos(corpo, d){
   };
 }
 
-window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao, recarregar: () => { DOCS = {}; }, carteiraMini, ACOES };
+window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao, recarregar: () => { DOCS = {}; }, carteiraMini, ACOES, COLS };
 })();

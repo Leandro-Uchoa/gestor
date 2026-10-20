@@ -1,6 +1,7 @@
 /* GESTOR · funções puras da página, com teste próprio (teste_gestor_lib.js, roda em node). TI, 06/10/2026 — achados 3 e 4 do Conselho
    (MSG-CONSELHEIRO-032/BOSS-033): texto do banco interpolado em HTML sem escape; texto do usuário montando o filtro .or() do PostgREST.
-   Sem número de negócio aqui: vai ao repositório público. 19/10: o seletor da casa e o PDF no navegador (carregarPdfLib, pdfDePaginas). */
+   Sem número de negócio aqui: vai ao repositório público. 19/10: o seletor da casa e o PDF no navegador (carregarPdfLib, pdfDePaginas).
+   20/10: o autofiltro do Excel (autofiltro, filtroPassa) — o mesmo na Análise de giro e na Carteira detalhada. */
 (function () {
   // todo texto que vem do banco (cliente, referência, descrição, cor) ou de erro passa por aqui antes de virar HTML
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -22,7 +23,6 @@
   // sel = Set (múltiplo) ou {v: valor} (único); aoMudar() depois de cada toque. Tudo DOM: nada de HTML de fora passa sem esc.
   function seletor(el, rotulo, opcoes, sel, aoMudar, opts) {
     opts = opts || {}; const unico = !!opts.unico, nomeDe = opts.nomeDe || (v => String(v));
-    const semAcento = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
     const marcado = v => unico ? sel.v === v : sel.has(v);
     const resumo = () => { if (unico) { const o = opcoes.find(x => x[0] === sel.v); return o ? nomeDe(o[0]) : (opts.vazio || "escolha"); } if (!sel.size) return (opts.todos || "todos") + " <small>" + opcoes.length + "</small>"; const ns = [...sel].map(nomeDe); return ns.slice(0, 3).join(", ") + (ns.length > 3 ? " <small>+" + (ns.length - 3) + "</small>" : ""); };
     el.classList.add("seletor");
@@ -101,7 +101,68 @@
     } finally { q.remove(); }
   }
 
-  const lib = { esc, padraoIlike, citarPostgrest, termoIlike, filtroProduto, seletor, carregarPdfLib, pdfDePaginas, nomeArquivoCasa };
+  // ---- AUTOFILTRO do Excel (TI, 20/10/2026 — ele: "igualzinho ao do Excel"). Nasceu preso à Análise de giro (v5.87) e aqui vira função
+  // da casa: a Carteira detalhada usa o MESMO. Texto = lista de valores com caixas + busca + tudo/limpar; número = condição com valor.
+  // Painel branco embaixo do ▾; OK/cancelar; Esc fecha; clicar fora fecha. O estado vive no Map que quem chama passa (memória, nada persiste).
+  //   autofiltro({ filtros: Map col→{tipo:"txt", v:Set} | {tipo:"num", op, a, b}, nomeCol(col), ehNum(col), valores(col) → valores crus da coluna
+  //                (quem chama decide de que linhas), rotulo?(col, chave) → texto mostrado na lista, aplicar() → redesenha })
+  //   → { botao(col) HTML do ▾/funil · limpar() HTML do "limpar filtros (n)" · ligar(raiz) liga os botões · passa(col, v) · passaTodos(valorDe, x, exceto?) · abrir · fechar }
+  const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+  const FUNIL = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0h10L6 5v4l-2 1V5z"/></svg>';
+  const OPS_FILTRO = [["maior", "maior que"], ["menor", "menor que"], ["igual", "igual a"], ["entre", "entre"], ["vazio", "vazio"], ["naovazio", "não vazio"]];
+  const chaveTxt = v => (v == null || v === "") ? "(vazio)" : String(v);
+  function filtroPassa(f, v) {
+    if (!f) return true;
+    if (f.tipo !== "num") return f.v.has(chaveTxt(v));
+    const vazio = v == null || v === "";
+    switch (f.op) { case "vazio": return vazio; case "naovazio": return !vazio; case "maior": return !vazio && v > f.a; case "menor": return !vazio && v < f.a; case "igual": return !vazio && Math.abs(v - f.a) < 0.05; case "entre": return !vazio && v >= f.a && v <= f.b; }
+    return true;
+  }
+  let PAINEL = null;                                                  // um painel aberto por vez, seja de que tabela for
+  const PAINEL_FORA = ev => { if (PAINEL && !PAINEL.contains(ev.target)) fecharPainel(); };
+  const PAINEL_TECLA = ev => { if (!PAINEL) return; if (ev.key === "Escape") fecharPainel(); else if (ev.key === "Enter" && ev.target.tagName !== "BUTTON") { ev.preventDefault(); PAINEL.querySelector(".fp-ok").click(); } };
+  function fecharPainel() { if (PAINEL) PAINEL.remove(); PAINEL = null; document.removeEventListener("mousedown", PAINEL_FORA); document.removeEventListener("keydown", PAINEL_TECLA); }
+  function autofiltro(o) {
+    const F = o.filtros, nome = o.nomeCol || (c => c), rotulo = o.rotulo || ((c, k) => k), ehNum = o.ehNum || (() => false);
+    const botao = col => { const f = F.get(col); return '<button type="button" class="fl' + (f ? " on" : "") + '" data-col="' + esc(col) + '" title="' + (f ? "filtro ligado em " + esc(nome(col)) + " — toque para mudar" : "filtrar " + esc(nome(col))) + '">' + (f ? FUNIL : "▾") + "</button>"; };
+    const limpar = () => F.size ? '<button type="button" class="sec limpa-filtros" title="' + esc([...F.keys()].map(nome).join(" · ")) + '">limpar filtros (' + F.size + ")</button>" : "";
+    const passa = (col, v) => filtroPassa(F.get(col), v);
+    const passaTodos = (valorDe, x, exceto) => { for (const [col, f] of F) { if (col === exceto) continue; if (!filtroPassa(f, valorDe(x, col))) return false; } return true; };
+    function abrir(bt, col) {
+      fecharPainel();
+      const f = F.get(col), r = bt.getBoundingClientRect(), p = document.createElement("div"); p.className = "fpainel";
+      p.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 262)) + "px"; p.style.top = Math.min(r.bottom + 4, window.innerHeight - 340) + "px";
+      const aplica = () => { fecharPainel(); o.aplicar(); };
+      if (ehNum(col)) {
+        p.innerHTML = '<div class="fp-tit">' + esc(nome(col)) + '</div><select class="fp-op">' + OPS_FILTRO.map(([v, n]) => '<option value="' + v + '"' + (f && f.op === v ? " selected" : "") + ">" + n + "</option>").join("") + '</select><div class="fp-vals"><input type="number" step="any" class="fp-a" value="' + (f && f.a != null ? f.a : "") + '" placeholder="valor"><input type="number" step="any" class="fp-b" value="' + (f && f.b != null ? f.b : "") + '" placeholder="e"></div><div class="fp-acoes">' + (f ? '<button type="button" class="sec fp-limpa">limpar</button>' : "") + '<button type="button" class="fp-ok">OK</button><button type="button" class="sec fp-cancela">cancelar</button></div>';
+        const op = p.querySelector(".fp-op"), mostra = () => { const v = op.value; p.querySelector(".fp-a").classList.toggle("oculto", v === "vazio" || v === "naovazio"); p.querySelector(".fp-b").classList.toggle("oculto", v !== "entre"); }; op.onchange = mostra; mostra();
+        p.querySelector(".fp-ok").onclick = () => { const v = op.value, a = parseFloat(p.querySelector(".fp-a").value), b = parseFloat(p.querySelector(".fp-b").value); if (!["vazio", "naovazio"].includes(v) && isNaN(a)) { p.querySelector(".fp-a").focus(); return; } F.set(col, { tipo: "num", op: v, a, b: isNaN(b) ? a : b }); aplica(); };
+      } else {
+        const vals = new Map(); for (const v of o.valores(col)) { const k = chaveTxt(v); vals.set(k, (vals.get(k) || 0) + 1); }
+        const lista = [...vals.entries()].sort((x, y) => x[0].localeCompare(y[0], "pt-BR", { numeric: true }));
+        p.innerHTML = '<div class="fp-tit">' + esc(nome(col)) + '</div><input type="search" class="fp-busca" placeholder="procurar…" autocomplete="off"><div class="fp-tudo"><button type="button" class="sec fp-todos">selecionar tudo</button><button type="button" class="sec fp-nenhum">limpar</button></div><div class="fp-lista">'
+          + lista.map(([v, n]) => '<label><input type="checkbox" value="' + esc(v) + '"' + (!f || f.v.has(v) ? " checked" : "") + "> <span>" + esc(rotulo(col, v)) + "</span> <small>" + n + "</small></label>").join("")
+          + '</div><div class="fp-acoes">' + (f ? '<button type="button" class="sec fp-limpa">limpar filtro</button>' : "") + '<button type="button" class="fp-ok">OK</button><button type="button" class="sec fp-cancela">cancelar</button></div>';
+        const caixas = () => [...p.querySelectorAll(".fp-lista label")], visiveis = () => caixas().filter(l => !l.classList.contains("oculto"));
+        p.querySelector(".fp-busca").oninput = ev => { const t = semAcento(ev.target.value.trim()); for (const l of caixas()) l.classList.toggle("oculto", !!t && !semAcento(l.textContent).includes(t)); };
+        p.querySelector(".fp-todos").onclick = () => { for (const l of visiveis()) l.querySelector("input").checked = true; };
+        p.querySelector(".fp-nenhum").onclick = () => { for (const l of visiveis()) l.querySelector("input").checked = false; };
+        p.querySelector(".fp-ok").onclick = () => { const v = new Set(caixas().filter(l => l.querySelector("input").checked).map(l => l.querySelector("input").value)); if (v.size === vals.size) F.delete(col); else F.set(col, { tipo: "txt", v }); aplica(); };
+      }
+      p.querySelector(".fp-cancela").onclick = fecharPainel;
+      const lim = p.querySelector(".fp-limpa"); if (lim) lim.onclick = () => { F.delete(col); aplica(); };
+      document.body.appendChild(p); PAINEL = p;
+      setTimeout(() => { if (PAINEL === p) { document.addEventListener("mousedown", PAINEL_FORA); document.addEventListener("keydown", PAINEL_TECLA); } }, 0);
+      const foco = p.querySelector(".fp-busca, .fp-a"); if (foco) foco.focus();
+    }
+    function ligar(raiz) {
+      for (const b of raiz.querySelectorAll("button.fl")) b.onclick = ev => { ev.stopPropagation(); abrir(b, b.dataset.col); };
+      const lf = raiz.querySelector(".limpa-filtros"); if (lf) lf.onclick = () => { F.clear(); o.aplicar(); };
+    }
+    return { botao, limpar, abrir, fechar: fecharPainel, ligar, passa, passaTodos };
+  }
+
+  const lib = { esc, padraoIlike, citarPostgrest, termoIlike, filtroProduto, seletor, carregarPdfLib, pdfDePaginas, nomeArquivoCasa, autofiltro, filtroPassa, chaveTxt, semAcento };
   if (typeof window !== "undefined") window.GestorLib = lib;
   if (typeof module !== "undefined" && module.exports) module.exports = lib;
 })();
