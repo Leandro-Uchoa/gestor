@@ -245,12 +245,14 @@ function carteiraDetalhada(d){
 // grupo de cor do cabeçalho (g): ebm = cinza (espelho do EBM) · gci e saldos = laranja · dec = azul (a análise dele) · rep = verde ·
 // claude = amarelo (coluna interna: aparece na tela dele; nunca em exportação para cliente — a mesa não exporta). As 9 primeiras (A–I) ficam
 // travadas à esquerda e as duas linhas do topo (subtotal + cabeçalho) grudam, como o congelamento dele. Autofiltro em TODAS as colunas.
-// O que carteira_consulta ainda não traz fica vazio (FABRICA, FILIAL, NF, TOTAL DO PEDIDO, PDC UNITÁRIO, PDV) — a coluna já existe para
-// quando a consulta trouxer (x.fab, x.filial, x.nf, x.tot, x.pdc, x.pdv). CODIGO sai da chave (CODIGO|GCI|REFERENCIA|COR); SEMESTRE, da PREV FAT.
+// FILIAL e NF vêm da consulta (0061). O que o banco ainda não tem fica vazio (FABRICA, TOTAL DO PEDIDO, PDC UNITÁRIO, PDV) — a coluna já
+// existe para quando vier (x.fab, x.tot, x.pdc, x.pdv). CODIGO sai da chave (CODIGO|GCI|REFERENCIA|COR); SEMESTRE, da PREV FAT.
 // SALDOS = em_repasse (rep) e REPASSADO = repassado (repd) da carteira_linha — a leitura das colunas W e X do repasse.
-// Realces do corpo, os ÚNICOS do Excel: linha NOVA (amarela, x.nova — a consulta ainda não traz a marca) · linha EXCLUÍDA (vermelha,
-// x.excluida — a consulta hoje só traz as vivas; a fonte é v_excluidas) · GCI DUPLICADO entre as linhas visíveis (rosa, texto vinho).
-// Sem cor por valor em AÇÃO/STATUS: não existe no Excel. Ganchos sem cor, prontos: tr.acao-GRUPO · tr.sem-acao · tr.decidida · td.prev-vencida.
+// Realces do corpo, os ÚNICOS do Excel: linha NOVA (amarela, x.nova: última marca LINHA NOVA da última reconciliação) · linha EXCLUÍDA
+// (vermelha, x.ex: vermelha na planilha ou em v_excluidas; entra só enquanto está na última foto com carteira) · GCI DUPLICADO entre as
+// linhas visíveis (rosa, texto vinho). Sem cor por valor em AÇÃO/STATUS: não existe no Excel. Ganchos sem cor: tr.acao-GRUPO · tr.sem-acao ·
+// tr.decidida · td.prev-vencida · select.dec.dif (decisão da tela diferente da planilha). Linha SIMPLES como no Excel (v5.92, PICASSO): o que
+// era rodapé da célula (linha da planilha, "planilha: …", quem decidiu) vai para o title; o que não cabe ganha reticências.
 const semDe = p => p ? (+String(p).slice(5, 7) <= 6 ? "1S" : "2S") + String(p).slice(2, 4) : "";
 const numXl = t => (t == null || t === "" || isNaN(t)) ? null : Number(t);
 const reais = n => n == null ? "—" : "R$ " + Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -288,51 +290,51 @@ const COL = Object.fromEntries(COLS.map(c => [c.k, c]));
 const valorCol = (x, k, ctx) => COL[k].v(x, ctx);
 // o autofiltro da casa (GestorLib.autofiltro) com as colunas desta mesa: filtros = o Map de quem chama; base() = as linhas antes dos filtros
 function afDe(filtros, base, ctx, aplicar){
-  return window.GestorLib.autofiltro({ filtros, nomeCol: k => COL[k].t, ehNum: k => !!COL[k].num, rotulo: (k, ch) => COL[k].data && ch !== "(vazio)" ? dmy(ch) : ch, aplicar,
+  return window.GestorLib.autofiltro({ filtros, nomeCol: k => COL[k].t, ehNum: k => !!COL[k].num, ehData: k => !!COL[k].data, rotulo: (k, ch) => COL[k].data && ch !== "(vazio)" ? dmy(ch) : ch, aplicar,
     valores: k => { const af = ctx.af; return base().filter(x => af.passaTodos((y, c) => valorCol(y, c, ctx), x, k)).map(x => valorCol(x, k, ctx)); } });
 }
 const efetiva = x => x.a || x.axl || "";
 function celXl(x, c, ctx, gciN){
   const v = c.v(x, ctx), cls = ["c-" + c.k, c.fx ? "fx" : "", c.num ? "n" : ""].filter(Boolean);
-  let h;
+  let h, tit = "";
   switch (c.k) {
-    case "gci": if (v && gciN.get(v) > 1) cls.push("gci-dup"); h = esc(v); break;
+    case "gci": if (v && gciN.get(v) > 1) { cls.push("gci-dup"); tit = "GCI repetido em " + gciN.get(v) + " linhas visíveis"; } h = esc(v); break;
     case "prev": if (v && v < hoje() && x.cart > 0) cls.push("prev-vencida"); h = v ? dmy(v) : ""; break;
     case "dfat": h = v ? dmy(v) : ""; break;
     case "cart": case "fat": case "saldos": case "repd": h = v != null ? fmt(v) : ""; break;
     case "tot": case "pdc": case "pdv": h = v != null ? reais(v) : ""; break;
-    case "acao": { const dif = x.a && x.axl && x.a !== x.axl;
-      h = `<select class="dec" data-campo="acao">${ACOES.map(a => `<option value="${a}" ${(x.a || "") === a ? "selected" : ""}>${a || "—"}</option>`).join("")}</select>${x.axl ? `<small class="xl ${dif ? "dif" : ""}" title="o que está na planilha dele">planilha: ${esc(x.axl)}${x.vxl ? " " + esc(x.vxl) : ""}${x.dxl ? " → " + esc(x.dxl) : ""}</small>` : ""}`; break; }
+    case "acao": { const dif = x.a && x.axl && x.a !== x.axl; tit = x.axl ? `planilha: ${x.axl}${x.vxl ? " " + x.vxl : ""}${x.dxl ? " → " + x.dxl : ""}` : "";
+      h = `<select class="dec${dif ? " dif" : ""}" data-campo="acao"${tit ? ` title="${esc(tit)}"` : ""}>${ACOES.map(a => `<option value="${a}" ${(x.a || "") === a ? "selected" : ""}>${a || "—"}</option>`).join("")}</select>`; break; }
     case "vol": h = `<input type="number" class="dec" data-campo="volume" min="0" value="${x.v != null ? x.v : ""}" placeholder="${x.vxl != null && x.vxl !== "" ? esc(x.vxl) : x.cart}">`; break;
     case "dest": h = `<input type="text" class="dec" data-campo="destinatario" value="${esc(x.dest || "")}" placeholder="${esc(x.dxl || "")}">`; break;
-    case "status": h = `<select class="dec" data-campo="status">${STATUS_C.map(s => `<option value="${s}" ${(x.s || "").split(" ")[0] === s ? "selected" : ""}>${s || "—"}</option>`).join("")}</select>${x.sxl ? `<small class="xl">planilha: ${esc(x.sxl)}</small>` : ""}${x.s && x.s.startsWith("SOLICITADO") ? `<small>${esc(x.s)}</small>` : ""}`; break;
-    case "claude": h = `<input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota">${x.q ? `<small class="mu">${esc(x.q.split("@")[0])} · ${dmy(x.em)}</small>` : ""}`; break;
-    case "desc": h = `${esc(v)}${x.lin ? `<small class="mu">linha ${x.lin}</small>` : ""}`; break;
-    default: h = esc(v);
+    case "status": tit = [x.sxl ? "planilha: " + x.sxl : "", x.s && x.s.startsWith("SOLICITADO") ? x.s : ""].filter(Boolean).join(" · ");
+      h = `<select class="dec" data-campo="status"${tit ? ` title="${esc(tit)}"` : ""}>${STATUS_C.map(s => `<option value="${s}" ${(x.s || "").split(" ")[0] === s ? "selected" : ""}>${s || "—"}</option>`).join("")}</select>`; break;
+    case "claude": tit = x.q ? `${x.q.split("@")[0]} · ${dmy(x.em)}` : ""; h = `<input type="text" class="dec" data-campo="nota" value="${esc(x.n || "")}" placeholder="nota"${tit ? ` title="${esc(tit)}"` : ""}>`; break;
+    case "desc": tit = (v ? v + " · " : "") + (x.lin ? "linha " + x.lin + " da planilha" : ""); h = esc(v); break;
+    default: h = esc(v); if (v && String(v).length > 12) tit = String(v);
   }
-  return `<td class="${cls.join(" ")}">${h}</td>`;
+  return `<td class="${cls.join(" ")}"${tit ? ` title="${esc(tit)}"` : ""}>${h}</td>`;
 }
 function linhaXl(x, ctx, gciN){
   const g = grupoAcao(efetiva(x));
-  const cls = [g ? "acao-" + g : "sem-acao", x.a ? "decidida" : "", x.nova ? "nova" : "", x.excluida ? "excluida" : "", x.cart > 0 ? "" : "cart-zero"].filter(Boolean);
+  const cls = [g ? "acao-" + g : "sem-acao", x.a ? "decidida" : "", x.nova ? "nova" : "", x.ex ? "excluida" : "", x.cart > 0 ? "" : "cart-zero"].filter(Boolean);
   return `<tr data-k="${esc(x.k)}" class="${cls.join(" ")}">${COLS.map(c => celXl(x, c, ctx, gciN)).join("")}</tr>`;
 }
 // a linha de SUBTOTAIS (linha 2 do Excel), recalculada com o que está visível: PREV FAT = contagem; CART, FAT, VOLUME, SALDOS, REPASSADO = soma;
-// DATA FAT = CART + FAT; TOTAL DO PEDIDO, PDC, PDV = soma em R$. Rótulo "subtotal · N linhas" nas duas primeiras colunas.
+// DATA FAT = CART + FAT; TOTAL DO PEDIDO, PDC, PDV = soma em R$. As outras ficam vazias (PICASSO, v5.92: sem rótulo em A/B).
 function subXl(lista, ctx){
   const soma = k => { let s = null; for (const x of lista) { const v = valorCol(x, k, ctx); if (v != null) s = (s || 0) + Number(v); } return s; };
   return `<tr class="sub">${COLS.map(c => {
     let h = "";
-    if (c.k === "sem") h = "subtotal"; else if (c.k === "nome") h = fmt(lista.length) + " linhas";
-    else if (c.sub === "conta") h = fmt(lista.length);
-    else if (c.sub === "soma") { const s = soma(c.k); h = s != null ? fmt(s) : ""; }
+    if (c.sub === "conta") h = fmt(lista.length);
+    else if (c.sub === "soma") h = fmt(soma(c.k) || 0);
     else if (c.sub === "cartfat") h = fmt((soma("cart") || 0) + (soma("fat") || 0));
     else if (c.sub === "reais") { const s = soma(c.k); h = s != null ? reais(s) : "—"; }
     return `<th class="c-${c.k}${c.fx ? " fx" : ""}${c.sc ? " s-" + c.sc : ""}" data-sub="${c.k}">${h}</th>`; }).join("")}</tr>`;
 }
 function tabelaXl(lista, ctx){
   const gciN = new Map(); for (const x of lista) if (x.gci) gciN.set(x.gci, (gciN.get(x.gci) || 0) + 1);
-  const cab = COLS.map(c => `<th class="cab c-${c.k} g-${c.g}${c.fx ? " fx" : ""}" data-k="${c.k}" style="min-width:${c.w * 7}px">${esc(c.t)} ${ctx.af.botao(c.k)}</th>`).join("");
+  const cab = COLS.map(c => `<th class="cab c-${c.k} g-${c.g}${c.fx ? " fx" : ""}" data-k="${c.k}" title="${esc(c.t)}">${esc(c.t)} ${ctx.af.botao(c.k)}</th>`).join("");
   return `<div class="rolagem xl-rol"><table class="cart xl"><thead>${subXl(lista, ctx)}<tr class="cab">${cab}</tr></thead><tbody>${lista.map(x => linhaXl(x, ctx, gciN)).join("")}</tbody></table></div>`;
 }
 // o congelamento: o cabeçalho gruda logo abaixo do subtotal (altura medida); as 9 colunas A–I grudam à esquerda, cada uma depois da anterior
@@ -359,10 +361,10 @@ async function desenharCarteira(corpo, d){
   const btExp = `<button type="button" class="sec expandir">${S.cartAberta ? "recolher ▴" : "tratar a carteira ›"}</button>`;
   if (!S.cartAberta) {
     // o cartão PEQUENO: só o placar; apertar abre a mesa inteira
-    const tot = vivas.reduce((s, x) => s + (x.cart || 0), 0), pa = new Map(); for (const x of vivas) { const g = grupoAcao(efetiva(x)) || "(vazia)"; pa.set(g, (pa.get(g) || 0) + (x.cart || 0)); }
-    const decididas = vivas.filter(x => x.a).length, pend = vivas.filter(x => !efetiva(x)).length;
+    const vv = vivas.filter(x => !x.ex), tot = vv.reduce((s, x) => s + (x.cart || 0), 0), pa = new Map(); for (const x of vv) { const g = grupoAcao(efetiva(x)) || "(vazia)"; pa.set(g, (pa.get(g) || 0) + (x.cart || 0)); }
+    const decididas = vv.filter(x => x.a).length, pend = vv.filter(x => !efetiva(x)).length, nov = vivas.filter(x => x.nova).length, exc = vivas.length - vv.length;
     box.className = "card cartd fechada";
-    box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)}`, btExp) + `<div class="num"><div><b>${fmt(tot)}</b><small>pares em carteira</small></div><div><b>${fmt(vivas.length)}</b><small>linhas</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${fmt(decididas)}</b><small>decididas na tela</small></div></div>
+    box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)}`, btExp) + `<div class="num"><div><b>${fmt(tot)}</b><small>pares em carteira</small></div><div><b>${fmt(vv.length)}</b><small>linhas</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${fmt(decididas)}</b><small>decididas na tela</small></div>${nov ? `<div><b>${fmt(nov)}</b><small>novas</small></div>` : ""}${exc ? `<div><b>${fmt(exc)}</b><small>excluídas (vermelhas)</small></div>` : ""}</div>
       <div class="chips mini">${[...pa.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([g, n]) => `<span class="chip">${esc(g.toLowerCase())} <b>${fmt(n)}</b></span>`).join("")}</div>`;
     box.querySelector(".expandir").onclick = () => { S.cartAberta = true; box.className = "card cartd larga"; desenharCarteira(corpo, d); box.scrollIntoView({ behavior: "smooth", block: "start" }); };
     return;
@@ -372,8 +374,8 @@ async function desenharCarteira(corpo, d){
   box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco · no formato da DETALHADA`, btExp + ir("cg", { cliente: d.cliente }, "abrir a AG")) + `
     <div class="filtros"><div class="linha"><label>mostrar</label><div class="chips" data-f="so"><button type="button" data-v="cart" class="${CF.so === "cart" ? "ativa" : ""}">só carteira aberta</button><button type="button" data-v="tudo" class="${CF.so === "tudo" ? "ativa" : ""}">com faturado recente</button></div><input type="search" id="cl-cart-busca" placeholder="referência, descrição, cor, GCI, OC, porta, marca…" value="${esc(CF.busca)}" autocomplete="off">${ctx.af.limpar()}</div></div>
     <div class="num"><div><b>${fmt(cart)}</b><small>pares na tela</small></div><div><b>${fmt(lista.length)}</b><small>linhas${FC.size ? " de " + fmt(base.length) : ""}</small></div>${[...porAcao.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, n]) => `<div><b>${fmt(n)}</b><small>${esc(g.toLowerCase())}</small></div>`).join("")}</div>
-    ${tabelaXl(lista.slice(0, 400), ctx)}
-    ${lista.length > 400 ? `<div class="mu" style="font-size:.74rem">mostrando 400 de ${lista.length} — afine o filtro (o subtotal é das 400 na tela)</div>` : ""}
+    ${tabelaXl(lista.slice(0, 2_000), ctx)}
+    ${lista.length > 2_000 ? `<div class="mu" style="font-size:.74rem">mostrando 2.000 de ${lista.length} — afine o filtro (o subtotal é das linhas na tela)</div>` : ""}
     <div id="cl-cart-msg"></div>`;
   ajustarXl(box);
   box.querySelector(".expandir").onclick = () => { S.cartAberta = false; desenharCarteira(corpo, d); };
@@ -432,18 +434,19 @@ async function carteiraMini(sel, container, sb, irCliente){
 const CSS_XL = `
 .cliente .rolagem.xl-rol{overflow:auto;max-height:70vh;background:#fff;color:#000;border:1px solid rgb(217,217,217);margin-top:6px}
 .cliente table.xl{border-collapse:separate;border-spacing:0;font-family:var(--fonte-sans);font-size:10pt;color:#000;background:#fff;width:auto;margin:0}
-.cliente table.xl th,.cliente table.xl td{padding:2px 5px;text-align:center;vertical-align:middle;white-space:nowrap;border-right:1px solid rgb(217,217,217);border-bottom:1px solid rgb(217,217,217);color:#000;font-variant-numeric:tabular-nums;box-sizing:border-box;height:22px;font-size:10pt}
+.cliente table.xl th,.cliente table.xl td{padding:1px 5px;text-align:center;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:1px solid rgb(217,217,217);border-bottom:1px solid rgb(217,217,217);color:#000;font-variant-numeric:tabular-nums;box-sizing:border-box;height:21px;line-height:17px;font-size:10pt}
+.cliente table.xl tbody tr{height:21px}
+${COLS.map(c => `.cliente table.xl th.c-${c.k}{min-width:${c.w * 7 + 5}px}.cliente table.xl td.c-${c.k}{max-width:${c.w * 7 + 5}px}`).join("")}
 .cliente table.xl thead th{position:sticky;top:0;z-index:3;font-weight:700;background:#fff}
 .cliente table.xl th.fx,.cliente table.xl td.fx{position:sticky;z-index:2;background:#fff}.cliente table.xl thead th.fx{z-index:4}
 .cliente table.xl .fx.c-sem{left:var(--f-sem,0)}.cliente table.xl .fx.c-nome{left:var(--f-nome,0)}.cliente table.xl .fx.c-cod{left:var(--f-cod,0)}.cliente table.xl .fx.c-porta{left:var(--f-porta,0)}.cliente table.xl .fx.c-marca{left:var(--f-marca,0)}.cliente table.xl .fx.c-faixa{left:var(--f-faixa,0)}.cliente table.xl .fx.c-fab{left:var(--f-fab,0)}.cliente table.xl .fx.c-filial{left:var(--f-filial,0)}.cliente table.xl .fx.c-nf{left:var(--f-nf,0)}
-.cliente table.xl th.c-nf,.cliente table.xl td.c-nf{border-right:2px solid #000}
+.cliente table.xl th.c-nf,.cliente table.xl td.c-nf{border-right:1px solid rgb(166,166,166)}
 .cliente table.xl tr.cab th.g-ebm{background:rgb(166,166,166)}.cliente table.xl tr.cab th.g-gci,.cliente table.xl tr.cab th.g-saldos{background:rgb(255,192,0)}.cliente table.xl tr.cab th.g-dec{background:rgb(0,176,240)}.cliente table.xl tr.cab th.g-rep{background:rgb(146,208,80)}.cliente table.xl tr.cab th.g-claude{background:rgb(255,255,0);color:#000}
 .cliente table.xl tr.sub th{font-weight:700;background:#fff}.cliente table.xl tr.sub th.s-cinza{background:rgb(217,217,217)}.cliente table.xl tr.sub th.s-azul{background:rgb(0,176,240)}.cliente table.xl tr.sub th.s-laranja{background:rgb(255,192,0)}.cliente table.xl tr.sub th.s-verde{background:rgb(146,208,80)}
 .cliente table.xl tbody td{background:#fff;font-weight:400}
 .cliente table.xl tr.nova td{background:rgb(255,255,0)}.cliente table.xl tr.excluida td{background:rgb(255,0,0)}
-.cliente table.xl td.gci-dup{background:rgb(255,199,206);color:rgb(156,0,6);font-weight:700}
-.cliente table.xl td small{display:block;font-size:.66rem;color:var(--mu);white-space:nowrap;max-width:none;text-align:center}.cliente table.xl td small.xl.dif{color:rgb(156,0,6)}
-.cliente table.xl select.dec,.cliente table.xl input.dec{width:100%;min-width:0;margin:0;padding:1px 4px;font-size:10pt;font-family:inherit;background:#fff;color:#000;border:1px solid rgb(217,217,217);border-radius:2px;text-align:center;box-sizing:border-box}
+.cliente table.xl td.gci-dup,.cliente table.xl tr.nova td.gci-dup,.cliente table.xl tr.excluida td.gci-dup{background:rgb(255,199,206);color:rgb(156,0,6);font-weight:700}
+.cliente table.xl select.dec,.cliente table.xl input.dec{width:100%;min-width:0;height:19px;margin:0;padding:0 3px;line-height:17px;font-size:10pt;font-family:inherit;background:#fff;color:#000;border:1px solid rgb(217,217,217);border-radius:2px;text-align:center;text-overflow:ellipsis;box-sizing:border-box}
 .cliente table.xl button.fl{width:16px;height:16px;padding:0;margin:0 0 0 4px;border:1px solid rgb(173,174,179);border-radius:2px;background:#fff;color:#000;font-size:9px;line-height:1;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center}.cliente table.xl button.fl.on{border-color:rgb(31,73,125)}.cliente table.xl button.fl svg{fill:rgb(31,73,125);width:10px;height:10px}
 .cliente .limpa-filtros{width:auto;margin:0 0 0 6px;padding:5px 10px;font-size:.74rem;border-color:var(--azul);color:var(--off-white);background:var(--azul)}
 .cart-quadro .limpa-filtros{margin:0 0 4px}

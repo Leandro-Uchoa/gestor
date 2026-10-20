@@ -104,8 +104,9 @@
   // ---- AUTOFILTRO do Excel (TI, 20/10/2026 — ele: "igualzinho ao do Excel"). Nasceu preso à Análise de giro (v5.87) e aqui vira função
   // da casa: a Carteira detalhada usa o MESMO. Texto = lista de valores com caixas + busca + tudo/limpar; número = condição com valor.
   // Painel branco embaixo do ▾; OK/cancelar; Esc fecha; clicar fora fecha. O estado vive no Map que quem chama passa (memória, nada persiste).
-  //   autofiltro({ filtros: Map col→{tipo:"txt", v:Set} | {tipo:"num", op, a, b}, nomeCol(col), ehNum(col), valores(col) → valores crus da coluna
-  //                (quem chama decide de que linhas), rotulo?(col, chave) → texto mostrado na lista, aplicar() → redesenha })
+  //   autofiltro({ filtros: Map col→{tipo:"txt", v:Set} | {tipo:"num", op, a, b}, nomeCol(col), ehNum(col), ehData?(col) (ISO yyyy-mm-dd por trás;
+  //                a lista vem agrupada por mês), valores(col) → valores crus da coluna (quem chama decide de que linhas),
+  //                rotulo?(col, chave) → texto mostrado na lista, aplicar() → redesenha })
   //   → { botao(col) HTML do ▾/funil · limpar() HTML do "limpar filtros (n)" · ligar(raiz) liga os botões · passa(col, v) · passaTodos(valorDe, x, exceto?) · abrir · fechar }
   const semAcento = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
   const FUNIL = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0h10L6 5v4l-2 1V5z"/></svg>';
@@ -118,12 +119,23 @@
     switch (f.op) { case "vazio": return vazio; case "naovazio": return !vazio; case "maior": return !vazio && v > f.a; case "menor": return !vazio && v < f.a; case "igual": return !vazio && Math.abs(v - f.a) < 0.05; case "entre": return !vazio && v >= f.a && v <= f.b; }
     return true;
   }
+  // DATAS agrupadas por mês (ele, 20/10 02:5x: "seleciono o mês e vêm todos os produtos daquele mês, do dia 1 ao 30; senão fico selecionando
+  // data a data"). Entra o Map chave→contagem (chave ISO yyyy-mm-dd, ou "(vazio)"/outra); sai a árvore mês → dias, em ordem ISO.
+  const MESES_CURTO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const mesCurto = m => MESES_CURTO[+String(m).slice(5, 7) - 1] + "/" + String(m).slice(2, 4);
+  const ehIso = k => /^\d{4}-\d{2}-\d{2}/.test(String(k));
+  function agruparDatas(vals) {
+    const meses = new Map(), soltos = [];
+    for (const [k, n] of vals) { if (!ehIso(k)) { soltos.push([k, n]); continue; } const m = String(k).slice(0, 7); const g = meses.get(m) || { m, n: 0, dias: [] }; g.n += n; g.dias.push([k, n]); meses.set(m, g); }
+    const lista = [...meses.values()].sort((a, b) => a.m.localeCompare(b.m)); for (const g of lista) g.dias.sort((a, b) => a[0].localeCompare(b[0]));
+    return { soltos: soltos.sort((a, b) => a[0].localeCompare(b[0], "pt-BR", { numeric: true })), meses: lista };
+  }
   let PAINEL = null;                                                  // um painel aberto por vez, seja de que tabela for
   const PAINEL_FORA = ev => { if (PAINEL && !PAINEL.contains(ev.target)) fecharPainel(); };
   const PAINEL_TECLA = ev => { if (!PAINEL) return; if (ev.key === "Escape") fecharPainel(); else if (ev.key === "Enter" && ev.target.tagName !== "BUTTON") { ev.preventDefault(); PAINEL.querySelector(".fp-ok").click(); } };
   function fecharPainel() { if (PAINEL) PAINEL.remove(); PAINEL = null; document.removeEventListener("mousedown", PAINEL_FORA); document.removeEventListener("keydown", PAINEL_TECLA); }
   function autofiltro(o) {
-    const F = o.filtros, nome = o.nomeCol || (c => c), rotulo = o.rotulo || ((c, k) => k), ehNum = o.ehNum || (() => false);
+    const F = o.filtros, nome = o.nomeCol || (c => c), rotulo = o.rotulo || ((c, k) => k), ehNum = o.ehNum || (() => false), ehData = o.ehData || (() => false);
     const botao = col => { const f = F.get(col); return '<button type="button" class="fl' + (f ? " on" : "") + '" data-col="' + esc(col) + '" title="' + (f ? "filtro ligado em " + esc(nome(col)) + " — toque para mudar" : "filtrar " + esc(nome(col))) + '">' + (f ? FUNIL : "▾") + "</button>"; };
     const limpar = () => F.size ? '<button type="button" class="sec limpa-filtros" title="' + esc([...F.keys()].map(nome).join(" · ")) + '">limpar filtros (' + F.size + ")</button>" : "";
     const passa = (col, v) => filtroPassa(F.get(col), v);
@@ -139,14 +151,32 @@
         p.querySelector(".fp-ok").onclick = () => { const v = op.value, a = parseFloat(p.querySelector(".fp-a").value), b = parseFloat(p.querySelector(".fp-b").value); if (!["vazio", "naovazio"].includes(v) && isNaN(a)) { p.querySelector(".fp-a").focus(); return; } F.set(col, { tipo: "num", op: v, a, b: isNaN(b) ? a : b }); aplica(); };
       } else {
         const vals = new Map(); for (const v of o.valores(col)) { const k = chaveTxt(v); vals.set(k, (vals.get(k) || 0) + 1); }
-        const lista = [...vals.entries()].sort((x, y) => x[0].localeCompare(y[0], "pt-BR", { numeric: true }));
-        p.innerHTML = '<div class="fp-tit">' + esc(nome(col)) + '</div><input type="search" class="fp-busca" placeholder="procurar…" autocomplete="off"><div class="fp-tudo"><button type="button" class="sec fp-todos">selecionar tudo</button><button type="button" class="sec fp-nenhum">limpar</button></div><div class="fp-lista">'
-          + lista.map(([v, n]) => '<label><input type="checkbox" value="' + esc(v) + '"' + (!f || f.v.has(v) ? " checked" : "") + "> <span>" + esc(rotulo(col, v)) + "</span> <small>" + n + "</small></label>").join("")
+        const marcado = k => !f || f.v.has(k), data = ehData(col);
+        const folha = (k, n) => '<label class="fp-v"><input type="checkbox" value="' + esc(k) + '"' + (marcado(k) ? " checked" : "") + "> <span>" + esc(rotulo(col, k)) + "</span> <small>" + n + "</small></label>";
+        let itens;
+        if (data) {       // a árvore do Excel: mês (caixa que marca/desmarca os dias dele; ▸ abre os dias dd/mm/aa); o que não é data fica solto no alto
+          const g = agruparDatas(vals);
+          itens = g.soltos.map(([k, n]) => folha(k, n)).join("") + g.meses.map(m => '<div class="fp-mes" data-m="' + m.m + '"><button type="button" class="fp-exp" title="mostrar os dias">▸</button><label class="fp-m"><input type="checkbox"' + (m.dias.every(d => marcado(d[0])) ? " checked" : "") + "> <span>" + mesCurto(m.m) + "</span> <small>" + m.n + '</small></label><div class="fp-dias oculto">' + m.dias.map(([k, n]) => folha(k, n)).join("") + "</div></div>").join("");
+        } else itens = [...vals.entries()].sort((x, y) => x[0].localeCompare(y[0], "pt-BR", { numeric: true })).map(([k, n]) => folha(k, n)).join("");
+        p.innerHTML = '<div class="fp-tit">' + esc(nome(col)) + '</div><input type="search" class="fp-busca" placeholder="procurar…" autocomplete="off"><div class="fp-tudo"><button type="button" class="sec fp-todos">selecionar tudo</button><button type="button" class="sec fp-nenhum">limpar</button></div><div class="fp-lista' + (data ? " fp-arvore" : "") + '">' + itens
           + '</div><div class="fp-acoes">' + (f ? '<button type="button" class="sec fp-limpa">limpar filtro</button>' : "") + '<button type="button" class="fp-ok">OK</button><button type="button" class="sec fp-cancela">cancelar</button></div>';
-        const caixas = () => [...p.querySelectorAll(".fp-lista label")], visiveis = () => caixas().filter(l => !l.classList.contains("oculto"));
-        p.querySelector(".fp-busca").oninput = ev => { const t = semAcento(ev.target.value.trim()); for (const l of caixas()) l.classList.toggle("oculto", !!t && !semAcento(l.textContent).includes(t)); };
-        p.querySelector(".fp-todos").onclick = () => { for (const l of visiveis()) l.querySelector("input").checked = true; };
-        p.querySelector(".fp-nenhum").onclick = () => { for (const l of visiveis()) l.querySelector("input").checked = false; };
+        const caixas = () => [...p.querySelectorAll(".fp-lista label.fp-v")], meses = () => [...p.querySelectorAll(".fp-mes")];
+        const visiveis = () => caixas().filter(l => !l.classList.contains("oculto") && !(l.closest(".fp-mes") && l.closest(".fp-mes").classList.contains("oculto")));
+        // a caixa do mês reflete os dias visíveis dele: todos = marcada; parte = indeterminada; nenhum = vazia
+        const estadoMes = m => { const ds = [...m.querySelectorAll("label.fp-v")].filter(l => !l.classList.contains("oculto")).map(l => l.querySelector("input")), cb = m.querySelector("label.fp-m input"), on = ds.filter(d => d.checked).length; cb.checked = ds.length > 0 && on === ds.length; cb.indeterminate = on > 0 && on < ds.length; };
+        for (const m of meses()) {
+          estadoMes(m);
+          m.querySelector(".fp-exp").onclick = () => { const d = m.querySelector(".fp-dias"); d.classList.toggle("oculto"); m.querySelector(".fp-exp").textContent = d.classList.contains("oculto") ? "▸" : "▾"; };
+          m.querySelector("label.fp-m input").onchange = ev => { for (const l of m.querySelectorAll("label.fp-v")) if (!l.classList.contains("oculto")) l.querySelector("input").checked = ev.target.checked; estadoMes(m); };
+          for (const i of m.querySelectorAll("label.fp-v input")) i.onchange = () => estadoMes(m);
+        }
+        p.querySelector(".fp-busca").oninput = ev => {
+          const t = semAcento(ev.target.value.trim());
+          for (const l of caixas()) { const m = l.closest(".fp-mes"); l.classList.toggle("oculto", !!t && !semAcento(l.textContent).includes(t) && !(m && semAcento(m.querySelector("label.fp-m").textContent).includes(t))); }
+          for (const m of meses()) { const algum = [...m.querySelectorAll("label.fp-v")].some(l => !l.classList.contains("oculto")); m.classList.toggle("oculto", !algum); if (t && algum) { m.querySelector(".fp-dias").classList.remove("oculto"); m.querySelector(".fp-exp").textContent = "▾"; } estadoMes(m); }
+        };
+        p.querySelector(".fp-todos").onclick = () => { for (const l of visiveis()) l.querySelector("input").checked = true; for (const m of meses()) estadoMes(m); };
+        p.querySelector(".fp-nenhum").onclick = () => { for (const l of visiveis()) l.querySelector("input").checked = false; for (const m of meses()) estadoMes(m); };
         p.querySelector(".fp-ok").onclick = () => { const v = new Set(caixas().filter(l => l.querySelector("input").checked).map(l => l.querySelector("input").value)); if (v.size === vals.size) F.delete(col); else F.set(col, { tipo: "txt", v }); aplica(); };
       }
       p.querySelector(".fp-cancela").onclick = fecharPainel;
@@ -162,7 +192,7 @@
     return { botao, limpar, abrir, fechar: fecharPainel, ligar, passa, passaTodos };
   }
 
-  const lib = { esc, padraoIlike, citarPostgrest, termoIlike, filtroProduto, seletor, carregarPdfLib, pdfDePaginas, nomeArquivoCasa, autofiltro, filtroPassa, chaveTxt, semAcento };
+  const lib = { esc, padraoIlike, citarPostgrest, termoIlike, filtroProduto, seletor, carregarPdfLib, pdfDePaginas, nomeArquivoCasa, autofiltro, filtroPassa, chaveTxt, semAcento, agruparDatas, mesCurto };
   if (typeof window !== "undefined") window.GestorLib = lib;
   if (typeof module !== "undefined" && module.exports) module.exports = lib;
 })();
