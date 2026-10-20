@@ -18,7 +18,7 @@
      para ficar na página; o que protege o dado é a política por linha, não a chave). -->
 <style>
 /* tokens do Design System 'Visual CMS Olympikus' (PICASSO, 19/10/2026) — fonte única do visual; os nomes são os do sistema */
-:root{--azul:#2E3EFC;--amarelo:#FFFF1A;--preto:#000000;--cinza-escuro:#787B86;--cinza-claro:#ADAEB3;--off-white:#F6F5F0;--pagina:#E6E7E8;--cartao:#FFFFFF;--vermelho-ua:#E3001B;--raio-cartao:7px;--raio-selo:3px;--raio-chip:999px;--sombra-cartao:0 0.8px 2.3px rgba(0,0,0,0.12);--calha-celular:16px;--fonte-sans:Arial,Helvetica,sans-serif;--fonte-mono:"Courier New",monospace}
+:root{--azul:#2E3EFC;--amarelo:#FFFF1A;--preto:#000;--cinza-escuro:#787B86;--cinza-claro:#ADAEB3;--off-white:#F6F5F0;--pagina:#E6E7E8;--cartao:#FFFFFF;--vermelho-ua:rgb(227,0,27);--raio-cartao:7px;--raio-selo:3px;--raio-chip:999px;--sombra-cartao:0 0.8px 2.3px rgba(0,0,0,0.12);--calha-celular:16px;--fonte-sans:Arial,Helvetica,sans-serif;--fonte-mono:"Courier New",monospace}
 :root{--bg:var(--preto);--card:rgba(120,123,134,.14);--ink:var(--off-white);--mu:var(--cinza-claro);--acc:var(--amarelo);--ruim:var(--amarelo);--bd:rgba(120,123,134,.4);--ok:var(--amarelo)}
 /* v2.6 (12/10): as cores da CMS — AMARELO var(--amarelo) (Amarelo Olympikus, PMS 102C) e PRETO var(--preto) (o preto do chat dele). O verde --ok é o único
    sinal de 'bateu' nas barras e números: o dourado fica só na estrela (ícone), para não se confundir com o amarelo da marca. */
@@ -96,11 +96,19 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cg td.zero{color:#787b86}.cg td.sem{color:#adaeb3}.cg td.neg{color:#000;font-weight:700}
 .cg tr.mae td{font-weight:700;border-top:1px solid #adaeb3}.cg tr.mae td.vd,.cg tr.mae td.est{background:#fff}.cg tr.mae td.gi,.cg tr.mae td.cob{background:#f2f2f2}.cg tr.mae td.cob-a{background:#e6b9b8}.cg tr.mae td.ct-fat{background:#e2efda}.cg tr.mae td.ct-conf{background:#92d050}
 .cg tr.filha td{background:#fff;font-weight:400;font-size:13px}.cg tr.filha td.fixa{background:#fff}.cg tr.filha td.gi,.cg tr.filha td.cob{background:#f2f2f2;font-weight:700}.cg tr.filha td.cob-a{background:#e6b9b8}.cg tr.filha td.ct-fat{background:#e2efda}.cg tr.filha td.ct-conf{background:#92d050;font-weight:700}
+/* v5.85 (19/10 23:1x) — o ESTADO da carteira como ele pinta na AG (0058, carteira_estado): os 6 da legenda dos clientes; aporte e cancelar com texto branco.
+   E a coluna "total 1S27"/"total 2S26" depois do último mês de cada semestre, cabeçalho rosa-escuro e corpo rosa-claro, como na AG (PICASSO). */
+.cg td.ct-aporte,.cg tr.mae td.ct-aporte,.cg tr.filha td.ct-aporte{background:#00b050;color:#fff;font-weight:700}
+.cg td.ct-sug,.cg tr.mae td.ct-sug,.cg tr.filha td.ct-sug{background:#00b0f0;color:#000;font-weight:700}
+.cg td.ct-aten,.cg tr.mae td.ct-aten,.cg tr.filha td.ct-aten{background:#ff0;color:#000;font-weight:700}
+.cg td.ct-canc,.cg tr.mae td.ct-canc,.cg tr.filha td.ct-canc{background:#f00;color:#fff;font-weight:700}
+.cg td.stot,.cg tr.mae td.stot,.cg tr.filha td.stot{background:#fde9d9;color:#000;font-weight:700;border-left:2px solid #000}
+.cg thead tr.meses th.stot,.cg thead tr.rotulos th.stot,.cg thead tr.tot th.stot{background:rgb(217,150,148);color:#000;box-shadow:none;border-left:2px solid #000;text-align:center}.cg thead tr.tot th.stot{text-align:right}
 .cg tbody tr:hover td{outline:2px solid #1f497d;outline-offset:-2px}
 .cg td{border-bottom:0;border-left:1px solid #d9d9d9}.cg td.ini,.cg th.mes{border-left:2px solid #000}.cg td.fixa{border-left:0}
 .cg button.mm{width:28px;height:28px;background:transparent;border:0;color:#1f497d;font-size:16px;font-weight:800}
 .cg th.col,.cg td.col{background:#d9d9d9}
-.legenda .lg{display:inline-block;width:11px;height:11px;border:1px solid #adaeb3;vertical-align:-1px;margin:0 3px 0 6px;border-radius:2px}.lg-r{background:#f00}.lg-g{background:#00b050}.lg-rosa{background:#e6b9b8}.lg-fat{background:#e2efda}.lg-conf{background:#92d050}
+.legenda .lg{display:inline-block;width:11px;height:11px;border:1px solid #adaeb3;vertical-align:-1px;margin:0 3px 0 6px;border-radius:2px}.lg-r{background:#f00}.lg-g{background:#00b050}.lg-rosa{background:#e6b9b8}.lg-fat{background:#e2efda}.lg-conf{background:#92d050}.lg-aporte{background:#00b050}.lg-sug{background:#00b0f0}.lg-aten{background:#ff0}.lg-canc{background:#f00}.lg-stot{background:#fde9d9;border-color:rgb(217,150,148)}
 /* abas e o seletor venda/estoque: botões pequenos, lado a lado */
 .abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
@@ -509,7 +517,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.84</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.85</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -648,7 +656,7 @@ function traduz(m){ return ({"Invalid login credentials":"e-mail ou senha errado
 const ABAS = {
   cliente: { subtitulo: "· cliente", rodape: "Tudo do cliente numa tela: assuntos pendentes, carteira e giro, raio-x, vitrine, atas e ações de trade. Cada painel tem o botão que abre a aba inteira já nele. Mora no banco, atrás do login." },
   trade: { subtitulo: "· trade", rodape: "As ações de trade de todos os clientes: a planilha de verbas (VERBAS TRADE CMS, 1S26 e 2S26) carregada no banco, mais o que for lançado na aba Cliente. Toque no cliente para abrir a aba dele." },
-  cg:    { subtitulo: "· análise de giro (AG)", rodape: "Por mês: V = venda do cliente (sellout) · E = estoque do cliente · C = carteira da base dele, em amarelo (amarelo cheio = o mês já tem faturado dentro). — = o banco não tem o dado; 0 = zero." },
+  cg:    { subtitulo: "· análise de giro (AG)", rodape: "Por mês: venda do cliente (sellout) · estoque do cliente · giro · cobertura, e a carteira da base dele pintada com o ESTADO que está na AG do cliente (faturada, confirmada, aporte, sugestão, atenção, cancelar). Sem AG pintada: faturado = faturada, carteira = confirmada. — = o banco não tem o dado; 0 = zero." },
   metas: { subtitulo: "· metas", rodape: "" },
   atas: { subtitulo: "· atas", rodape: "Atas das reuniões da CMS (internas, com o King, com clientes). O texto mora no banco, atrás do login. Toque numa ata para abrir inteira." },
   catalogo: { subtitulo: "· catálogo", rodape: "Produtos da base de cadastro + catálogo da CMS. Fotos: página pública da CMS. ♥ fica neste aparelho. Exportar PDF = imprimir a grade." },        // nenhum texto explicativo na tela (ATA 23/09)
@@ -755,7 +763,7 @@ function enderecoDaAba(){
   if (est) { if (est.cliente) p.set("cliente", est.cliente); if (est.vista) p.set("vista", est.vista); if (est.bloco) p.set("bloco", est.bloco); if (est.semestre) p.set("semestre", est.semestre); }
   return location.origin + location.pathname + "#" + p.toString();
 }
-function outraJanela(url){ const w = Math.min(screen.availWidth, 1400), h = Math.min(screen.availHeight, 900); window.open(url, "_blank", `popup=yes,width=${w},height=${h},left=0,top=0`); }
+function outraJanela(url){ const w = Math.min(screen.availWidth, 1_400), h = Math.min(screen.availHeight, 900); window.open(url, "_blank", `popup=yes,width=${w},height=${h},left=0,top=0`); }
 $("bt-janela").onclick = () => outraJanela(enderecoDaAba());
 // ---------- Fale com o TI (19/10): insere em gestor_mensagem; relê a cada 20 s enquanto a caixa está aberta
 const FALE = { aberta: false, esc: null, timer: null, ultimo: null };
@@ -772,7 +780,7 @@ async function faleAbrir(){
   FALE.aberta = !FALE.aberta; $("fale").classList.toggle("oculto", !FALE.aberta); if (FALE.aberta && IA.aberta) iaAbrir();
   if (!FALE.aberta) { clearInterval(FALE.timer); return; }
   if (!FALE.esc) { const e = await sb.from("escritorio").select("id").limit(1); FALE.esc = (e.data && e.data[0] && e.data[0].id) || null; }
-  await faleLer(); $("fale-txt").focus(); FALE.timer = setInterval(faleLer, 20000);
+  await faleLer(); $("fale-txt").focus(); FALE.timer = setInterval(faleLer, 20e3);
 }
 async function faleEnviar(){
   const t = $("fale-txt").value.trim(); if (!t) return;
@@ -966,8 +974,11 @@ async function consultar(){
     if (!a.descricao && x.descricao) a.descricao = x.descricao; if (!a.fam) a.fam = familiaDe(x.marca); if (!a.sub && x.faixa) a.sub = x.faixa; return a; };
   const soma = (alvo, m, campo, v) => { if (v == null) return; const c = alvo.meses[m] || (alvo.meses[m] = {}); c[campo] = (c[campo] || 0) + v; alvo[campo] = (alvo[campo] || 0) + v; };
   const CAMPOS = { f: "fat", c: "cart", v: "venda", e: "estoque" };
+  // o ESTADO da carteira (ce, 0058) não se soma: na linha-mãe (todas as cores) prevalece o que mais pede ação, mesma ordem da cg_consulta
+  const PESO_CE = { CANCELAR: 1, ATENCAO: 2, SUGESTAO: 3, APORTE: 4, CONFIRMADA: 5, FATURADA: 6 };
+  const estado = (alvo, m, ce) => { if (!ce || !PESO_CE[ce]) return; const c = alvo.meses[m] || (alvo.meses[m] = {}); if (!c.ce || PESO_CE[ce] < PESO_CE[c.ce]) c.ce = ce; };
   for (const x of dados.linhas) { const a = mae(x), f = { cor: x.cor || "", meses: {}, venda: 0, cart: 0, fat: 0 }; a.cores.set(f.cor, f);
-    for (const [m, c] of Object.entries(x.meses || {})) for (const [k, campo] of Object.entries(CAMPOS)) { soma(a, m, campo, c[k]); soma(f, m, campo, c[k]); } }
+    for (const [m, c] of Object.entries(x.meses || {})) { for (const [k, campo] of Object.entries(CAMPOS)) { soma(a, m, campo, c[k]); soma(f, m, campo, c[k]); } estado(a, m, c.ce); estado(f, m, c.ce); } }
   const bases = new Set(); if (dados.base_venda) bases.add("base " + dmy(dados.base_venda)); if (dados.base_giro) bases.add("AG " + dmy(dados.base_giro));
   bases.add((Math.round(performance.now() - t0) / 1000).toFixed(1).replace(".", ",") + " s");
   let linhas = [...maes.values()];
@@ -989,27 +1000,35 @@ function desenharCG(linhas, pedidos, bases){
   const dec = v => v.toFixed(1).replace(".", ",").replace("-", "−");
   const cob = (c) => { if (c.estoque == null || !c.venda) return semDado; const v = c.estoque / c.venda; return `<td class="n cob${v >= 3.5 ? " cob-a" : v < 2.5 ? " cob-r" : ""}">${dec(v)}</td>`; };
   const giro = (c) => { if (c.venda == null || !c.estoque) return semDado; const v = c.venda / c.estoque; return `<td class="n gi${v <= 0.2 ? " gi-r" : v >= 0.3 ? " gi-g" : ""}">${dec(v)}</td>`; };
-  // carteira pelo ESTADO, legenda do cliente na AG (PICASSO 22:4x): verde claro = já FATURADA · verde médio = CONFIRMADA (firme, não faturada);
-  // mista (parte faturada, parte firme) = verde médio. O estado vem do DADO, nunca do valor ("valor > 0 → verde" foi removido da AG em 30/06).
-  // Ainda sem fonte no banco: aporte (verde escuro), sugestão (azul), atenção (amarelo), cancelar (vermelho) — ficam sem cor até a regra do NÚCLEO.
-  const celC = c => { const fat = c.fat || 0, cart = c.cart || 0, v = fat + cart; if (!v) return `<td class="n zero">0</td>`; return `<td class="n ${cart ? "ct-conf" : "ct-fat"}" title="${cart ? (fat ? "parte faturada, parte confirmada" : "carteira confirmada (firme, não faturada)") : "carteira já faturada"}">${fmt(v)}</td>`; };
+  // carteira pelo ESTADO que ele pintou na AG do cliente (0058, carteira_estado; legenda dos clientes lida pelo PICASSO 22:4x): verde claro =
+  // FATURADA · verde médio = CONFIRMADA · verde escuro = APORTE · azul = SUGESTÃO · amarelo = ATENÇÃO · vermelho = CANCELAR. O estado vem do
+  // DADO (a cor lida na carga), nunca do valor ("valor > 0 → verde" saiu da AG em 30/06). Sem estado (cliente sem AG pintada): a regra de
+  // reserva — faturado = faturada, carteira = confirmada; mista = confirmada.
+  const CE = { FATURADA: ["ct-fat", "faturada — como está pintado na AG"], CONFIRMADA: ["ct-conf", "confirmada — como está pintado na AG"], APORTE: ["ct-aporte", "aporte — como está pintado na AG"],
+               SUGESTAO: ["ct-sug", "sugestão — como está pintado na AG"], ATENCAO: ["ct-aten", "atenção — como está pintado na AG"], CANCELAR: ["ct-canc", "cancelar — como está pintado na AG"] };
+  const celC = c => { const fat = c.fat || 0, cart = c.cart || 0, v = fat + cart, e = CE[c.ce]; if (e) return `<td class="n ${e[0]}" title="${e[1]}">${v ? fmt(v) : "0"}</td>`; if (!v) return `<td class="n zero">0</td>`; return `<td class="n ${cart ? "ct-conf" : "ct-fat"}" title="${cart ? (fat ? "parte faturada, parte confirmada (sem estado na AG)" : "carteira confirmada (sem estado na AG)") : "carteira já faturada (sem estado na AG)"}">${fmt(v)}</td>`; };
+  // a coluna "total 1S27"/"total 2S26" depois do último mês de cada semestre, como na AG (PICASSO): soma dos meses do semestre que estão na tela
+  const semDe = m => (+m.slice(5, 7) <= 6 ? "1S" : "2S") + m.slice(2, 4);
+  const semestres = []; for (const m of mesesCart) { const s = semDe(m), g = semestres.find(x => x.s === s); if (g) g.meses.push(m); else semestres.push({ s, meses: [m] }); }
+  const somaSem = (x, g) => g.meses.reduce((acc, m) => { const c = x.meses[m] || {}; return acc + (c.fat || 0) + (c.cart || 0); }, 0);
   const fechada = `<td class="col"></td>`;
-  const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "vd").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + giro(c) + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
+  const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "vd").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + giro(c) + cob(c); }
+    for (const g of semestres) { for (const m of g.meses) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } const t = somaSem(x, g); h += `<td class="n stot" title="total ${g.s}: soma dos meses na tela">${t ? fmt(t) : "0"}</td>`; } return h; };
   const tot = { meses: {} }; for (const a of linhas) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = linhas.reduce((s, a) => s + a.cores.size, 0);
-  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda">por mês, como na AG: venda · estoque · giro (venda ÷ estoque: <i class="lg lg-r"></i>≤ 0,2 · <i class="lg lg-g"></i>≥ 0,3) · cob (estoque ÷ venda: <i class="lg lg-rosa"></i>≥ 3,5 alta · <i class="lg lg-r"></i>&lt; 2,5) · carteira: <i class="lg lg-fat"></i>já faturada · <i class="lg lg-conf"></i>confirmada (firme) · a linha do alto é o total do que está filtrado · toque no mês para esconder a coluna; no + para trazer de volta</div></div>`;
+  let html = `<div class="card"><b>${linhas.length} referência(s)</b> · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}<div class="legenda">por mês, como na AG: venda · estoque · giro (venda ÷ estoque: <i class="lg lg-r"></i>≤ 0,2 · <i class="lg lg-g"></i>≥ 0,3) · cob (estoque ÷ venda: <i class="lg lg-rosa"></i>≥ 3,5 alta · <i class="lg lg-r"></i>&lt; 2,5) · carteira, o estado pintado na AG do cliente: <i class="lg lg-fat"></i>faturada · <i class="lg lg-conf"></i>confirmada · <i class="lg lg-aporte"></i>aporte · <i class="lg lg-sug"></i>sugestão · <i class="lg lg-aten"></i>atenção · <i class="lg lg-canc"></i>cancelar (sem AG pintada: faturado = faturada, carteira = confirmada) · <i class="lg lg-stot"></i>total do semestre = soma dos meses na tela · a linha do alto é o total do que está filtrado · toque no mês para esconder a coluna; no + para trazer de volta</div></div>`;
   // a linha de TOTAIS vem ANTES do mês (ele, 19/10 22:1x: "a linha da venda, estoque, cobertura está abaixo da indicação do mês; é para estar acima")
   let totHtml = `<tr class="tot"><th class="fixa ref">total</th><th class="fixa nome">${linhas.length} ref.</th><th class="fixa cor"></th>`;
   for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}; totHtml += `<th class="ini tv">${t.venda != null ? fmt(t.venda) : "—"}</th><th class="te">${t.estoque != null ? fmt(t.estoque) : "—"}</th><th class="tg">${(t.venda != null && t.estoque) ? dec(t.venda / t.estoque) : "—"}</th><th class="tc">${(t.estoque != null && t.venda) ? dec(t.estoque / t.venda) : "—"}</th>`; }
-  for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}, v = (t.fat || 0) + (t.cart || 0); totHtml += `<th class="ini tcart">${v ? fmt(v) : "0"}</th>`; }
+  for (const g of semestres) { for (const m of g.meses) { if (COLAPSADOS.has("c" + m)) { totHtml += `<th class="col"></th>`; continue; } const t = tot.meses[m] || {}, v = (t.fat || 0) + (t.cart || 0); totHtml += `<th class="ini tcart">${v ? fmt(v) : "0"}</th>`; } const ts = somaSem(tot, g); totHtml += `<th class="stot">${ts ? fmt(ts) : "0"}</th>`; }
   totHtml += `</tr>`;
   html += `<div class="card cg"><table><thead>${totHtml}<tr class="meses"><th class="fixa ref">ref.</th><th class="fixa nome">nome</th><th class="fixa cor">cor</th>`;
   const cabMes = (m, cls, span) => COLAPSADOS.has(cls + m) ? `<th class="mes col ${cls}" data-m="${cls + m}" title="mostrar ${mesBR(m)}">+</th>` : `<th class="mes ${cls}" data-m="${cls + m}" colspan="${span}" title="esconder ${mesBR(m)}">${mesBR(m)}</th>`;
   for (const m of mesesGiro) html += cabMes(m, "g", 4);
-  for (const m of mesesCart) html += cabMes(m, "c", 1).replace('class="mes c"', `class="mes c ${+m.slice(5, 7) <= 6 ? "s1" : "s2"}"`);   // 1S amarelo · 2S laranja, como na AG
+  for (const g of semestres) { for (const m of g.meses) html += cabMes(m, "c", 1).replace('class="mes c"', `class="mes c ${+m.slice(5, 7) <= 6 ? "s1" : "s2"}"`); html += `<th class="stot" title="soma dos meses de ${g.s} que estão na tela">total ${g.s}</th>`; }   // 1S amarelo · 2S laranja, como na AG; o total do semestre depois do último mês
   html += `</tr><tr class="rotulos"><th class="fixa ref"></th><th class="fixa nome"></th><th class="fixa cor"></th>`;
   for (const m of mesesGiro) html += COLAPSADOS.has("g" + m) ? `<th class="col g">${mesBR(m)}</th>` : `<th class="n ini g rv">venda</th><th class="n g re">estoque</th><th class="n g rg">giro</th><th class="n g rc">cob</th>`;
-  for (const m of mesesCart) html += COLAPSADOS.has("c" + m) ? `<th class="col c">${mesBR(m)}</th>` : `<th class="n ini c">cart</th>`;
+  for (const g of semestres) { for (const m of g.meses) html += COLAPSADOS.has("c" + m) ? `<th class="col c">${mesBR(m)}</th>` : `<th class="n ini c">cart</th>`; html += `<th class="n stot">total</th>`; }
   html += `</tr>`;
   html += `</tr></thead><tbody>`;
   for (const a of linhas) {
