@@ -574,8 +574,8 @@ function desenharVitrine(){
 const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", ebm: "Excel pedido EBM" };
 // o FILTRO da tela (ele, 19/10 16:5x: "o Excel e o PDF do cliente saem de acordo com o que estou filtrando — e você pergunta antes:
 // deseja subir apenas tênis Olympikus de janeiro?"). Vazio = a vitrine inteira. O GTM não pergunta (é uma vez por semestre).
-const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v.size) f.mes = MESES_V.filter(m => VF_MES.v.has(m)); if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) f.gen = [...VF.gen]; if (VF.bloco.size) f.familia = [...VF.bloco];
-  const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen) partes.push(f.gen.map(g => g.toLowerCase()).join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes.join(" e "));
+const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v.size) f.mes = MESES_V.filter(m => VF_MES.v.has(m)); if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) { const g = [...VF.gen].filter(x => x !== "Grade especial"); if (g.length) f.gen = g; if (VF.gen.has("Grade especial")) f.esp = true; } if (VF.bloco.size) f.familia = [...VF.bloco];
+  const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen || f.esp) partes.push([...(f.gen || []).map(g => g.toLowerCase()), ...(f.esp ? ["grade especial"] : [])].join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes.join(" e "));
   f.texto = partes.length ? partes.join(" · ") : ""; return Object.keys(f).length > 1 || f.texto ? f : null; };
 const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && (!f.gen || f.gen.includes(it.ge || "")) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes.some(m => m in (e.pm || {})))))); };
 function confirmar(titulo, texto){
@@ -653,7 +653,8 @@ const condDe = it => ehGtm() ? { markup: MARKUP_CMS, prazo: 63 } : (VIT.cond.get
 const VF_MES = { v: new Set() };   // meses marcados na linha "mês / pares" do placar (ele, 17:1x): vazio = tudo; vários ao mesmo tempo
 const mesCasa = kc => !VF_MES.v.size || entradasDe(kc).some(e => [...VF_MES.v].some(m => m in (e.pm || {})));                      // filtros da direita (a vitrine)
 let PAINEL = "esq";                                                                    // no celular: qual metade está na tela
-const GEN_ORDEM = ["Feminino", "Masculino", "Unissex", "Infantil"];
+const GEN_ORDEM = ["Feminino", "Masculino", "Unissex", "Infantil", "Grade especial"];   // "Grade especial" é GRUPO (numeração até 47/48), não gênero
+const ehEsp = it => it.t === "TENIS" && (numMax(it) || 0) >= 47 && !/^inf/i.test(it.ge || "");
 const genOrd = g => { const i = GEN_ORDEM.indexOf(g); return i < 0 ? 9 : i; };
 const escolhidas = () => VIT.cliente ? DADOS.itens.filter(it => marcas(DADOS.colecao).get(chaveCor(it)) === "escolhida") : [];
 
@@ -694,7 +695,7 @@ function desenharMontador(pg){
           <div class="frow"><span class="fl">marca</span><div class="chips" id="mf-marca"></div></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="mf-tipo"></div></div>
           <div class="frow"><span class="fl">família</span><div class="chips" id="mf-bloco"></div></div>
-          <div class="frow"><span class="fl">gênero</span><div class="chips" id="mf-gen"></div></div>
+          <div class="frow"><span class="fl">grupo</span><div class="chips" id="mf-gen"></div></div>
           <div class="mu" id="mf-conta"></div>
         </div>
         <div class="mont-lista" id="mf-lista"></div>
@@ -706,7 +707,7 @@ function desenharMontador(pg){
           <div class="mont-placar" id="vf-placar"></div>
           <div class="frow"><span class="fl">marca</span><div class="chips" id="vf-marca"></div></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
-          <div class="frow"><span class="fl">gênero</span><div class="chips" id="vf-gen"></div></div>
+          <div class="frow"><span class="fl">grupo</span><div class="chips" id="vf-gen"></div></div>
           <div class="frow"><span class="fl">família</span><div class="chips" id="vf-bloco"></div></div>
         </div>
         <div class="mont-vitrine" id="vf-lista"></div>
@@ -752,10 +753,11 @@ function desenharEsquerda(pg){
   const cb = new Map(); for (const it of ordenar(base)) { const f = familiaDe(it); if (f) cb.set(f, (cb.get(f) || 0) + 1); }
   chips(pg, "mf-bloco", [["", "todas as famílias"], ...[...cb.entries()].map(([v, n]) => [v, titulo(v), n])], MF.bloco, v => { if (v === "") MF.bloco.clear(); else if (MF.bloco.has(v)) MF.bloco.delete(v); else MF.bloco.add(v); desenharEsquerda(pg); });
   const cgn = new Map(); for (const it of base) if (it.ge) cgn.set(it.ge, (cgn.get(it.ge) || 0) + 1);
+  { const ne = base.filter(ehEsp).length; if (ne) cgn.set("Grade especial", ne); }
   chips(pg, "mf-gen", [["", "todos"], ...[...cgn.entries()].sort((a, b) => genOrd(a[0]) - genOrd(b[0])).map(([v, n]) => [v, v, n])], MF.gen, v => { if (v === "") MF.gen.clear(); else if (MF.gen.has(v)) MF.gen.delete(v); else MF.gen.add(v); desenharEsquerda(pg); });
   const t = semAcento(MF.busca).split(/\s+/).filter(Boolean);
   // 19/10, ele: "os unissex você traz dentro também — no feminino e no masculino"; o filtro de gênero Feminino/Masculino inclui o unissex
-  const casaGen = it => !MF.gen.size || MF.gen.has(it.ge || "") || (ehUnissex(it) && (MF.gen.has("Feminino") || MF.gen.has("Masculino")));
+  const casaGen = it => !MF.gen.size || MF.gen.has(it.ge || "") || (ehUnissex(it) && (MF.gen.has("Feminino") || MF.gen.has("Masculino"))) || (MF.gen.has("Grade especial") && ehEsp(it));
   // ele, 19/10 21:3x: "ELEVADO tem uma cor isolada feminina, as outras masculinas; traz tudo para um bloco só, todas as cores; eu vou
   // clicando e definindo se é masculino ou feminino" — família, gênero e especial escolhem o MODELO; dentro dele entram todas as cores
   const chaveMod = it => it.m + "|" + it.r;
@@ -847,16 +849,18 @@ function desenharDireita(pg){
   const l1 = todas.filter(it => !VF.marca.size || VF.marca.has(it.m));
   linha("vf-tipo", conta(l1, it => it.t), v => NOME_TIPO[v] || v, VF.tipo, "todos", (a, b) => tipoIdx(a[0]) - tipoIdx(b[0]));
   const l2 = l1.filter(it => !VF.tipo.size || VF.tipo.has(it.t));
-  linha("vf-gen", ehGtm() ? new Map() : conta(l2, it => it.ge), v => v, VF.gen, "todos", (a, b) => genOrd(a[0]) - genOrd(b[0]));
+  const mGen = ehGtm() ? new Map() : conta(l2, it => it.ge); { const ne = ehGtm() ? 0 : l2.filter(ehEsp).length; if (ne) mGen.set("Grade especial", ne); }
+  linha("vf-gen", mGen, v => v, VF.gen, "todos", (a, b) => genOrd(a[0]) - genOrd(b[0]));
+  const casaGrupo = it => !VF.gen.size || VF.gen.has(it.ge || "") || (VF.gen.has("Grade especial") && ehEsp(it));
   if (ehGtm()) VF.gen.clear();
-  const l3 = l2.filter(it => !VF.gen.size || VF.gen.has(it.ge || ""));
+  const l3 = l2.filter(casaGrupo);
   linha("vf-bloco", conta(l3, it => familiaDe(it)), v => titulo(v), VF.bloco, "todas as famílias");
   const ct = conta(todas, it => it.t);
   // 19/10: por SEÇÃO (tênis feminino · masculino · grade especial · infantil · grade unissex; depois chinelos, meias…) e dentro da seção
   // do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const gtm = ehGtm(), mes = gtmMes();
   // na DISTRIBUIÇÃO: por tipo, dentro do tipo o modelo junto (todas as cores), a cor com mais pares primeiro
-  const lista = todas.filter(it => mesCasa(chaveCor(it)) && (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
+  const lista = todas.filter(it => mesCasa(chaveCor(it)) && (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && casaGrupo(it) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
     .sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || (gtm ? (String(a.n).localeCompare(String(b.n)) || ((VIT.pares.get(chaveCor(b)) || 0) - (VIT.pares.get(chaveCor(a)) || 0))) : 0)
       || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
@@ -869,7 +873,7 @@ function desenharDireita(pg){
   // filtros têm que atualizar"); com mês marcado, os pares e o custo são os daquele mês
   const base = lista, paresDe = it => VF_MES.v.size ? [...VF_MES.v].reduce((s, m) => s + (((VIT.meses.get(chaveCor(it)) || {})[m]) || 0), 0) : (VIT.pares.get(chaveCor(it)) || 0);
   // a linha "mês / pares": os meses de TODAS as cores do tipo que passam nos outros filtros (para o mês não sumir quando é desmarcado)
-  const semMes = todas.filter(it => (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && (!VF.gen.size || VF.gen.has(it.ge || "")) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))));
+  const semMes = todas.filter(it => (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && casaGrupo(it) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))));
   const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = base.filter(it => it.t === v); if (!its.length) return "";
     const temCond = gtm || its.some(it => condDe(it));
     const soma = temCond ? its.reduce((s, it) => { const c = condDe(it); return s + (c ? paresDe(it) * ((+it.p || 0) / c.markup) : 0); }, 0) : its.reduce((s, it) => s + (+it.p || 0), 0);
