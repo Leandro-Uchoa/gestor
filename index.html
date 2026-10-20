@@ -82,6 +82,24 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .cg button.mm{background:var(--off-white);color:var(--preto);border-color:var(--cinza-escuro)}
 .cg thead tr.tot th{position:sticky;background:var(--preto);color:var(--off-white);font-weight:800;font-variant-numeric:tabular-nums;text-align:right;box-shadow:inset 0 -2px 0 var(--amarelo)}.cg thead tr.tot th.fixa{text-align:left;background:var(--preto);color:var(--amarelo)}.cg thead tr.tot th.ct,.cg thead tr.tot th.ctf{background:var(--amarelo);color:var(--preto)}.cg thead tr.tot th.col{background:var(--preto)}
 .cg thead tr.tot th .cob{display:block;font-size:.66rem;font-weight:600;color:var(--cinza-claro)}.cg thead tr.tot th.ct .cob,.cg thead tr.tot th.ctf .cob{color:var(--preto)}
+/* v5.83 (19/10 22:3x) — tabela da Análise de giro pela especificação do PICASSO: fundo branco, números tabulares à direita, escuro só no cabeçalho */
+.cg{background:#fff}.cg table{background:#fff;color:var(--preto);font-family:var(--fonte-sans);font-size:13px}
+.cg td,.cg th{font-variant-numeric:tabular-nums;padding:4px 8px;height:28px;box-sizing:border-box;white-space:nowrap}.cg td.n,.cg th.n,.cg thead tr.tot th{text-align:right}
+.cg thead tr.tot th{background:var(--preto);color:var(--off-white);font-weight:700;font-size:13px;box-shadow:none}.cg thead tr.tot th.ini{color:var(--amarelo)}.cg thead tr.tot th .cob{color:var(--cinza-claro);font-size:.66rem;font-weight:700}
+.cg thead tr.tot th.fixa{background:var(--preto);color:var(--off-white)}.cg thead tr.tot th.ct,.cg thead tr.tot th.ctf{background:var(--preto);color:var(--amarelo)}
+.cg thead tr.meses th{background:var(--azul);color:#fff;font-weight:700;font-size:14px;text-align:center;box-shadow:none}.cg thead tr.meses th.fixa{background:var(--azul);color:#fff}.cg thead tr.meses th.g,.cg thead tr.meses th.c{background:var(--azul);color:#fff;box-shadow:none}
+.cg thead tr.rotulos th{background:var(--off-white);color:var(--preto);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--preto);box-shadow:none}.cg thead tr.rotulos th.g,.cg thead tr.rotulos th.c,.cg thead tr.rotulos th.fixa,.cg thead tr.rotulos th.col{background:var(--off-white);color:var(--preto);box-shadow:none}
+.cg td.fixa{background:#fff;color:var(--preto)}.cg td.fixa.ref{font-family:var(--fonte-mono);font-weight:700;color:var(--azul)}.cg td.fixa.nome{font-weight:700}.cg td.fixa.cor{font-family:var(--fonte-mono);color:var(--preto)}.cg td.fixa.cor,.cg th.fixa.cor{border-right:2px solid var(--preto)}
+.cg td.fat{background:rgba(46,62,252,.10);color:var(--azul);font-weight:700}.cg td.est{background:#fff;color:var(--preto);font-weight:400}.cg td.cob{color:var(--preto);font-weight:400}.cg td.cob.cob-r{background:var(--amarelo);font-weight:700}.cg td.cob.cob-a{background:var(--cinza-claro);color:var(--preto)}
+.cg td.ct{background:rgba(255,255,26,.30);color:var(--preto);box-shadow:none}.cg td.ctf{background:var(--amarelo);color:var(--preto);font-weight:700}
+.cg td.zero{color:var(--cinza-escuro)}.cg td.sem{color:var(--cinza-claro)}.cg td.neg{color:var(--preto);font-weight:700}
+.cg tr.mae td{background:var(--off-white);font-weight:700;border-top:1px solid var(--cinza-claro)}.cg tr.mae td.fixa{background:var(--off-white)}.cg tr.mae td.fat{background:rgba(46,62,252,.10)}.cg tr.mae td.est{background:var(--off-white)}
+.cg tr.filha td{background:#fff;font-weight:400;font-size:13px}.cg tr.filha td.fixa{background:#fff}.cg tr.filha:nth-child(even) td{background:rgba(173,174,179,.12)}.cg tr.filha:nth-child(even) td.fixa{background:rgba(226,227,229,1)}.cg tr.filha td.fat{background:rgba(46,62,252,.10)}
+.cg tr.filha td.ct,.cg tr.mae td.ct{background:rgba(255,255,26,.30);color:var(--preto)}.cg tr.filha td.ctf,.cg tr.mae td.ctf{background:var(--amarelo);color:var(--preto)}.cg tr.filha td.cob-r,.cg tr.mae td.cob-r{background:var(--amarelo)}.cg tr.filha td.cob-a,.cg tr.mae td.cob-a{background:var(--cinza-claro)}
+.cg tbody tr:hover td{outline:2px solid var(--azul);outline-offset:-2px}
+.cg td{border-bottom:0;border-left:1px solid rgba(173,174,179,.4)}.cg td.ini,.cg th.mes{border-left:2px solid var(--preto)}.cg td.fixa{border-left:0}
+.cg button.mm{width:28px;height:28px;background:transparent;border:0;color:var(--azul);font-size:16px;font-weight:800}
+.cg th.col,.cg td.col{background:var(--off-white)}
 /* abas e o seletor venda/estoque: botões pequenos, lado a lado */
 .abas,.seletor{display:flex;gap:8px;margin:0 0 12px}
 .abas button,.seletor button{margin:0;padding:10px;background:transparent;color:var(--mu);border:1px solid var(--bd);font-weight:700}
@@ -490,7 +508,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.82</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.83</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -961,10 +979,11 @@ async function consultar(){
 }
 function desenharCG(linhas, pedidos, bases){
   const mesesGiro = pedidos.filter(m => COB.giro.includes(m)), mesesCart = pedidos.filter(m => COB.carteira.includes(m));
-  const semDado = `<td class="n mu">—</td>`;
-  const cel = (v, cls) => v == null ? semDado : (v ? `<td class="n ${cls}">${fmt(v)}</td>` : `<td class="n mu">0</td>`);
+  const semDado = `<td class="n sem">—</td>`;
+  const cel = (v, cls) => v == null ? semDado : (v ? `<td class="n ${cls}${v < 0 ? " neg" : ""}">${fmt(v).replace("-", "−")}</td>` : `<td class="n zero">0</td>`);
   // cobertura do mês = estoque ÷ venda do mês (em meses); sem venda, não há cobertura
-  const cob = (c) => (c.estoque == null || !c.venda) ? semDado : `<td class="n mu">${(c.estoque / c.venda).toFixed(1).replace(".", ",")}</td>`;
+  // cobertura na régua dele (PICASSO 22:3x): abaixo de 4 = ruptura (amarelo), 4 a 5 normal, acima de 5 = acima do teto (cinza)
+  const cob = (c) => { if (c.estoque == null || !c.venda) return semDado; const v = c.estoque / c.venda; return `<td class="n cob${v < 4 ? " cob-r" : v > 5 ? " cob-a" : ""}">${v.toFixed(1).replace(".", ",").replace("-", "−")}</td>`; };
   const celC = c => { const fat = c.fat || 0, cart = c.cart || 0, v = fat + cart; if (!v) return `<td class="n mu">0</td>`; return `<td class="n ${fat ? "ctf" : "ct"}">${fmt(v)}</td>`; };
   const fechada = `<td class="col"></td>`;
   const celulas = (x, cls) => { let h = ""; for (const m of mesesGiro) { if (COLAPSADOS.has("g" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += cel(c.venda, "fat").replace('class="n', 'class="n ini') + cel(c.estoque, "est") + cob(c); } for (const m of mesesCart) { if (COLAPSADOS.has("c" + m)) { h += fechada; continue; } const c = x.meses[m] || {}; h += celC(c).replace('class="n', 'class="n ini'); } return h; };
