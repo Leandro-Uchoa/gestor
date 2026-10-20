@@ -639,7 +639,7 @@ async function apresentacao(modo){
     avisa("montando…");
     const { blob, nomeArq } = await gerarPdf(d, avisa, { modo });
     const arquivo = new File([blob], nomeArq + ".pdf", { type: "application/pdf" });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) { try { await navigator.share({ files: [arquivo], title: nomeArq }); avisa("compartilhado ✓"); setTimeout(() => avisa(antes), 2.5e3); return; } catch (e) { if (e && e.name === "AbortError") { avisa(antes); return; } } }
+    if (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) && navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) { try { await navigator.share({ files: [arquivo], title: nomeArq }); avisa("compartilhado ✓"); setTimeout(() => avisa(antes), 2.5e3); return; } catch (e) { if (e && e.name === "AbortError") { avisa(antes); return; } } }
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = nomeArq + ".pdf"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30e3);
     avisa("baixado: " + nomeArq + ".pdf"); setTimeout(() => avisa(antes), 4e3);
   } catch (e) { avisa(antes); alert("não montei a apresentação: " + (e.message || e)); }

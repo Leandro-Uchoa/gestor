@@ -23,6 +23,7 @@
 // Regra da casa para este arquivo (publica_portal): nenhum número de 4+ dígitos no código — produto, preço, bloqueio moram no banco.
 (function(){
 const IMG = "img/mini/";
+const CELULAR = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);   // a folha de compartilhar só no celular; no PC baixa direto (20/10)
 // 19/10: CHINELOS é tipo próprio (regra dele: chinelo nunca junto do tênis — outro dinheiro, outra cota, outro departamento)
 // 19/10 (PICASSO): rótulo "Tênis", não "Footwear" — ele não fala inglês; o valor interno segue TENIS
 const TIPOS = [["", "Geral"], ["TENIS", "Tênis"], ["CHINELOS", "Chinelos"], ["MEIAS", "Meias"], ["ACESSORIOS", "Acessórios"], ["CONFECCAO", "Confecção"]];
@@ -602,7 +603,7 @@ async function pedirSaida(tipos){
 }
 async function mostrarSaidas(el){
   const o = el.querySelector("#vit-saidas"); if (!o || !VIT.cliente) { if (o) o.innerHTML = ""; return; }
-  const r = await SB.from("vitrine_saida").select("id,tipo,pedido_em,atendido_em,arquivo,erro,nota").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
+  const r = await SB.from("vitrine_saida").select("id,tipo,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
   if (r.error || !r.data) { o.innerHTML = ""; return; }
   const hora = s => s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   // enquanto houver pedido na fila, a lista se relê sozinha a cada 20 s (ele, 19/10 15:0x: "só apareceu uma informação" — o pronto não chegava sem F5)
@@ -612,8 +613,31 @@ async function mostrarSaidas(el){
   const agora = Date.now(), vivo = x => !ocultas.has(x.id) && (!x.atendido_em || (agora - new Date(x.atendido_em).getTime()) < (x.erro ? 30 : 10) * 60_000);
   const lista = r.data.filter(vivo);
   clearTimeout(mostrarSaidas._t); if (lista.length) mostrarSaidas._t = setTimeout(() => mostrarSaidas(el), lista.some(x => !x.atendido_em) ? 20_000 : 60_000);
-  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}" data-id="${x.id}"><button type="button" class="sai-x" title="tirar esta linha">×</button><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → <code>${esc(x.arquivo || "")}</code>${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min, na pasta do cliente (esta lista se atualiza sozinha)")}</div>`).join("");
+  // 20/10 (ordem dele 09:5x: "se eu dou permissão a usuários, tem que funcionar no equipamento deles"): o arquivo pronto está no COFRE
+  // (Storage privado, 0062) — o botão "baixar" pede URL assinada e baixa aqui, em qualquer aparelho. O caminho da máquina dele fica no
+  // title (a página não sabe quem é ele). Saída de antes da 0062, sem storage_path: só na máquina dele.
+  const nomeArq = x => String(x.arquivo || "").split(/[\\/]/).pop() || "saida.xlsx";
+  const pronto = x => x.storage_path ? `<button type="button" class="sai-baixa" data-p="${esc(x.storage_path)}" data-n="${esc(nomeArq(x))}" title="${esc(x.arquivo || "")}">baixar</button> <span class="mu" title="${esc(x.arquivo || "")}">${esc(nomeArq(x))}${x.tamanho ? " · " + Math.max(1, Math.round(x.tamanho / 1e3)) + " KB" : ""}</span>` : `<span class="mu" title="${esc(x.arquivo || "")}">arquivo só na máquina do Léo</span>`;
+  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}" data-id="${x.id}"><button type="button" class="sai-x" title="tirar esta linha">×</button><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → ${pronto(x)}${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min (esta lista se atualiza sozinha)")}</div>`).join("");
   for (const b of o.querySelectorAll(".sai-x")) b.onclick = () => { const id = +b.parentElement.dataset.id; ocultas.add(id); try { localStorage.setItem("gestor.saidas.ocultas", JSON.stringify([...ocultas].slice(-200))); } catch (e) {} b.parentElement.remove(); };
+  for (const b of o.querySelectorAll(".sai-baixa")) b.onclick = () => baixarSaida(b);
+}
+const XLSX_TIPO = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+// o botão "baixar" dentro da linha da saída (o botão global da página é de tela cheia): azul da paleta, do tamanho da linha
+const CSS_SAIDA = ".sai-item .sai-baixa{width:auto;margin:0 2px;padding:2px 10px;border-radius:6px;background:var(--azul);color:var(--off-white);font-size:.68rem;font-weight:700;vertical-align:baseline}.sai-item .sai-baixa:disabled{opacity:.7}";
+if (typeof document !== "undefined" && !document.getElementById("css-saida")) { const st = document.createElement("style"); st.id = "css-saida"; st.textContent = CSS_SAIDA; document.head.appendChild(st); }
+async function baixarSaida(b){
+  const nome = b.dataset.n, antes = b.textContent, volta = (t, ms) => { b.textContent = t; setTimeout(() => { b.textContent = antes; b.disabled = false; }, ms); };
+  b.disabled = true; b.textContent = "pedindo ao cofre…";
+  const r = await SB.storage.from("saidas-vitrine").createSignedUrl(b.dataset.p, 120, { download: nome });
+  if (r.error || !r.data || !r.data.signedUrl) { volta("o cofre recusou: " + (r.error ? r.error.message : "sem endereço"), 6e3); return; }
+  // no celular: compartilhar (WhatsApp, Arquivos), como o PDF da vitrine; cancelou = nada; sem compartilhar, baixa já nomeado
+  if (CELULAR && navigator.share && navigator.canShare) {
+    try { const resp = await fetch(r.data.signedUrl); if (resp.ok) { const arquivo = new File([await resp.blob()], nome, { type: XLSX_TIPO }); if (navigator.canShare({ files: [arquivo] })) { await navigator.share({ files: [arquivo], title: nome }); volta("compartilhado ✓", 2.5e3); return; } } }
+    catch (e) { if (e && e.name === "AbortError") { volta(antes, 0); return; } }
+  }
+  const a = document.createElement("a"); a.href = r.data.signedUrl; a.download = nome; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+  volta("baixado ✓", 2.5e3);
 }
 
 // ---------- o MONTADOR (15/10, orientação dele, ao vivo): "parta a tela no meio: do lado esquerdo os produtos da 1S27 com filtros

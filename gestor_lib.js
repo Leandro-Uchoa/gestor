@@ -92,7 +92,7 @@
       if (pdf.getNumberOfPages() !== pgs.length) throw new Error("o PDF saiu com " + pdf.getNumberOfPages() + " páginas e o documento tem " + pgs.length + " — não entrego página a mais");
       const blob = pdf.output("blob"), nome = String(nomeArq).replace(/[\/\\:*?"<>|]+/g, "-") + ".pdf", arquivo = new File([blob], nome, { type: "application/pdf" });
       // no celular: compartilhar (WhatsApp, Arquivos); cancelou = nada; sem compartilhar, baixa já nomeado
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      if (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) && navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) {
         try { await navigator.share({ files: [arquivo], title: nomeArq }); return { modo: "compartilhado", nome, paginas: pgs.length, semFoto }; }
         catch (e) { if (e && e.name === "AbortError") return { modo: "cancelado", nome, paginas: pgs.length, semFoto }; }
       }
