@@ -57,7 +57,7 @@ async function desenhar(){
   if (!el.querySelector(".raiox")) {
     el.innerHTML = `<div class="raiox">
       <div class="card filtros">
-        <div class="linha-sel"><div id="rx-cli"></div><button type="button" class="sec" id="rx-apres" title="gera o PDF da apresentação deste cliente, já nomeado; no celular abre o compartilhar">gerar apresentação PDF ⎙</button></div>
+        <div class="linha-sel"><div id="rx-cli"></div><button type="button" class="sec" id="rx-apres-portas" title="PDF com a rede e os slides por loja (portas, mapa de calor, índice e cobertura por categoria, venda e cobertura por loja); no celular abre o compartilhar">apresentação por portas ⎙</button><button type="button" class="sec" id="rx-apres-cons" title="PDF só da rede como um todo, sem slide por loja; no celular abre o compartilhar">apresentação consolidada ⎙</button></div>
         <label>vista</label><div class="chips" id="rx-vista"></div>
         <div class="mu" id="rx-base"></div>
       </div>
@@ -65,10 +65,12 @@ async function desenhar(){
     </div>`;
   }
   window.GestorLib.seletor(el.querySelector("#rx-cli"), "cliente", LISTA.map(c => [c.cliente, c.nome]), { v: S.cliente }, v => { S.cliente = v; S.cat = null; S.fam = null; S.sub = ""; desenhar(); }, { unico: true, nomeDe: c => (LISTA.find(x => x.cliente === c) || {}).nome || c });
-  el.querySelector("#rx-apres").onclick = () => apresentacao();
+  el.querySelector("#rx-apres-portas").onclick = () => apresentacao("portas"); el.querySelector("#rx-apres-cons").onclick = () => apresentacao("consolidada");
   const corpo = el.querySelector("#rx-corpo");
   let d;
   try { d = await doc(S.cliente); } catch (e) { corpo.innerHTML = `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
+  // os botões da apresentação: por portas só com o raio-x de lojas (AG PORTA); consolidada com o da rede
+  el.querySelector("#rx-apres-portas").hidden = !(d && d.lojas && d.lojas.length > 1); el.querySelector("#rx-apres-cons").hidden = !(d && (d.sazonal || d.escopo));
   if (!d) { corpo.innerHTML = `<div class="card mu">Sem raio-x para este cliente.</div>`; return; }
   const vistas = vistasDe(d); if (!vistas.some(([v]) => v === S.vista)) S.vista = (vistas[0] || [""])[0];
   chips("rx-vista", vistas, S.vista, v => { S.vista = v; desenhar(); });
@@ -334,10 +336,14 @@ function precoBarras(fx, larg){
     return `<div style="display:flex;flex-direction:row;align-items:center;gap:14px;width:${LT}px"><div style="flex:none;width:${w}px;height:44px;background:${AZUL};border-radius:8px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:16px;overflow:hidden">${dentro ? rot(OFF) : ""}</div>${dentro ? "" : `<div style="display:flex;flex-direction:row;align-items:baseline;gap:12px">${rot(PRETO)}</div>`}</div>`; }).join("")}</div>`;
 }
 
-function montarApresentacao(d){
+// modo (ele, 20/10: "deixa as duas apresentações disponíveis: portas e consolidada"): 'portas' = a rede E os slides por loja;
+// 'consolidada' = só a rede (capa, posicionamento, sazonalidade, peso do mês, pirâmide, categorias, chinelos/acessórios/meias, UA rede,
+// oportunidade de giro). O que cita "N de 12 lojas" vira a versão de rede, como quando o documento só tem uma linha.
+function montarApresentacao(d, modo){
   NOME_DECK = bonito(d.nome);
   const pags = [], ESC = d.escopo || {}, cob = ESC.v ? ESC.e / ESC.v : null;
   const L = (d.lojas || []).slice().sort((a, b) => String(a.cluster || "").localeCompare(String(b.cluster || "")) || (b.v || 0) - (a.v || 0)), nL = L.length;
+  const consolidada = modo === "consolidada", porLoja = !consolidada && nL > 1;
   const clusters = [...new Set(L.map(l => l.cluster).filter(Boolean))].sort(), temCl = clusters.length > 1;
   // a loja para o cliente é o CÓDIGO DELE (l.loja: MA09, 021…), que é como ele a reconhece; l.nome é a descrição e vai ao lado, em
   // cinza, quando cabe; l.codigo (o da Vulcabras) nunca sai. Nas leituras, só o código dele (o texto do banco já fala nele).
@@ -387,13 +393,13 @@ function montarApresentacao(d){
     const card = (num, rot, dest) => `<div style="flex:1;${dest ? "background:" + AZUL : "border:2px solid " + PRETO};padding:28px 32px;border-radius:8px;display:flex;flex-direction:column;gap:8px"><p style="font-size:80px;font-weight:800;line-height:1;color:${dest ? AMARELO : PRETO}">${num}</p><p style="font-size:28px;line-height:1.3;color:${dest ? OFF : PRETO}">${rot}</p></div>`;
     const secasTxt = !secas.length ? "nenhuma abaixo de 4" : secas.length === 1 ? "só a " + nomeL(secas[0]) + " abaixo de 4" : secas.length + " abaixo de 4";
     const cards = card(n0(ESC.v), `pares/mês de venda média nas lojas, ${janela}`) + card(n0(ESC.e), `pares em estoque nas lojas (${mesBase}) ≈ ${n1(cob)} meses`, true)
-      + (nL > 1 ? card(`${ate5.length} de ${nL}`, `lojas com até 5 meses; ${secasTxt}`) : card(n1(cob), "meses de cobertura da rede"))
+      + (porLoja ? card(`${ate5.length} de ${nL}`, `lojas com até 5 meses; ${secasTxt}`) : nL > 1 ? card(String(nL), "lojas na rede, somadas nesta leitura") : card(n1(cob), "meses de cobertura da rede"))
       + (idxDez != null ? card(n1(idxDez / 100) + "×", `o mês médio: é quanto dezembro vende (índice ${Math.round(idxDez)})`) : card(String(nL), "lojas ativas na análise"));
     const frase = preNatal && idxDez != null ? `Em ${MESES_LONGO[mesB - 1]}, ficar acima dela é normal: a loja carrega estoque para o Natal, e dezembro vende ${n1(idxDez / 100)} vez o mês médio.` : "Abaixo de 4 meses falta produto na loja; acima de 5, o estoque pesa.";
     pags.push(pagina(cabec("Posicionamento · " + escopoTxt + " nas lojas", "O que importa é a razão venda × estoque", "") + `<p style="font-size:32px;line-height:1.4">O estoque acompanha a venda: se a venda sobe, o estoque sobe; se cai, reduz. <b>A referência de cobertura é de 4 a 5 meses.</b> ${frase}</p>${regua}<div style="display:flex;flex-direction:row;gap:24px">${cards}</div>`, FONTE_LJ, 28, { entre: true }));
   }
-  // 3 · venda e estoque por porta: as lojas em duas colunas, "Rede" no fim da segunda, leitura embaixo
-  if (nL) {
+  // 3 · venda e estoque por porta: as lojas em duas colunas, "Rede" no fim da segunda, leitura embaixo (só no modo por portas)
+  if (porLoja) {
     const cols = [...(temCl ? [["Cl.", "center"]] : []), ["Loja", "left"], ["Venda/mês", "center"], ["Part.", "center"], ["Estoque", "center"], ["Cob.", "center"]], LG = [...(temCl ? [48] : []), 304, 124, 100, 124, 88];
     const secas = L.filter(l => l.cob != null && l.cob < 4), pesadas = L.filter(l => l.cob > 8).sort((a, b) => b.cob - a.cob);
     const [e1, e2] = corte(L);
@@ -411,7 +417,7 @@ function montarApresentacao(d){
   const ABVQ = { "CAMINHADA P1": "Cam.<br>P1", "CAMINHADA P2": "Cam.<br>P2", "CORRIDA/TREINO": "Corrida<br>Treino", "CORRE": "Corre", "CLÁSSICOS": "Clás-<br>sicos", "INFANTIL": "Infan-<br>til", "CHINELOS": "Chine-<br>los", "ACESSÓRIOS": "Acess.", "MEIAS": "Meias", "UA TÊNIS": "UA<br>tênis" };
   const ABV = { "CAMINHADA P1": "P1", "CAMINHADA P2": "P2", "CORRIDA/TREINO": "Corrida", "CORRE": "Corre", "CLÁSSICOS": "Clássicos", "INFANTIL": "Infantil" };
   const ab = c => ABV[String(c).toUpperCase()] || esc(bonito(c));
-  if (nL > 1 && cats.length) {
+  if (porLoja && cats.length) {
     const partDe = (l, c) => xc(l, c).part || 0, mx = cats.map(c => Math.max(...L.map(l => partDe(l, c))));
     const heat = (p, m) => { const a = m ? 0.04 + 0.96 * Math.pow(p / m, 1.2) : 0; return `background:rgba(46,62,252,${a.toFixed(2)});color:${a > 0.7 ? OFF : PRETO};${m && p === m ? "font-weight:800" : ""}`; };
     const colw = Math.min(66, Math.floor((W - 24 - 2 * 222) / (2 * cats.length)));
@@ -487,15 +493,15 @@ function montarApresentacao(d){
     const tt = catsTenis.reduce((s, c) => s + ((T[c] || {}).v || 0), 0), te = catsTenis.reduce((s, c) => s + ((T[c] || {}).e || 0), 0);
     const puxa = c => L.filter(l => (xc(l, c).idx || 0) >= 110).sort((a, b) => xc(b, c).idx - xc(a, c).idx).slice(0, 3).map(l => `${nomeL(l)} (${xc(l, c).idx})`).join(", ");
     const cobCel = v => v == null ? ["—", ""] : [n1(v), v < 4 ? `background:${AMARELO};font-weight:800` : v > 8 ? `background:${CINZA2}` : ""];
-    const cols = [["Categoria", "left"], ["Venda/mês", "center"], ["Part.", "center"], ["Estoque", "center"], ["Cob.", "center"], ["Quem puxa · índice 110 ou mais", "left"]], LG = [380, 160, 120, 160, 120, 724];
-    const lin = catsTenis.map(c => { const t = T[c] || {}; return { bg: "transparent", cells: [[`<b>${esc(bonito(c))}</b>`, ""], [n0(t.v), ""], [pc1(tt ? t.v / tt : null), ""], [n0(t.e), ""], cobCel(t.v ? t.e / t.v : null), [puxa(c) || "—", "font-size:22px"]] }; });
-    lin.push({ bg: CINZA2, cells: [["<b>Tênis Olympikus</b>", ""], [`<b>${n0(tt)}</b>`, ""], ["<b>100%</b>", ""], [`<b>${n0(te)}</b>`, ""], [`<b>${n1(tt ? te / tt : null)}</b>`, ""], ["", ""]] });
+    const cols = [["Categoria", "left"], ["Venda/mês", "center"], ["Part.", "center"], ["Estoque", "center"], ["Cob.", "center"], ...(porLoja ? [["Quem puxa · índice 110 ou mais", "left"]] : [])], LG = porLoja ? [380, 160, 120, 160, 120, 724] : [640, 256, 256, 256, 256];
+    const lin = catsTenis.map(c => { const t = T[c] || {}; return { bg: "transparent", cells: [[`<b>${esc(bonito(c))}</b>`, ""], [n0(t.v), ""], [pc1(tt ? t.v / tt : null), ""], [n0(t.e), ""], cobCel(t.v ? t.e / t.v : null), ...(porLoja ? [[puxa(c) || "—", "font-size:22px"]] : [])] }; });
+    lin.push({ bg: CINZA2, cells: [["<b>Tênis Olympikus</b>", ""], [`<b>${n0(tt)}</b>`, ""], ["<b>100%</b>", ""], [`<b>${n0(te)}</b>`, ""], [`<b>${n1(tt ? te / tt : null)}</b>`, ""], ...(porLoja ? [["", ""]] : [])] });
     const ordC = catsTenis.slice().sort((a, b) => ((T[b] || {}).v || 0) - ((T[a] || {}).v || 0)), lei = []; let soma = 0;
     for (const c of ordC) { const t = (d.leitura || {})[c]; if (!t) continue; if (soma + t.length > 900) break; soma += t.length; lei.push(`<b>${esc(bonito(c))}:</b> ${texto(t)}`); }
     pags.push(pagina(cabec("Tênis · categorias · nas lojas", "O que vende e como gira", "venda média/mês nas lojas · cobertura em meses: amarelo abaixo de 4, cinza acima de 8") + tabela(cols, lin, LG, 24, "7px 10px") + (lei.length ? leitura(lei, 22) : ""), FONTE_LJ, 18));
   }
   // 9 · índice por categoria e 10 · cobertura por categoria: tênis por loja, duas colunas
-  if (nL > 1 && catsTenis.length) {
+  if (porLoja && catsTenis.length) {
     const n = catsTenis.length, cw = Math.min(104, Math.floor((W - 32 - 460) / (2 * n)));
     const abH = c => cw < 110 && ab(c).length > 8 ? ab(c).slice(0, 5) + "." : ab(c);     // "Clássicos" não cabe na coluna estreita: "Cláss."
     const cols = [["Cl.", "center"], ["Loja", "left"], ...catsTenis.map(c => [abH(c), "center"])], LG = [40, 190, ...catsTenis.map(() => cw)];
@@ -534,7 +540,7 @@ function montarApresentacao(d){
   // 14 · mix de meias (modelo · gênero · cor): o documento ainda não traz — some
   // 15 · chinelos, acessórios e meias por loja: venda e cobertura, duas colunas, leitura do NÚCLEO embaixo
   const OC = [[catChi, "Chinelos", AZUL], [catAcc, "Acessórios", CINZA], [catMei, "Meias", PRETO]].filter(([c]) => c);
-  if (nL > 1 && OC.length) {
+  if (porLoja && OC.length) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ...OC.flatMap(() => [["Venda", "center"], ["Cob.", "center"]])], LG = [40, 216, ...OC.flatMap(() => [96, 88])];
     const grp = [["", 2, "transparent"], ...OC.map(([c, t, bg]) => [`${t} · ${unid(c)}`, 2, bg])];
     const [e1, e2] = corte(L);
@@ -550,7 +556,7 @@ function montarApresentacao(d){
   }
   // 16 · Under Armour na rede e 17 · onde o UA gira: só quando a família vem no documento
   if (famUA) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(Object.keys(PIR).find(k => /^UA/i.test(k)), catUA, true), FONTE_RD));
-  if (catUA && nL > 1) {
+  if (catUA && porLoja) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ["Venda/mês", "center"], ["Estoque", "center"], ["Cob.", "center"], ["Índice", "center"]], LG = [52, 236, 140, 140, 120, 128], t = T[catUA] || {}, cobU = t.v ? t.e / t.v : null;
     const [e1, e2] = corte(L);
     const topU = L.slice().sort((a, b) => (xc(b, catUA).v || 0) - (xc(a, catUA).v || 0)).slice(0, 6), somaTop = topU.reduce((s, l) => s + (xc(l, catUA).v || 0), 0), par = L.filter(l => (xc(l, catUA).v || 0) < 1.5 && (xc(l, catUA).e || 0) >= 40);
@@ -582,14 +588,14 @@ function montarApresentacao(d){
   const paginas = pags.filter(Boolean).map((p, i) => p.replace("{{pg}}", String(i + 1)));
   const interno = /regulador|rebaixa|queima/i.exec(paginas.join(""));
   if (interno) throw new Error(`a apresentação sairia com termo interno ("${interno[0]}") — não monto`);
-  const mes = new Date(); const nomeArq = (String(mes.getMonth() + 1).padStart(2, "0") + "," + String(mes.getFullYear()).slice(2) + " " + String(d.nome).toUpperCase() + " - ANÁLISE COMERCIAL").replace(/[\\/:*?"<>|]+/g, "-");
+  const mes = new Date(); const nomeArq = (String(mes.getMonth() + 1).padStart(2, "0") + "," + String(mes.getFullYear()).slice(2) + " " + String(d.nome).toUpperCase() + " - ANÁLISE COMERCIAL - " + (consolidada ? "CONSOLIDADA" : "PORTAS")).replace(/[\\/:*?"<>|]+/g, "-");
   return { paginas, nomeArq, css: ".pg p,.pg h1,.pg h2,.pg h3{margin:0}.pg table{border-collapse:collapse}.pg *{box-sizing:border-box}" };
 }
 // monta as páginas, fotografa cada uma e devolve o PDF — quem chama decide se baixa, compartilha ou grava (o harness grava num receptor local)
-async function gerarPdf(d, avisa){
-  avisa = avisa || (() => {});
+async function gerarPdf(d, avisa, o){
+  avisa = avisa || (() => {}); o = o || {};
   await carregarPdfLib();
-  const { paginas, nomeArq, css } = montarApresentacao(d);
+  const { paginas, nomeArq, css } = montarApresentacao(d, o.modo || "portas");
   if (paginas.length > 18) throw new Error("a apresentação passou do teto de 18 páginas (" + paginas.length + ")");
   // o palco: 1_920 px de largura, atrás da página (fora da tela sai em branco); uma foto por página
   const q = document.createElement("div"); q.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:1920px;background:" + OFF + ";pointer-events:none"; q.innerHTML = `<style>${css}</style>` + paginas.join(""); document.body.appendChild(q);
@@ -606,14 +612,15 @@ async function gerarPdf(d, avisa){
   if (pdf.getNumberOfPages() !== paginas.length) throw new Error("o PDF saiu com " + pdf.getNumberOfPages() + " páginas e a apresentação tem " + paginas.length);
   return { blob: pdf.output("blob"), nomeArq, paginas: paginas.length };
 }
-async function apresentacao(){
-  const bt = EL.querySelector("#rx-apres"); const antes = bt ? bt.textContent : "";
+async function apresentacao(modo){
+  const bt = EL.querySelector(modo === "consolidada" ? "#rx-apres-cons" : "#rx-apres-portas"); const antes = bt ? bt.textContent : "";
   const avisa = t => { if (bt) bt.textContent = t; };
   try {
     let d; try { d = await doc(S.cliente); } catch (e) { alert("O banco recusou: " + e.message); return; }
-    if (!d || !d.lojas) { alert("este cliente ainda não tem o raio-x de lojas (o NÚCLEO calcula pela AG PORTA)."); return; }
+    if (!d || !(d.sazonal || d.escopo)) { alert("este cliente ainda não tem o raio-x da rede (o NÚCLEO calcula)."); return; }
+    if (modo !== "consolidada" && !(d.lojas && d.lojas.length > 1)) { alert("este cliente ainda não tem o raio-x por loja (o NÚCLEO calcula pela AG PORTA) — gere a consolidada."); return; }
     avisa("montando…");
-    const { blob, nomeArq } = await gerarPdf(d, avisa);
+    const { blob, nomeArq } = await gerarPdf(d, avisa, { modo });
     const arquivo = new File([blob], nomeArq + ".pdf", { type: "application/pdf" });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [arquivo] })) { try { await navigator.share({ files: [arquivo], title: nomeArq }); avisa("compartilhado ✓"); setTimeout(() => avisa(antes), 2.5e3); return; } catch (e) { if (e && e.name === "AbortError") { avisa(antes); return; } } }
     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = nomeArq + ".pdf"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30e3);
