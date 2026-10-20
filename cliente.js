@@ -345,11 +345,16 @@ function ajustarXl(raiz){
   let acc = 0; for (const th of t.querySelectorAll("tr.cab th.fx")) { t.style.setProperty("--f-" + th.dataset.k, acc + "px"); acc += th.getBoundingClientRect().width; }
 }
 const FC = new Map(); let MESA = null;                                 // os filtros da mesa inteira; MESA = o que a mesa precisa para se redesenhar
+// 20/10 (0063): a carteira dos OUTROS clientes vem do EBM (carga_carteira_ebm.py), não da DETALHADA dele — a fonte vem na consulta. O NÚCLEO:
+// "a tela tem que deixar claro que é só consulta até ele marcar". O aviso fica no alto da mesa (cartão fechado, mesa aberta e quadro da AG);
+// a decisão continua possível e grava como hoje. Nas colunas Y/Z/AA entram TOTAL DO PEDIDO, PDC UNITÁRIO e PDV (x.tot/x.pdc/x.pdv), dos dois caminhos.
+const doEbm = c => !!(c && c.fonte && c.fonte !== "DETALHADA");
+const avisoEbm = c => doEbm(c) ? `<div class="msg aviso ebm-aviso">carteira do EBM · cliente de outro vendedor · só consulta até você marcar</div>` : "";
 async function desenharCarteira(corpo, d){
   const box = corpo.querySelector("#cl-cart"); if (!box) return;
   let c; try { c = await carteiraDoc(d.cliente); } catch (e) { box.innerHTML = tit("Carteira detalhada") + `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
   const L = c.linhas || [];
-  if (!L.length) { box.innerHTML = tit("Carteira detalhada") + `<div class="vazio">sem linhas de carteira para este cliente no banco (a DETALHADA só tem Ban Ban, Noroeste, Sapataria Nova, Polyélle, Casa Pio e CMS).</div>`; return; }
+  if (!L.length) { box.innerHTML = tit("Carteira detalhada") + `<div class="vazio">sem linhas de carteira para este cliente no banco (a DETALHADA dele, ou a puxada do EBM dos outros clientes, ainda não trouxe este cliente).</div>`; return; }
   const ctx = { nomeCli: nomeDe(d.cliente) };
   const vivas = L.filter(x => CF.so !== "cart" || x.cart > 0);
   const naBusca = x => !CF.busca || (x.r + " " + (x.d || "") + " " + x.c + " " + (x.gci || "") + " " + (x.oc || "") + " " + (x.porta || "") + " " + (x.m || "") + " " + efetiva(x) + " " + (x.dest || x.dxl || "")).toUpperCase().includes(CF.busca.toUpperCase());
@@ -364,14 +369,14 @@ async function desenharCarteira(corpo, d){
     const vv = vivas.filter(x => !x.ex), tot = vv.reduce((s, x) => s + (x.cart || 0), 0), pa = new Map(); for (const x of vv) { const g = grupoAcao(efetiva(x)) || "(vazia)"; pa.set(g, (pa.get(g) || 0) + (x.cart || 0)); }
     const decididas = vv.filter(x => x.a).length, pend = vv.filter(x => !efetiva(x)).length, nov = vivas.filter(x => x.nova).length, exc = vivas.length - vv.length;
     box.className = "card cartd fechada";
-    box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)}`, btExp) + `<div class="num"><div><b>${fmt(tot)}</b><small>pares em carteira</small></div><div><b>${fmt(vv.length)}</b><small>linhas</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${fmt(decididas)}</b><small>decididas na tela</small></div>${nov ? `<div><b>${fmt(nov)}</b><small>novas</small></div>` : ""}${exc ? `<div><b>${fmt(exc)}</b><small>excluídas (vermelhas)</small></div>` : ""}</div>
+    box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)}${doEbm(c) ? " · do EBM" : ""}`, btExp) + avisoEbm(c) + `<div class="num"><div><b>${fmt(tot)}</b><small>pares em carteira</small></div><div><b>${fmt(vv.length)}</b><small>linhas</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${fmt(decididas)}</b><small>decididas na tela</small></div>${nov ? `<div><b>${fmt(nov)}</b><small>novas</small></div>` : ""}${exc ? `<div><b>${fmt(exc)}</b><small>excluídas (vermelhas)</small></div>` : ""}</div>
       <div class="chips mini">${[...pa.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([g, n]) => `<span class="chip">${esc(g.toLowerCase())} <b>${fmt(n)}</b></span>`).join("")}</div>`;
     box.querySelector(".expandir").onclick = () => { S.cartAberta = true; box.className = "card cartd larga"; desenharCarteira(corpo, d); box.scrollIntoView({ behavior: "smooth", block: "start" }); };
     return;
   }
   const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), porAcao = new Map(); for (const x of lista) { const g = grupoAcao(efetiva(x)) || "(vazia)"; porAcao.set(g, (porAcao.get(g) || 0) + (x.cart || 0)); }
   box.className = "card cartd larga";
-  box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco · no formato da DETALHADA`, btExp + ir("cg", { cliente: d.cliente }, "abrir a AG")) + `
+  box.innerHTML = tit("Carteira detalhada", `base ${dmy(c.base_em)} · ${fmt(c.n_total)} linhas vivas no banco · ${doEbm(c) ? "do EBM (puxada do robô)" : "no formato da DETALHADA"}`, btExp + ir("cg", { cliente: d.cliente }, "abrir a AG")) + avisoEbm(c) + `
     <div class="filtros"><div class="linha"><label>mostrar</label><div class="chips" data-f="so"><button type="button" data-v="cart" class="${CF.so === "cart" ? "ativa" : ""}">só carteira aberta</button><button type="button" data-v="tudo" class="${CF.so === "tudo" ? "ativa" : ""}">com faturado recente</button></div><input type="search" id="cl-cart-busca" placeholder="referência, descrição, cor, GCI, OC, porta, marca…" value="${esc(CF.busca)}" autocomplete="off">${ctx.af.limpar()}</div></div>
     <div class="num"><div><b>${fmt(cart)}</b><small>pares na tela</small></div><div><b>${fmt(lista.length)}</b><small>linhas${FC.size ? " de " + fmt(base.length) : ""}</small></div>${[...porAcao.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, n]) => `<div><b>${fmt(n)}</b><small>${esc(g.toLowerCase())}</small></div>`).join("")}</div>
     ${tabelaXl(lista.slice(0, 2_000), ctx)}
@@ -411,14 +416,14 @@ async function carteiraMini(sel, container, sb, irCliente){
   const base = L.filter(x => x.r === sel.referencia && (!sel.cor || x.c === sel.cor) && x.prev && String(x.prev).slice(0, 7) === mes);
   const vai = () => { S.cliente = sel.cliente; S.cartAberta = true; if (irCliente) irCliente(sel.cliente); };
   if (!base.length) {
-    container.innerHTML = `<div class="vazio">sem linha na carteira detalhada para ${mesBR(mes)}${L.length ? "" : " — este cliente não tem carteira detalhada no banco (a DETALHADA só tem Ban Ban, Noroeste, Sapataria Nova, Polyélle, Casa Pio e CMS)"}.</div><button type="button" class="sec ir-cli">abrir a aba Cliente ›</button>`;
+    container.innerHTML = `<div class="vazio">sem linha na carteira detalhada para ${mesBR(mes)}${L.length ? "" : " — este cliente ainda não tem carteira detalhada no banco (nem na DETALHADA dele, nem na puxada do EBM dos outros clientes)"}.</div><button type="button" class="sec ir-cli">abrir a aba Cliente ›</button>`;
     container.querySelector(".ir-cli").onclick = vai; return;
   }
   const FM = new Map(), ctx = { nomeCli: nomeDe(sel.cliente) };
   const desenha = () => {
     const lista = base.filter(x => ctx.af.passaTodos((y, k) => valorCol(y, k, ctx), x));
     const cart = lista.reduce((s, x) => s + (x.cart || 0), 0), fat = lista.reduce((s, x) => s + (x.fat || 0), 0), pend = lista.filter(x => !efetiva(x)).length;
-    container.innerHTML = `<div class="num"><div><b>${fmt(cart)}</b><small>pares em carteira</small></div><div><b>${fmt(fat)}</b><small>faturados</small></div><div><b>${fmt(lista.length)}</b><small>linhas em ${mesBR(mes)}${FM.size ? " de " + fmt(base.length) : ""}</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${dmy(c.base_em)}</b><small>base</small></div></div>
+    container.innerHTML = avisoEbm(c) + `<div class="num"><div><b>${fmt(cart)}</b><small>pares em carteira</small></div><div><b>${fmt(fat)}</b><small>faturados</small></div><div><b>${fmt(lista.length)}</b><small>linhas em ${mesBR(mes)}${FM.size ? " de " + fmt(base.length) : ""}</small></div><div class="${pend ? "al" : ""}"><b>${fmt(pend)}</b><small>sem ação</small></div><div><b>${dmy(c.base_em)}</b><small>base${doEbm(c) ? " · EBM" : ""}</small></div></div>
       ${ctx.af.limpar()}${tabelaXl(lista, ctx)}
       <div class="cm-msg"></div><button type="button" class="sec ir-cli">tratar a carteira inteira na aba Cliente ›</button>`;
     ajustarXl(container);
@@ -449,6 +454,7 @@ ${COLS.map(c => `.cliente table.xl th.c-${c.k}{min-width:${c.w * 7 + 5}px}.clien
 .cliente table.xl select.dec,.cliente table.xl input.dec{width:100%;min-width:0;height:19px;margin:0;padding:0 3px;line-height:17px;font-size:10pt;font-family:inherit;background:#fff;color:#000;border:1px solid rgb(217,217,217);border-radius:2px;text-align:center;text-overflow:ellipsis;box-sizing:border-box}
 .cliente table.xl button.fl{width:16px;height:16px;padding:0;margin:0 0 0 4px;border:1px solid rgb(173,174,179);border-radius:2px;background:#fff;color:#000;font-size:9px;line-height:1;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center}.cliente table.xl button.fl.on{border-color:rgb(31,73,125)}.cliente table.xl button.fl svg{fill:rgb(31,73,125);width:10px;height:10px}
 .cliente .limpa-filtros{width:auto;margin:0 0 0 6px;padding:5px 10px;font-size:.74rem;border-color:var(--azul);color:var(--off-white);background:var(--azul)}
+.msg.aviso.ebm-aviso{margin:6px 0 8px;padding:8px 12px;font-size:.86rem;font-weight:700;color:var(--preto);background:var(--amarelo);border:0}
 .cart-quadro .limpa-filtros{margin:0 0 4px}
 `;
 if (typeof document !== "undefined" && !document.getElementById("css-xl")) { const st = document.createElement("style"); st.id = "css-xl"; st.textContent = CSS_XL; document.head.appendChild(st); }
