@@ -603,7 +603,7 @@ async function pedirSaida(tipos){
 }
 async function mostrarSaidas(el){
   const o = el.querySelector("#vit-saidas"); if (!o || !VIT.cliente) { if (o) o.innerHTML = ""; return; }
-  const r = await SB.from("vitrine_saida").select("id,tipo,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
+  const r = await SB.from("vitrine_saida").select("id,tipo,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho,previa,confirmado_em").eq("escritorio_id", VIT.esc).eq("cliente", VIT.cliente).order("pedido_em", { ascending: false }).limit(6);
   if (r.error || !r.data) { o.innerHTML = ""; return; }
   const hora = s => s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   // enquanto houver pedido na fila, a lista se relê sozinha a cada 20 s (ele, 19/10 15:0x: "só apareceu uma informação" — o pronto não chegava sem F5)
@@ -618,13 +618,26 @@ async function mostrarSaidas(el){
   // title (a página não sabe quem é ele). Saída de antes da 0062, sem storage_path: só na máquina dele.
   const nomeArq = x => String(x.arquivo || "").split(/[\\/]/).pop() || "saida.xlsx";
   const pronto = x => x.storage_path ? `<button type="button" class="sai-baixa" data-p="${esc(x.storage_path)}" data-n="${esc(nomeArq(x))}" title="${esc(x.arquivo || "")}">baixar</button> <span class="mu" title="${esc(x.arquivo || "")}">${esc(nomeArq(x))}${x.tamanho ? " · " + Math.max(1, Math.round(x.tamanho / 1e3)) + " KB" : ""}</span>` : `<span class="mu" title="${esc(x.arquivo || "")}">arquivo só na máquina do Léo</span>`;
-  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : "fila")}" data-id="${x.id}"><button type="button" class="sai-x" title="tirar esta linha">×</button><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? `pronto ${esc(hora(x.atendido_em))} → ${pronto(x)}${x.nota ? " · " + esc(x.nota) : ""}` : "na fila — sai em até 2 min (esta lista se atualiza sozinha)")}</div>`).join("");
+  // 20/10 (0064, ordem dele 17:02): o GIRO grava NA AG DO CLIENTE em dois tempos — o executor anota a PRÉVIA ("vou criar N linhas, preencher M
+  // células em JAN..JUN, deixar K em branco, STATUS 1S27 em P") e espera; o botão "confirmar" marca confirmado_em e só então a AG recebe.
+  // Pronto = a nota diz o que gravou e onde está o backup; o arquivo é a AG dele (não vai ao cofre).
+  const giroFila = x => x.tipo === "giro" && !x.atendido_em;
+  const previa = x => x.confirmado_em ? `confirmado ${esc(hora(x.confirmado_em))} — gravando na AG em até 2 min · ${esc(x.nota || "")}` : `<span class="sai-previa">${esc(x.nota || "")}</span> <button type="button" class="sai-conf" data-id="${x.id}" title="grava a prévia acima na AG do cliente (com backup)">confirmar na AG</button>`;
+  const prontoGiro = x => `gravado na AG ${esc(hora(x.atendido_em))} · <span class="mu" title="${esc(x.arquivo || "")}">${esc(nomeArq(x))}</span>${x.nota ? " · " + esc(x.nota) : ""}`;
+  o.innerHTML = lista.map(x => `<div class="sai-item ${x.erro ? "erro" : (x.atendido_em ? "pronto" : (giroFila(x) && x.previa ? "aguarda" : "fila"))}" data-id="${x.id}"><button type="button" class="sai-x" title="tirar esta linha">×</button><b>${esc(ROTULO_SAIDA[x.tipo] || x.tipo)}</b> · pedido ${esc(hora(x.pedido_em))} · ${x.erro ? "não saiu: " + esc(x.erro) : (x.atendido_em ? (x.tipo === "giro" ? prontoGiro(x) : `pronto ${esc(hora(x.atendido_em))} → ${pronto(x)}${x.nota ? " · " + esc(x.nota) : ""}`) : (giroFila(x) && x.previa ? previa(x) : (giroFila(x) ? "na fila — a prévia (o que vai para a AG) chega em até 2 min, e você confirma antes de gravar" : "na fila — sai em até 2 min (esta lista se atualiza sozinha)")))}</div>`).join("");
   for (const b of o.querySelectorAll(".sai-x")) b.onclick = () => { const id = +b.parentElement.dataset.id; ocultas.add(id); try { localStorage.setItem("gestor.saidas.ocultas", JSON.stringify([...ocultas].slice(-200))); } catch (e) {} b.parentElement.remove(); };
   for (const b of o.querySelectorAll(".sai-baixa")) b.onclick = () => baixarSaida(b);
+  for (const b of o.querySelectorAll(".sai-conf")) b.onclick = () => confirmarSaida(b, el);
+}
+async function confirmarSaida(b, el){
+  b.disabled = true; b.textContent = "confirmando…";
+  const r = await SB.from("vitrine_saida").update({ confirmado_em: new Date().toISOString() }).eq("id", +b.dataset.id);
+  if (r.error) { b.disabled = false; b.textContent = "o banco recusou: " + r.error.message; setTimeout(() => { b.textContent = "confirmar na AG"; }, 6e3); return; }
+  mostrarSaidas(el);
 }
 const XLSX_TIPO = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 // o botão "baixar" dentro da linha da saída (o botão global da página é de tela cheia): azul da paleta, do tamanho da linha
-const CSS_SAIDA = ".sai-item .sai-baixa{width:auto;margin:0 2px;padding:2px 10px;border-radius:6px;background:var(--azul);color:var(--off-white);font-size:.68rem;font-weight:700;vertical-align:baseline}.sai-item .sai-baixa:disabled{opacity:.7}";
+const CSS_SAIDA = ".sai-item .sai-baixa,.sai-item .sai-conf{width:auto;margin:0 2px;padding:2px 10px;border-radius:6px;background:var(--azul);color:var(--off-white);font-size:.68rem;font-weight:700;vertical-align:baseline}.sai-item .sai-baixa:disabled,.sai-item .sai-conf:disabled{opacity:.7}.sai-item.aguarda{border-color:var(--amarelo)}.sai-item .sai-previa{display:block;margin:2px 0}";
 if (typeof document !== "undefined" && !document.getElementById("css-saida")) { const st = document.createElement("style"); st.id = "css-saida"; st.textContent = CSS_SAIDA; document.head.appendChild(st); }
 async function baixarSaida(b){
   const nome = b.dataset.n, antes = b.textContent, volta = (t, ms) => { b.textContent = t; setTimeout(() => { b.textContent = antes; b.disabled = false; }, ms); };
