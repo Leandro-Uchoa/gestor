@@ -743,7 +743,11 @@ function desenharEsquerda(pg){
   const porModelo = new Map();
   // na DISTRIBUIÇÃO (ele, 19/10 11:2x: "quando vier a ESFERA, vem tudo bloco junto") o modelo é UM bloco só, todas as cores, sem família nem gênero
   for (const it of lista) { const k = it.m + "|" + it.r; if (!porModelo.has(k)) porModelo.set(k, []); porModelo.get(k).push(it); }   // 21:3x: sempre um bloco por modelo
-  for (const cores of porModelo.values()) {
+  // ele, 19/10 22:0x: "coloca sempre em ordem crescente de preço: nos confortos inicia do 189, depois 199, 229, 249… aí vem outro bloco, corrida; por blocos"
+  const precoMin = cs => Math.min(...cs.map(c => +c.p || Infinity));
+  const grupos = [...porModelo.values()].sort((A, B) => { const a = A[0], b = B[0]; return (a.m < b.m ? -1 : a.m > b.m ? 1 : 0) || (tipoIdx(a.t) - tipoIdx(b.t))
+    || (gtm ? 0 : ((oficial(a) ? famOrd(familiaDe(a)) : 0) - (oficial(b) ? famOrd(familiaDe(b)) : 0))) || (precoMin(A) - precoMin(B)) || (a.o - b.o); });
+  for (const cores of grupos) {
     const m = cores[0];
     const sec = gtm ? "" : familiaDe(m);
     if (sec !== bloco || bloco === null) { bloco = sec; html += `<div class="mont-sec">${esc(NOME_TIPO[m.t] || m.t)}${bloco ? " · " + esc(bloco) : ""}</div>`; }
