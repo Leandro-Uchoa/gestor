@@ -577,7 +577,7 @@ const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", eb
 const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v.size) f.mes = MESES_V.filter(m => VF_MES.v.has(m)); if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) { const g = [...VF.gen].filter(x => x !== "Grade especial"); if (g.length) f.gen = g; if (VF.gen.has("Grade especial")) f.esp = true; } if (VF.bloco.size) f.familia = [...VF.bloco];
   const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen || f.esp) partes.push([...(f.gen || []).map(g => g.toLowerCase()), ...(f.esp ? ["grade especial"] : [])].join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes.join(" e "));
   f.texto = partes.length ? partes.join(" · ") : ""; return Object.keys(f).length > 1 || f.texto ? f : null; };
-const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && (!f.gen || f.gen.includes(it.ge || "")) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes.some(m => m in (e.pm || {})))))); };
+const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && ((!f.gen && !f.esp) || gruposDe(it).some(g => (f.gen || []).includes(g) || (f.esp && g === "Grade especial"))) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes.some(m => m in (e.pm || {})))))); };
 function confirmar(titulo, texto){
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
@@ -849,9 +849,9 @@ function desenharDireita(pg){
   const l1 = todas.filter(it => !VF.marca.size || VF.marca.has(it.m));
   linha("vf-tipo", conta(l1, it => it.t), v => NOME_TIPO[v] || v, VF.tipo, "todos", (a, b) => tipoIdx(a[0]) - tipoIdx(b[0]));
   const l2 = l1.filter(it => !VF.tipo.size || VF.tipo.has(it.t));
-  const mGen = ehGtm() ? new Map() : conta(l2, it => it.ge); { const ne = ehGtm() ? 0 : l2.filter(ehEsp).length; if (ne) mGen.set("Grade especial", ne); }
+  const mGen = new Map(); if (!ehGtm()) for (const it of l2) for (const g of gruposDe(it)) mGen.set(g, (mGen.get(g) || 0) + 1);   // pelo grupo do cartão (grade escolhida), não pelo gênero do catálogo
   linha("vf-gen", mGen, v => v, VF.gen, "todos", (a, b) => genOrd(a[0]) - genOrd(b[0]));
-  const casaGrupo = it => !VF.gen.size || VF.gen.has(it.ge || "") || (VF.gen.has("Grade especial") && ehEsp(it));
+  const casaGrupo = it => !VF.gen.size || gruposDe(it).some(g => VF.gen.has(g));
   if (ehGtm()) VF.gen.clear();
   const l3 = l2.filter(casaGrupo);
   linha("vf-bloco", conta(l3, it => familiaDe(it)), v => titulo(v), VF.bloco, "todas as famílias");
@@ -892,6 +892,7 @@ function desenharDireita(pg){
   let secAtual = null, html = "";
   // um CARTÃO POR GRADE (ele, 16:2x): cor com grade feminina e masculina aparece duas vezes, cada uma na sua seção, com os seus meses
   const cartoes = gtm ? lista.map(it => ({ it, e: null, i: 0, n: 1 })) : lista.flatMap(it => { const L = entradasDe(chaveCor(it)); return L.length ? L.map((e, i) => ({ it, e, i, n: L.length })) : [{ it, e: null, i: 0, n: 1 }]; })
+    .filter(c => gtm || !VF.gen.size || VF.gen.has(grupoDeEntrada(c.it, c.e ? c.e.grade : VIT.grades.get(chaveCor(c.it)))))   // cor com duas grades: só o cartão do grupo filtrado
     .filter(c => !VF_MES.v.size || !c.e || [...VF_MES.v].some(m => m in (c.e.pm || {})))
     .sort((a, b) => (secOrd(secaoDe(a.it, a.e ? a.e.grade : undefined)) - secOrd(secaoDe(b.it, b.e ? b.e.grade : undefined))) || ((b.it.p == null ? -1 : +b.it.p) - (a.it.p == null ? -1 : +a.it.p)) || String(a.it.n).localeCompare(String(b.it.n)) || String(a.it.c).localeCompare(String(b.it.c)) || (a.i - b.i));
   for (const { it, e, i, n } of cartoes) {
@@ -974,6 +975,14 @@ const guardarEntradas = (kc, L) => { const t = somaMeses(L); VIT.gradesL.set(kc,
 const limparEntradas = kc => { for (const m of [VIT.gradesL, VIT.grades, VIT.gradeTx, VIT.pares, VIT.pares6, VIT.meses, VIT.meses6]) m.delete(kc); };
 const linhaDeEntradas = L => { const t = somaMeses(L); return { grade: (L[0] && L[0].grade) || null, grade_texto: (L[0] && L[0].tx) || null, pares: t.pares, pares6: t.pares6 || null, pares_mes: t.pm, pares6_mes: Object.keys(t.pm6).length ? t.pm6 : null, grades: L }; };
 const ehUnissex = it => /unissex|unisex/i.test(it.ge || "");
+// o GRUPO do cartão na vitrine do cliente = a grade que ELE escolheu (feminina → Feminino, masculina → Masculino, estendida → Unissex,
+// especial → Grade especial, infantil → Infantil); sem grade, o gênero do catálogo. A seção, o filtro "grupo" e as saídas usam ESTA regra
+// (ele, 20/10 11:3x: "ELEVADO arenito cinza está na vitrine como tênis feminino e aparece no grupo masculino — bagunça").
+const grupoDeEntrada = (it, g) => {
+  if (it.t === "TENIS") { if (g === "especial") return "Grade especial"; if (g === "estendida") return "Unissex"; if (g === "feminina") return "Feminino"; if (g === "masculina") return "Masculino"; if (g === "infantil") return "Infantil"; }
+  if (ehInf(it)) return "Infantil"; if (ehFem(it)) return "Feminino"; if (ehMasc(it)) return "Masculino"; return ehUnissex(it) ? "Unissex" : (it.ge || "");
+};
+const gruposDe = it => { const k = chaveCor(it), L = entradasDe(k); const gs = L.length ? L.map(e => grupoDeEntrada(it, e.grade)) : [grupoDeEntrada(it, VIT.grades.get(k))]; return [...new Set(gs.filter(Boolean))]; };
 const ehMasc = it => /^masc/i.test(it.ge || ""), ehFem = it => /^fem/i.test(it.ge || ""), ehInf = it => /^inf/i.test(it.ge || "");
 // numeração "34/44", "38/48" → o maior número; grade ESPECIAL = tênis que digita até o 48 (ordem dele, 19/10: "produtos que têm digitação até o 48")
 const numMax = it => { const m = String(it.nu || "").match(/(\d{2})\s*$/); return m ? +m[1] : null; };
