@@ -131,6 +131,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .fpainel .fp-mes{display:flex;flex-wrap:wrap;align-items:center}.fpainel .fp-mes>label.fp-m{flex:1;font-weight:700}.fpainel .fp-mes .fp-exp{flex:none;width:16px;height:16px;margin:0;padding:0;border:0;background:transparent;color:#000;font-size:10px;line-height:1;font-weight:400}.fpainel .fp-mes .fp-dias{flex-basis:100%;margin-left:22px}.fpainel .fp-mes.oculto{display:none}
 .fpainel .fp-tudo{display:flex;gap:6px;margin-bottom:6px}.fpainel button{width:auto;margin:0;padding:4px 10px;font-size:12px;border-radius:3px;background:#1f497d;color:#fff;border:1px solid #1f497d;font-weight:700}.fpainel button.sec{background:#f2f2f2;color:#000;border-color:#adaeb3;font-weight:600}.fpainel .fp-acoes{display:flex;gap:6px;justify-content:flex-end}.fpainel .fp-vals{display:flex;gap:6px}
 #resultado .limpa-filtros{width:auto;margin:0 0 0 6px;padding:3px 10px;font-size:.74rem;border-color:var(--azul);color:var(--off-white);background:var(--azul)}
+#resultado .cg-sug{width:auto;margin:0 0 0 10px;padding:3px 10px;font-size:.74rem;color:var(--ink)}   /* v6.00: o atalho da sugestão de trade, com UM cliente */
 .cg th.col,.cg td.col{background:#d9d9d9}
 .legenda .lg{display:inline-block;width:11px;height:11px;border:1px solid #adaeb3;vertical-align:-1px;margin:0 3px 0 6px;border-radius:2px}.lg-r{background:#f00}.lg-rosa{background:#e6b9b8}.lg-fat{background:#e2efda}.lg-conf{background:#92d050}.lg-aporte{background:#00b050}.lg-sug{background:#00b0f0}.lg-aten{background:#ff0}.lg-canc{background:#f00}.lg-stot{background:#fde9d9;border-color:rgb(217,150,148)}
 /* abas e o seletor venda/estoque: botões pequenos, lado a lado */
@@ -541,7 +542,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v5.99</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.00</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -623,7 +624,8 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="colecao.js?v=57"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=16"></script>
-<script src="cliente.js?v=11"></script>
+<script src="cliente.js?v=12"></script>
+<script src="trade_sugestao.js?v=1"></script>
 <script src="trade.js?v=3"></script>
 <script src="topics.js?v=4"></script>
 <script>
@@ -774,7 +776,7 @@ window.irPara = (aba, est) => {
   if (aba === "vitrine" && window.Colecao && Colecao.irVitrine) Colecao.irVitrine(est.cliente);
   if (aba === "atas" && window.Atas && Atas.ir) Atas.ir(est.pasta);
   if (aba === "topics" && window.Topics && Topics.ir) Topics.ir(est.bloco);
-  if (aba === "cliente" && window.Cliente && Cliente.ir) Cliente.ir(est.cliente);
+  if (aba === "cliente" && window.Cliente && Cliente.ir) Cliente.ir(est.cliente, est);   // 21/10: est.sugestao abre o painel "Ações de trade — sugestão"
   trocarAba(aba);
 };
 // 19/10, ordem dele: "um botão que eu clique e tem a opção de extrair para outra janela — em todos os campos". A aba abre numa JANELA
@@ -1086,7 +1088,8 @@ function desenharCG(linhas, pedidos, bases){
   const visiveis = FILTROS.size ? linhas.filter(a => passaLinha(a, null, FILTROS)) : linhas;
   const tot = { meses: {} }; for (const a of visiveis) for (const [m, c] of Object.entries(a.meses)) { const t = tot.meses[m] || (tot.meses[m] = {}); for (const k of ["venda", "estoque", "fat", "cart"]) if (c[k] != null) t[k] = (t[k] || 0) + c[k]; }
   const nCores = visiveis.reduce((s, a) => s + a.cores.size, 0);
-  let html = `<div class="card"><b>${visiveis.length} referência(s)</b>${FILTROS.size ? ` <span class="mu">de ${linhas.length}</span>` : ""} · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}${FILTROS.size ? ` · ${AF.limpar()}` : ""}<div class="legenda">por mês, como na AG: venda · estoque · cob (estoque ÷ venda: <i class="lg lg-rosa"></i>≥ 3,5 alta · <i class="lg lg-r"></i>&lt; 2,5) · observação é sua, por cliente (grava ao sair do campo) · carteira, o estado pintado na AG do cliente: <i class="lg lg-fat"></i>faturada · <i class="lg lg-conf"></i>confirmada · <i class="lg lg-aporte"></i>aporte · <i class="lg lg-sug"></i>sugestão · <i class="lg lg-aten"></i>atenção · <i class="lg lg-canc"></i>cancelar (sem AG pintada: faturado = faturada, carteira = confirmada) · <i class="lg lg-stot"></i>total do semestre = soma dos meses na tela · toque na carteira para abrir a detalhada do mês · ▾ no rótulo filtra a coluna, como no Excel · a linha do alto é o total do que está visível · toque no mês para esconder a coluna; no + para trazer de volta</div></div>`;
+  // 21/10 (v6.00): com UM cliente na tela, o atalho para a sugestão de ações de trade (abre a aba Cliente já no painel)
+  let html = `<div class="card"><b>${visiveis.length} referência(s)</b>${FILTROS.size ? ` <span class="mu">de ${linhas.length}</span>` : ""} · ${nCores} linha(s) por cor · ${esc(bases.join(" · "))}${FILTROS.size ? ` · ${AF.limpar()}` : ""}${UM_CLIENTE ? `<button type="button" class="sec cg-sug" title="elege pelo giro (estoque alto com venda boa · giro baixo) e simula o cashback com o impacto financeiro — abre na aba Cliente">sugestão de ações de trade ›</button>` : ""}<div class="legenda">por mês, como na AG: venda · estoque · cob (estoque ÷ venda: <i class="lg lg-rosa"></i>≥ 3,5 alta · <i class="lg lg-r"></i>&lt; 2,5) · observação é sua, por cliente (grava ao sair do campo) · carteira, o estado pintado na AG do cliente: <i class="lg lg-fat"></i>faturada · <i class="lg lg-conf"></i>confirmada · <i class="lg lg-aporte"></i>aporte · <i class="lg lg-sug"></i>sugestão · <i class="lg lg-aten"></i>atenção · <i class="lg lg-canc"></i>cancelar (sem AG pintada: faturado = faturada, carteira = confirmada) · <i class="lg lg-stot"></i>total do semestre = soma dos meses na tela · toque na carteira para abrir a detalhada do mês · ▾ no rótulo filtra a coluna, como no Excel · a linha do alto é o total do que está visível · toque no mês para esconder a coluna; no + para trazer de volta</div></div>`;
   const fl = AF.botao;
   // a linha de TOTAIS vem ANTES do mês (ele, 19/10 22:1x: "a linha da venda, estoque, cobertura está abaixo da indicação do mês; é para estar acima")
   let totHtml = `<tr class="tot"><th class="fixa ref">total</th><th class="fixa nome">${visiveis.length} ref.</th><th class="fixa cor"></th><th class="fixa gen"></th><th class="fixa pdv"></th><th class="fixa el"></th>`;
@@ -1116,6 +1119,7 @@ function desenharCG(linhas, pedidos, bases){
   for (const b of document.querySelectorAll("#resultado button.mm")) b.onclick = () => { const r = b.dataset.ref; if (ABERTOS.has(r)) ABERTOS.delete(r); else ABERTOS.add(r); desenharCG(linhas, pedidos, bases); };
   for (const th of document.querySelectorAll("#resultado th.mes")) th.onclick = () => { const m = th.dataset.m; if (COLAPSADOS.has(m)) COLAPSADOS.delete(m); else COLAPSADOS.add(m); desenharCG(linhas, pedidos, bases); };
   AF.ligar($("resultado"));
+  { const bs = $("resultado").querySelector(".cg-sug"); if (bs) bs.onclick = () => window.irPara("cliente", { cliente: UM_CLIENTE, sugestao: true }); }
   for (const td of document.querySelectorAll("#resultado tbody td.ck")) td.onclick = () => { const tr = td.closest("tr"), a = linhas.find(x => x.referencia === tr.dataset.ref); abrirCarteiraMes(tr.dataset.ref, tr.dataset.cor != null ? tr.dataset.cor : null, td.dataset.cm, a ? a.descricao : tr.dataset.ref); };
   for (const inp of document.querySelectorAll("#resultado input.obs")) { inp.onblur = () => gravarObs(inp); inp.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); inp.blur(); } if (ev.key === "Escape") { inp.value = OBS[inp.dataset.k] || ""; inp.blur(); } }; }
   for (const chk of document.querySelectorAll("#resultado input.el")) chk.onchange = () => gravarEmLinha(chk);

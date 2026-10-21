@@ -1,4 +1,5 @@
-/* CLIENTE · a aba por cliente do Gestor (TI, 19/10/2026; 20/10: a Carteira detalhada no formato do Excel — COLS, tabelaXl, autofiltro da GestorLib). Ordem dele: "abre clientes, seleciono o cliente, e dentro vai ter tudo
+/* CLIENTE · a aba por cliente do Gestor (TI, 19/10/2026; 20/10: a Carteira detalhada no formato do Excel — COLS, tabelaXl, autofiltro da GestorLib;
+   21/10: o painel "Ações de trade — sugestão", que chama trade_sugestao.js). Ordem dele: "abre clientes, seleciono o cliente, e dentro vai ter tudo
    referente a ele — raio-x, carteiras, vitrine, gestão e ações de trade, ata, assuntos pendentes; dashboards; um raio-x do cliente".
    Um painel por assunto, cada um com o resumo e o botão que abre a aba inteira já no cliente. Tudo vem de UMA chamada
    (cliente_consulta) — a página é desenho; número mora no banco. Sem número de 4+ dígitos aqui (vai ao repositório público). */
@@ -12,7 +13,7 @@ const mesBR = m => m ? MESES[+String(m).slice(5, 7) - 1] + "/" + String(m).slice
 const dmy = d => d ? String(d).slice(8, 10) + "/" + String(d).slice(5, 7) + "/" + String(d).slice(2, 4) : "—";
 const hoje = () => new Date().toISOString().slice(0, 10);
 let LISTA = null, DOCS = {}, EL = null, SB = null, ESC = null;
-const S = { cliente: null, form: false, erro: "", todosTopics: false, cartAberta: false };
+const S = { cliente: null, form: false, erro: "", todosTopics: false, cartAberta: false, sugestao: false };
 const nomeDe = c => { const p = (LISTA || []).find(x => x.cliente === c); return p ? p.nome : c; };
 
 async function abrir(sb, el){
@@ -63,9 +64,9 @@ async function desenhar(){
   try { d = await doc(S.cliente); } catch (e) { corpo.innerHTML = `<div class="msg erro">O banco recusou: ${esc(e.message)}</div>`; return; }
   if (!d) { corpo.innerHTML = `<div class="card mu">Nada no banco para este cliente.</div>`; return; }
   S.erro = "";
-  corpo.innerHTML = cabecalho(d) + `<div class="grade">${pendentes(d)}${carteiraGiro(d)}${raioX(d)}${vitrine(d)}${atas(d)}${trade(d)}${carteiraDetalhada(d)}${pedidosOriginais(d)}</div>`;
-  const ligarIr = () => { for (const b of corpo.querySelectorAll("button.ir")) b.onclick = () => { if (window.irPara) window.irPara(b.dataset.aba, JSON.parse(b.dataset.est || "{}")); }; };
-  ligarIr(); ligarTrade(corpo, d); ligarTopics(corpo, d);
+  corpo.innerHTML = cabecalho(d) + `<div class="grade">${pendentes(d)}${carteiraGiro(d)}${raioX(d)}${vitrine(d)}${atas(d)}${trade(d)}${tradeSugestao(d)}${carteiraDetalhada(d)}${pedidosOriginais(d)}</div>`;
+  const ligarIr = () => { for (const b of corpo.querySelectorAll("button.ir[data-aba]")) b.onclick = () => { if (window.irPara) window.irPara(b.dataset.aba, JSON.parse(b.dataset.est || "{}")); }; };
+  ligarIr(); ligarTrade(corpo, d); ligarTopics(corpo, d); ligarSugestao(corpo, d);
   desenharCarteira(corpo, d).then(ligarIr); desenharPedidos(corpo, d);
 }
 
@@ -201,6 +202,20 @@ function ligarTrade(corpo, d){
   };
 }
 
+
+// ---------- AÇÕES DE TRADE — SUGESTÃO (21/10, ordem dele via NÚCLEO; memória trade-acoes-de-aceleracao-metodo): o painel abre fechado e o
+// botão chama o módulo trade_sugestao.js (elege pelo giro, simula o cashback com o impacto financeiro, PDF, Excel, TOPICS, ação). A Análise
+// de giro chega aqui com `sugestao: true` (irPara) e o painel abre sozinho.
+function tradeSugestao(d){
+  return `<div class="card larga tsug" id="cl-tsug" data-cliente="${esc(d.cliente)}" data-nome="${esc(nomeDe(d.cliente))}">${tit("Ações de trade — sugestão", "elege pelo giro (estoque alto com venda boa · giro baixo) e simula o cashback, com o impacto financeiro", `<button type="button" class="sec ir ir-sug">sugestão de ações ›</button>`)}
+    <div class="vazio">toque em "sugestão de ações": produtos com histórico no cliente, estoque da CMS, cobertura, ★ nos eleitos, meta +30–35% no período, gasto nas duas contas, PDF e Excel.</div></div>`;
+}
+function ligarSugestao(corpo, d){
+  const box = corpo.querySelector("#cl-tsug"); if (!box) return;
+  const abrirSug = () => { if (!window.TradeSugestao) { box.querySelector(".vazio").innerHTML = `<span class="msg erro">o módulo trade_sugestao.js não carregou — recarregue a página</span>`; return; } TradeSugestao.abrir(SB, box, d.cliente, nomeDe(d.cliente)); };
+  box.querySelector(".ir-sug").onclick = abrirSug;
+  if (S.sugestao) { S.sugestao = false; abrirSug(); setTimeout(() => box.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }
+}
 
 // ---------- TOPICS VIVO dentro do cliente (ele, 19/10 19:0x: "que eu não precise abrir o TOPICS para atualizar; faço a manutenção ali")
 // marca feito / desfaz e responde, gravando em topics_item como a aba TOPICS (a política do banco é a mesma: só quem está em topics_leitor)
@@ -509,5 +524,5 @@ async function desenharPedidos(corpo, d){
   };
 }
 
-window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: c => { S.cliente = c; }, grupoAcao, recarregar: () => { DOCS = {}; }, carteiraMini, ACOES, COLS };
+window.Cliente = { abrir, estado: () => ({ cliente: S.cliente }), ir: (c, est) => { S.cliente = c; if (est && est.sugestao) S.sugestao = true; }, grupoAcao, recarregar: () => { DOCS = {}; }, carteiraMini, ACOES, COLS };
 })();
