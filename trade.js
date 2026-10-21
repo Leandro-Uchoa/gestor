@@ -61,9 +61,15 @@ function desenhar(){
 
 function desenharCorpo(){
   const lista = filtradas(), tot = k => lista.reduce((s, a) => s + (Number(a[k]) || 0), 0);
-  const prov = tot("provisionado"), util = tot("utilizada"), rest = lista.reduce((s, a) => s + (a.restante != null ? Number(a.restante) : (Number(a.provisionado) || 0) - (Number(a.utilizada) || 0)), 0);
+  // a verba (ele, 21/10 10:1x: "considere a verba consumida somente o que está feito ou em andamento; outra informação do que está
+  // provisionado [planejada] e outra do que ainda está em aberto — a todo momento a gente muda a intenção da ação")
+  const valor = a => Number(a.provisionado != null ? a.provisionado : a.verba) || 0;
+  const vivas = lista.filter(a => a.status !== "cancelada"), total = vivas.reduce((s, a) => s + valor(a), 0);
+  const consumida = lista.filter(a => a.status === "feita" || a.status === "em andamento").reduce((s, a) => s + (a.utilizada != null ? Number(a.utilizada) : valor(a)), 0);
+  const provisionada = lista.filter(a => a.status === "planejada").reduce((s, a) => s + valor(a), 0);
+  const aberto = total - consumida - provisionada, canceladas = lista.filter(a => a.status === "cancelada").reduce((s, a) => s + valor(a), 0);
   const portas = tot("portas"), carga = D.carga || {};
-  EL.querySelector("#tr-placar").innerHTML = `<div class="card"><div class="num"><div><b>${rs(prov)}</b><small>provisionado</small></div><div><b>${rs(util)}</b><small>utilizada / aprovada</small></div><div class="${rest > 0 ? "al" : ""}"><b>${rs(rest)}</b><small>restante</small></div><div><b>${fmt(lista.length)}</b><small>ações</small></div><div><b>${fmt(portas)}</b><small>portas</small></div></div>
+  EL.querySelector("#tr-placar").innerHTML = `<div class="card"><div class="num"><div><b>${rs(total)}</b><small>verba total (sem canceladas)</small></div><div><b>${rs(consumida)}</b><small>consumida · feita + em andamento</small></div><div><b>${rs(provisionada)}</b><small>provisionada · planejada</small></div><div class="${aberto > 0 ? "al" : ""}"><b>${rs(aberto)}</b><small>em aberto</small></div><div><b>${rs(canceladas)}</b><small>canceladas</small></div><div><b>${fmt(lista.length)}</b><small>ações</small></div><div><b>${fmt(portas)}</b><small>portas</small></div></div>
     <div class="fontes">${carga.arquivo ? `planilha ${esc(carga.arquivo)} · carga de ${dmy(carga.carregado_em)}` : "sem carga da planilha de verbas"} · as ações lançadas na aba Cliente entram aqui também</div></div>`;
   if (!lista.length) { EL.querySelector("#tr-corpo").innerHTML = `<div class="card vazio">nenhuma ação de trade com esses filtros.</div>`; return; }
   const max = Math.max(1, ...lista.map(a => Number(a.provisionado) || 0));
@@ -74,7 +80,7 @@ function desenharCorpo(){
       <td class="estr"><div class="barra" style="--w:${Math.round(100 * (Number(a.provisionado) || 0) / max)}%"></div>${esc(a.titulo)}${a.tipo && a.tipo !== "outro" ? ` <span class="chip">${esc(a.tipo)}</span>` : ""}${a.nota ? `<small class="nota${ab ? " aberta" : ""}">${esc(a.nota)}</small>` : ""}</td>
       <td class="n">${rs(a.provisionado != null ? a.provisionado : a.verba)}</td><td class="n">${a.utilizada != null ? rs(a.utilizada) : "—"}</td><td class="n c">${a.restante != null ? rs(a.restante) : "—"}</td>
       <td><select class="st" data-id="${a.id}">${STATUS.map(s => `<option ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}</select><div class="atu" contenteditable="true" data-id="${a.id}" data-antes="${esc(a.atualizacao || "")}" title="sua atualização: escreva e aperte Enter">${esc(a.atualizacao || "")}</div></td></tr>`; }).join("")}</tbody>
-    <tfoot><tr><td colspan="4">${lista.length} ações</td><td class="n">${rs(prov)}</td><td class="n">${rs(util)}</td><td class="n c">${rs(rest)}</td><td></td></tr></tfoot></table></div>`;
+    <tfoot><tr><td colspan="4">${lista.length} ações</td><td class="n">${rs(tot("provisionado"))}</td><td class="n">${rs(tot("utilizada"))}</td><td class="n c">${rs(aberto)}</td><td></td></tr></tfoot></table></div>`;
   for (const b of EL.querySelectorAll("#tr-corpo button.cli")) b.onclick = () => { if (window.irPara) window.irPara("cliente", { cliente: b.dataset.cli }); };
   // VIVO (ele, 19/10 19:5x: "que eu consiga selecionar o status e um campo para eu atualizar"): grava em trade_acao; o gatilho guarda o histórico
   const gravar = async (id, patch) => {
