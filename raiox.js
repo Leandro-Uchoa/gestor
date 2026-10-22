@@ -41,7 +41,7 @@ async function doc(cliente){
   if (DOCS[cliente]) return DOCS[cliente];
   const r = await SB.rpc("raio_x_consulta", { p_cliente: cliente });
   if (r.error) throw new Error(r.error.message);
-  DOCS[cliente] = r.data; return r.data;
+  DOCS[cliente] = normalizar(r.data); return DOCS[cliente];
 }
 
 function chips(id, lista, atual, aoClicar){
@@ -324,6 +324,22 @@ function semestres(serie, meses){
 // a faixa de preço pelo texto da chave: "TOPO (149,99–179,99)" → "149,99 a 179,99" · "BASE (até 99,99)" → "até 99,99" · "49,99–59,99" → "49,99 a 59,99"
 const rotuloFaixa = k => { const m = /\(([^)]*)\)/.exec(k); return (m ? m[1] : String(k)).replace(/[–—]/g, " a ").toLowerCase(); };
 const faixaRS = k => { const t = rotuloFaixa(k); return /^(acima de|até) /.test(t) ? t.replace(/^(acima de|até) /, "$1 R$ ") : "R$ " + t; };
+// chinelo em DUAS faixas (ele, 22/10/2026: "não é até 99 e acima de 99; é até 139 e acima de 139"): o pacote vinha em base/meio/topo
+// com corte em 99,99; aqui as faixas se somam pelo TETO de cada uma. Faixa sem número legível = deixa como veio (não se inventa corte).
+const tetoFaixa = k => { const t = rotuloFaixa(k); if (/acima de|ou mais/.test(t)) return Infinity; const ns = (t.match(/\d+(?:\.\d{3})*,\d{2}/g) || []).map(x => parseFloat(x.replace(/\./g, "").replace(",", "."))); return ns.length ? Math.max(...ns) : NaN; };
+function chineloDuas(fx){
+  const A = "BASE (até 139,99)", Z = "TOPO (acima de 139,99)", o = { [A]: 0, [Z]: 0 };
+  for (const [k, v] of Object.entries(fx || {})) { const t = tetoFaixa(k); if (isNaN(t)) return fx; o[t <= 139.99 ? A : Z] += v || 0; }
+  return o;
+}
+// a família UA que é TÊNIS: o jsonb do banco reordena as chaves (mesmo tamanho → ordem dos bytes) e "UA OUTROS" vinha antes de
+// "UA TÊNIS" — o Gestor mostrava 11 pares (UA OUTROS) no lugar de 215/119/54 (ele, 22/10, com a AG da Nova aberta)
+const chaveUA = ks => ks.find(k => /^UA\s*T[EÊ]NIS/i.test(k)) || ks.find(k => /^UA\s*FTW/i.test(k)) || null;
+function normalizar(d){
+  if (!d) return d;
+  if (d.piramide) for (const k of Object.keys(d.piramide)) if (/CHINEL/i.test(k) && !/^UA/i.test(k) && d.piramide[k] && typeof d.piramide[k] === "object") d.piramide[k] = chineloDuas(d.piramide[k]);
+  return d;
+}
 const nivel = k => /TOPO/i.test(k) ? 3 : /MEIO/i.test(k) ? 2 : /BASE/i.test(k) ? 1 : parseFloat(String(k).replace(",", ".")) || 0;
 const nivelNome = k => /TOPO/i.test(k) ? "topo" : /MEIO/i.test(k) ? "meio" : /BASE/i.test(k) ? "base" : "";
 // "PREÇO · PDV R$": a pirâmide da família em barras azuis, da faixa de cima para a de baixo. PICASSO (20/10): a largura é proporcional
@@ -358,9 +374,9 @@ function montarApresentacao(d, modo){
   const texto = t => esc(t);
   // famílias e categorias: pelo nome, não pela posição
   const cats = d.cats || [], ehOutra = c => /CHINEL|ACESS|MEIA/i.test(c), ehUA = c => /^UA\b/i.test(c);
-  const catsTenis = cats.filter(c => !ehOutra(c) && !ehUA(c)), catChi = cats.find(c => /CHINEL/i.test(c)), catAcc = cats.find(c => /ACESS/i.test(c)), catMei = cats.find(c => /MEIA/i.test(c)), catUA = cats.find(ehUA);
+  const catsTenis = cats.filter(c => !ehOutra(c) && !ehUA(c)), catChi = cats.find(c => /CHINEL/i.test(c)), catAcc = cats.find(c => /ACESS/i.test(c)), catMei = cats.find(c => /MEIA/i.test(c)), catUA = chaveUA(cats) || cats.find(ehUA);
   const SZ = d.sazonal || {}, famDe = re => Object.keys(SZ).find(k => re.test(k) && !/^UA/i.test(k));
-  const famTen = famDe(/T[EÊ]NIS/i), famChi = famDe(/CHINEL/i), famAcc = famDe(/ACESS/i), famMei = famDe(/MEIA/i), famUA = Object.keys(SZ).find(k => /^UA/i.test(k));
+  const famTen = famDe(/T[EÊ]NIS/i), famChi = famDe(/CHINEL/i), famAcc = famDe(/ACESS/i), famMei = famDe(/MEIA/i), famUA = chaveUA(Object.keys(SZ));
   const PIR = d.piramide || {}, pirDe = re => Object.keys(PIR).find(k => re.test(k) && !/^UA/i.test(k));
   const serieDe = f => { const ms = Object.keys(((SZ[f] || {}).mensal) || {}).sort(); return { meses: ms, vals: ms.map(k => SZ[f].mensal[k] || 0) }; };
   const ref = serieDe(famTen || Object.keys(SZ)[0] || ""), ini = ref.meses[0], fim = ref.meses[ref.meses.length - 1];
@@ -549,7 +565,44 @@ function montarApresentacao(d, modo){
   if (famChi) pags.push(sazSlide(famChi, "Chinelos", unid(catChi || famChi), "Sazonalidade e preço · " + KSAZ, dirPreco(pirDe(/CHINEL/i), catChi, false), FONTE_RD));
   if (famAcc) pags.push(sazSlide(famAcc, "Acessórios", unid(catAcc || famAcc), "Sazonalidade e preço · " + KSAZ, dirPreco(pirDe(/ACESS/i), catAcc, false), FONTE_RD));
   if (famMei) pags.push(sazSlide(famMei, "Meias", unid(catMei || famMei), "Sazonalidade e preço · " + KSAZ, dirPreco(pirDe(/MEIA/i), catMei, true), FONTE_RD));
-  // 14 · mix de meias (modelo · gênero · cor): o documento ainda não traz — some
+  // 13b · TÊNIS × MEIAS na sazonalidade (ele, 22/10/2026, para todos os clientes): barras lado a lado mês a mês, tênis em pares e meias
+  // em packs, e a relação packs de meia por par de tênis embaixo de cada mês; cartões por ano e a leitura dos meses de maior e menor relação
+  if (famTen && famMei) {
+    const sT = SZ[famTen].mensal || {}, sM = SZ[famMei].mensal || {}, meses = Object.keys(sT).filter(m => sM[m] != null).sort();
+    if (meses.length >= 2) {
+      const vt = meses.map(m => sT[m] || 0), vm = meses.map(m => sM[m] || 0), rel = meses.map((m, i) => vt[i] ? vm[i] / vt[i] : null);
+      const n2 = v => v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const H = 300, max = Math.max(...vt, ...vm, 1) * 1.06, fsR = meses.length > 24 ? 14 : meses.length > 18 ? 16 : 18;
+      const colsB = meses.map((m, i) => `<div style="flex:1;display:flex;flex-direction:row;justify-content:center;align-items:flex-end;gap:3px;height:${H}px;${m.endsWith("-01") && i ? `border-left:2px solid ${CINZA2};` : ""}"><div style="width:34%;height:${Math.round(H * vt[i] / max)}px;background:${AZUL}"></div><div style="width:34%;height:${Math.round(H * vm[i] / max)}px;background:${PRETO}"></div></div>`).join("");
+      const linhaMes = `<div style="width:${W}px;display:flex;flex-direction:row;margin-top:4px">${meses.map(m => `<p style="flex:1;font-size:18px;color:${CINZA};text-align:center">${MESES[+m.slice(5, 7) - 1][0].toUpperCase()}</p>`).join("")}</div>`;
+      const linhaRel = `<div style="width:${W}px;display:flex;flex-direction:row">${meses.map((m, i) => `<p style="flex:1;font-size:${fsR}px;font-weight:700;text-align:center;white-space:nowrap">${n2(rel[i])}</p>`).join("")}</div>`;
+      const leg = `<div style="display:flex;flex-direction:row;gap:32px;align-items:center"><span style="display:inline-flex;align-items:center;gap:8px;font-size:22px"><i style="display:inline-block;width:22px;height:22px;background:${AZUL}"></i>tênis Olympikus · pares</span><span style="display:inline-flex;align-items:center;gap:8px;font-size:22px"><i style="display:inline-block;width:22px;height:22px;background:${PRETO}"></i>meias · packs</span><span style="font-size:22px;color:${CINZA}">linha de baixo: packs de meia por par de tênis</span></div>`;
+      const anos = [...new Set(meses.map(m => m.slice(0, 4)))].map(a => { const ix = meses.map((m, i) => m.startsWith(a) ? i : -1).filter(i => i >= 0), t = ix.reduce((s, i) => s + vt[i], 0), mm = ix.reduce((s, i) => s + vm[i], 0);
+        return { a, n: ix.length, t, mm, r: t ? mm / t : null, rot: ix.length < 12 ? ` (${MESES[+meses[ix[0]].slice(5, 7) - 1]}–${MESES[+meses[ix[ix.length - 1]].slice(5, 7) - 1]})` : "" }; });
+      const cards = anos.map(x => `<div style="flex:1;border:2px solid ${CINZA2};border-radius:8px;padding:12px 16px;display:flex;flex-direction:column;gap:2px"><p style="font-size:24px;font-weight:700;color:${AZUL}">${x.a}${esc(x.rot)}</p><p style="font-size:36px;font-weight:800;line-height:1.1">${n2(x.r)}</p><p style="font-size:22px;color:${CINZA}">packs por par · ${n0(x.t / x.n)} pares e ${n0(x.mm / x.n)} packs/mês</p></div>`).join("");
+      const ord = rel.map((r, i) => [r, i]).filter(([r]) => r != null).sort((a, b) => b[0] - a[0]);
+      const f1 = ord.length >= 3 ? `<b>Maior relação:</b> ${ord.slice(0, 3).map(([r, i]) => `${mmaa(meses[i])} (${n2(r)})`).join(" · ")}. <b>Menor:</b> ${ord.slice(-3).reverse().map(([r, i]) => `${mmaa(meses[i])} (${n2(r)})`).join(" · ")}.` : "";
+      const iT = vt.indexOf(Math.max(...vt)), iM = vm.indexOf(Math.max(...vm));
+      const f2 = `O pico do tênis foi ${mmaa(meses[iT])} (${n0(vt[iT])} pares); o da meia, ${mmaa(meses[iM])} (${n0(vm[iM])} packs)${iT === iM ? ": os dois no mesmo mês" : ""}.`;
+      pags.push(pagina(cabec("Sazonalidade · " + KSAZ, "Tênis × Meias", "por mês · tênis em pares · meias em packs") + leg
+        + `<div style="display:flex;flex-direction:column;gap:2px"><div style="width:${W}px;height:${H}px;display:flex;flex-direction:row;border-bottom:2px solid ${CINZA}">${colsB}</div>${linhaMes}${anosRow(meses, W)}${linhaRel}</div>`
+        + `<div style="display:flex;flex-direction:row;gap:12px">${cards}</div>` + leitura([f1, f2].filter(Boolean), 22), FONTE_RD, 12));
+    }
+  }
+  // 14 · mix de meias (modelo · gênero · cor), quando o documento traz `mix_meias` ({periodo, modelo:{nome: packs}, genero, cor}):
+  // os modelos que mais vendem em barras, e gênero e cor ao lado. Invisível + invisível sem fleece já vêm somadas (regra dele, 20/10).
+  const MX = d.mix_meias;
+  if (MX && MX.modelo && Object.keys(MX.modelo).length) {
+    const bar = (obj, larg, top) => { const ent = Object.entries(obj || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, top || 8), tot = Object.values(obj || {}).reduce((s, v) => s + (v > 0 ? v : 0), 0), mx = Math.max(...ent.map(([, v]) => v), 1);
+      return ent.map(([k, v], i) => `<div style="display:flex;flex-direction:row;align-items:center;gap:14px"><p style="flex:none;width:${Math.round(larg * 0.42)}px;font-size:24px;font-weight:${i ? 500 : 800};line-height:1.2">${esc(k)}</p><div style="flex:none;width:${Math.max(6, Math.round(larg * 0.4 * v / mx))}px;height:34px;background:${i ? AZUL : AMARELO};${i ? "" : `border:2px solid ${PRETO};`}box-sizing:border-box;border-radius:6px"></div><p style="font-size:24px;font-weight:700;white-space:nowrap">${pc1(tot ? v / tot : null)}</p></div>`).join(""); };
+    const tot = Object.values(MX.modelo).reduce((s, v) => s + (v > 0 ? v : 0), 0), nM = MX.meses || 1;
+    const topo = Object.entries(MX.modelo).sort((a, b) => b[1] - a[1]);
+    const f1 = topo.length ? `<b>${esc(topo[0][0])}</b> é o modelo que mais vende: ${pc1(tot ? topo[0][1] / tot : null)} dos packs${topo[1] ? `; ${esc(topo[1][0])} vem em seguida, com ${pc1(tot ? topo[1][1] / tot : null)}` : ""}.` : "";
+    pags.push(pagina(cabec("Meias · mix · " + esc(MX.periodo || KSAZ), "Os modelos que mais vendem", `packs · participação na venda do período · ${n0(tot / nM)} packs/mês`)
+      + `<div style="flex:1;display:flex;flex-direction:row;gap:56px"><div style="flex:none;width:1000px;display:flex;flex-direction:column;gap:12px">${kick("Por modelo")}${bar(MX.modelo, 1000, 8)}</div>`
+      + `<div style="flex:1;display:flex;flex-direction:column;gap:12px">${MX.genero ? kick("Por gênero") + bar(MX.genero, 620, 3) : ""}${MX.cor ? kick("Por cor") + bar(MX.cor, 620, 5) : ""}</div></div>`
+      + (f1 ? leitura([f1], 24) : ""), FONTE_RD + " · invisível e invisível sem fleece somadas", 16));
+  }
   // 15 · chinelos, acessórios e meias por loja: venda e cobertura, duas colunas, leitura do NÚCLEO embaixo
   const OC = [[catChi, "Chinelos", AZUL], [catAcc, "Acessórios", CINZA], [catMei, "Meias", PRETO]].filter(([c]) => c);
   if (porLoja && OC.length) {
@@ -567,7 +620,7 @@ function montarApresentacao(d, modo){
       + duas(tabela(cols, e1.map(lin), LG, fs, pad, grp), tabela(cols, [...e2.map(lin), rede], LG, fs, pad, grp)) + leitura([fr0, ...frs], fsL), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 14));
   }
   // 16 · Under Armour na rede e 17 · onde o UA gira: só quando a família vem no documento
-  if (famUA) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(Object.keys(PIR).find(k => /^UA/i.test(k)), catUA, true), FONTE_RD));
+  if (famUA) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(chaveUA(Object.keys(PIR)), catUA, true), FONTE_RD));
   if (catUA && porLoja) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ["Venda/mês", "center"], ["Estoque", "center"], ["Cob.", "center"], ["Índice", "center"]], LG = [52, 236, 140, 140, 120, 128], t = T[catUA] || {}, cobU = t.v ? t.e / t.v : null;
     const [e1, e2] = corte(L);
