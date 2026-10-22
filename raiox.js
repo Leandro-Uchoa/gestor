@@ -594,14 +594,15 @@ function montarApresentacao(d, modo){
   const MX = d.mix_meias;
   if (MX && MX.modelo && Object.keys(MX.modelo).length) {
     const bar = (obj, larg, top) => { const ent = Object.entries(obj || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, top || 8), tot = Object.values(obj || {}).reduce((s, v) => s + (v > 0 ? v : 0), 0), mx = Math.max(...ent.map(([, v]) => v), 1);
-      return ent.map(([k, v], i) => `<div style="display:flex;flex-direction:row;align-items:center;gap:14px"><p style="flex:none;width:${Math.round(larg * 0.42)}px;font-size:24px;font-weight:${i ? 500 : 800};line-height:1.2">${esc(k)}</p><div style="flex:none;width:${Math.max(6, Math.round(larg * 0.4 * v / mx))}px;height:34px;background:${i ? AZUL : AMARELO};${i ? "" : `border:2px solid ${PRETO};`}box-sizing:border-box;border-radius:6px"></div><p style="font-size:24px;font-weight:700;white-space:nowrap">${pc1(tot ? v / tot : null)}</p></div>`).join(""); };
+      const lw = larg < 800 ? 0.5 : 0.42, bw = larg < 800 ? 0.33 : 0.4;
+      return ent.map(([k, v], i) => `<div style="display:flex;flex-direction:row;align-items:center;gap:14px"><p style="flex:none;width:${Math.round(larg * lw)}px;font-size:24px;font-weight:${i ? 500 : 800};line-height:1.2;white-space:nowrap">${esc(k)}</p><div style="flex:none;width:${Math.max(6, Math.round(larg * bw * v / mx))}px;height:34px;background:${i ? AZUL : AMARELO};${i ? "" : `border:2px solid ${PRETO};`}box-sizing:border-box;border-radius:6px"></div><p style="font-size:24px;font-weight:700;white-space:nowrap">${pc1(tot ? v / tot : null)}</p></div>`).join(""); };
     const tot = Object.values(MX.modelo).reduce((s, v) => s + (v > 0 ? v : 0), 0), nM = MX.meses || 1;
     const topo = Object.entries(MX.modelo).sort((a, b) => b[1] - a[1]);
     const f1 = topo.length ? `<b>${esc(topo[0][0])}</b> é o modelo que mais vende: ${pc1(tot ? topo[0][1] / tot : null)} dos packs${topo[1] ? `; ${esc(topo[1][0])} vem em seguida, com ${pc1(tot ? topo[1][1] / tot : null)}` : ""}.` : "";
     pags.push(pagina(cabec("Meias · mix · " + esc(MX.periodo || KSAZ), "Os modelos que mais vendem", `packs · participação na venda do período · ${n0(tot / nM)} packs/mês`)
       + `<div style="flex:1;display:flex;flex-direction:row;gap:56px"><div style="flex:none;width:1000px;display:flex;flex-direction:column;gap:12px">${kick("Por modelo")}${bar(MX.modelo, 1000, 8)}</div>`
       + `<div style="flex:1;display:flex;flex-direction:column;gap:12px">${MX.genero ? kick("Por gênero") + bar(MX.genero, 620, 3) : ""}${MX.cor ? kick("Por cor") + bar(MX.cor, 620, 5) : ""}</div></div>`
-      + (f1 ? leitura([f1], 24) : ""), FONTE_RD + " · invisível e invisível sem fleece somadas", 16));
+      + (f1 ? leitura([f1 + " A invisível antiga e a invisível sem fleece estão somadas."], 24) : ""), FONTE_RD, 16));
   }
   // 15 · chinelos, acessórios e meias por loja: venda e cobertura, duas colunas, leitura do NÚCLEO embaixo
   const OC = [[catChi, "Chinelos", AZUL], [catAcc, "Acessórios", CINZA], [catMei, "Meias", PRETO]].filter(([c]) => c);
