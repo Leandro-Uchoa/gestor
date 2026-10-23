@@ -610,7 +610,11 @@ async function mostrarSaidas(el){
   // e a linha SOME depois (ele, 15:5x: "aparece e depois some, senão ocupa espaço"): pronto fica 10 min na tela, erro 30 min, na fila até sair
   // e um × em cada linha para ele tirar na hora (ele, 16:0x: "não deixar só por tempo"): fica guardado no aparelho
   const ocultas = new Set((() => { try { return JSON.parse(localStorage.getItem("gestor.saidas.ocultas") || "[]"); } catch (e) { return []; } })());
-  const agora = Date.now(), vivo = x => !ocultas.has(x.id) && (!x.atendido_em || (agora - new Date(x.atendido_em).getTime()) < (x.erro ? 30 : 10) * 60_000);
+  // 23/10: o Chris pediu o GTM MAI 4 vezes e "não consegue baixar" — o pronto SUMIA 10 min depois, antes de ele voltar à tela. Agora o
+  // ÚLTIMO pronto de cada tipo fica 24 h (o botão "baixar" não some); os prontos mais velhos seguem saindo em 10 min (o espaço que ele pediu).
+  const agora = Date.now(), idade = x => (agora - new Date(x.atendido_em).getTime()) / 60_000, ultimoDoTipo = new Set();
+  for (const x of r.data) if (x.atendido_em && !x.erro && !ultimoDoTipo.has(x.tipo) && !ocultas.has(x.id)) ultimoDoTipo.add(x.tipo) && (x._ultimo = true);
+  const vivo = x => !ocultas.has(x.id) && (!x.atendido_em || idade(x) < (x.erro ? 30 : x._ultimo ? 24 * 60 : 10));
   const lista = r.data.filter(vivo);
   clearTimeout(mostrarSaidas._t); if (lista.length) mostrarSaidas._t = setTimeout(() => mostrarSaidas(el), lista.some(x => !x.atendido_em) ? 20_000 : 60_000);
   // 20/10 (ordem dele 09:5x: "se eu dou permissão a usuários, tem que funcionar no equipamento deles"): o arquivo pronto está no COFRE
