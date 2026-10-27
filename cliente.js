@@ -113,7 +113,10 @@ function carteiraGiro(d){
   // o mês em andamento é PARCIAL (a base é de meados do mês): entra na barra marcado, mas fica fora da média que faz a cobertura
   const mesAtual = hoje().slice(0, 7), parcial = x => String(x.mes).slice(0, 7) >= mesAtual;
   const ult = g[g.length - 1], fechados = g.filter(x => !parcial(x)), tres = fechados.slice(-3), media = tres.length ? tres.reduce((s, x) => s + (x.v || 0), 0) / tres.length : 0;
-  const cob = ult && media ? ult.e / media : null;
+  // 27/10 (BOSS, medição do GAMER no Ban Ban): o mês em andamento vem SEM estoque (null) e a conta dava 0,0 — ruptura falsa. Regra da
+  // casa: "—" quando o banco não tem o dado. O estoque e a cobertura usam o ÚLTIMO mês COM estoque, com a base escrita ao lado.
+  const comEst = g.filter(x => x.e != null && x.e !== ""), ue = comEst.length ? comEst[comEst.length - 1] : null;
+  const cob = ue && media ? ue.e / media : null;
   const serie = g.slice(-12), max = Math.max(1, ...serie.map(x => x.v || 0));
   const barras = `<div class="barras" style="--n:${serie.length}">${serie.map(x => `<div class="${parcial(x) ? "parcial" : ""}" style="height:${Math.round(100 * (x.v || 0) / max)}%" title="${mesBR(x.mes)}: ${fmt(x.v)} pares${parcial(x) ? " (mês em andamento, base " + dmy(x.base_em) + ")" : ""}"><span>${fmt(x.v)}</span></div>`).join("")}</div>
     <div class="eixo" style="--n:${serie.length}">${serie.map(x => `<span>${mesBR(x.mes)}${parcial(x) ? "*" : ""}</span>`).join("")}</div>${serie.some(parcial) ? `<div class="fontes">* mês em andamento (base ${dmy(ult.base_em)}); a cobertura usa a média dos ${tres.length} meses fechados</div>` : ""}`;
@@ -121,7 +124,7 @@ function carteiraGiro(d){
   const tabela = cart.length ? `<table class="mini"><thead><tr><th>carteira</th>${cart.map(x => `<th class="n">${mesBR(x.mes)}</th>`).join("")}</tr></thead>
     <tbody><tr><td>faturado</td>${cart.map(x => `<td class="n">${x.fat ? fmt(x.fat) : "—"}</td>`).join("")}</tr><tr><td>em carteira</td>${cart.map(x => `<td class="n c">${x.cart ? fmt(x.cart) : "—"}</td>`).join("")}</tr></tbody></table>` : "";
   return `<div class="card">${tit("Análise de giro", "AG · sellout por mês · pares", ir("cg", est, "abrir a AG"))}
-    <div class="num"><div><b>${ult ? fmt(ult.v) : "—"}</b><small>sellout ${ult ? mesBR(ult.mes) + (parcial(ult) ? "*" : "") : ""}</small></div><div><b>${ult ? fmt(ult.e) : "—"}</b><small>estoque ${ult ? mesBR(ult.mes) : ""}</small></div><div class="${cob != null && cob < 4 ? "al" : ""}"><b>${cob != null ? dec(cob) : "—"}</b><small>cobertura (meses)</small></div><div><b>${fmt(c.reduce((s, x) => s + (x.cart || 0), 0))}</b><small>carteira a faturar</small></div></div>
+    <div class="num"><div><b>${ult ? fmt(ult.v) : "—"}</b><small>sellout ${ult ? mesBR(ult.mes) + (parcial(ult) ? "*" : "") : ""}</small></div><div><b>${ue ? fmt(ue.e) : "—"}</b><small>estoque ${ue ? mesBR(ue.mes) : "— sem estoque no banco"}</small></div><div class="${cob != null && cob < 4 ? "al" : ""}"><b>${cob != null ? dec(cob) : "—"}</b><small>cobertura (meses${ue ? " · estoque de " + mesBR(ue.mes) : ""})</small></div><div><b>${fmt(c.reduce((s, x) => s + (x.cart || 0), 0))}</b><small>carteira a faturar</small></div></div>
     ${barras}${tabela}
   </div>`;
 }
