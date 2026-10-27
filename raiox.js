@@ -41,7 +41,13 @@ async function doc(cliente){
   if (DOCS[cliente]) return DOCS[cliente];
   const r = await SB.rpc("raio_x_consulta", { p_cliente: cliente });
   if (r.error) throw new Error(r.error.message);
-  DOCS[cliente] = normalizar(r.data); return DOCS[cliente];
+  const d = normalizar(r.data);
+  // 27/10 (regra dele via NÚCLEO): a ação de trade em andamento (ou feita no mês anterior) entra no deck — trade_acao_deck traz a ação
+  // e os produtos do escopo; falhou → o deck sai sem o slide e o erro fica registrado em d.acoes_erro (nunca calado)
+  const t = await SB.rpc("trade_acao_deck", { p_cliente: cliente });
+  if (t.error) { d.acoes = []; d.acoes_erro = t.error.message; console.warn("trade_acao_deck:", t.error.message); }
+  else { d.acoes = (t.data && t.data.acoes) || []; d.acoes_mes = t.data && t.data.mes; d.acoes_rede = t.data && t.data.rede; d.acoes_meses_venda = t.data && t.data.meses_venda; }
+  DOCS[cliente] = d; return d;
 }
 
 function chips(id, lista, atual, aoClicar){
@@ -658,6 +664,36 @@ function montarApresentacao(d, modo){
     const temUAponta = its.some(i => ua(i.marca));
     pags.push(pagina(`<div style="flex:none;width:980px;display:flex;flex-direction:column;gap:20px">${cabec("Ponta de estoque · fora de linha", "Oportunidade de giro", "")}<p style="font-size:26px;line-height:1.35">Produtos fora de linha com estoque · os modelos com mais pares</p>${tabela(cols, lin, [560, 170, 110, 140], mP.fs, padP)}</div>${dir}`,
       `estoque com saldo, lido em ${dmy((d.ponta.base || {}).lido_em)} · status fora de linha na Olympikus${temUAponta ? " e na Under Armour" : ""}`, 56, { row: true }));
+  }
+  // 19 · AÇÃO EM ANDAMENTO (regra dele, 27/10, via NÚCLEO: "a ação em andamento, ou feita no mês anterior, pode estar na apresentação;
+  // se já foi há algum tempo, não precisa"). Molde: slide 14 da Azteca de 27/10 — tabela dos 8 modelos do escopo com mais estoque
+  // (PDV, estoque do último mês, venda média, cobertura), total do escopo inteiro, cobertura do escopo contra a rede, mecânica,
+  // período e meta, e o efeito de bater a meta (cobertura antes → depois). NUNCA aprovação, proposta, verba ou nota de débito.
+  for (const ac of (d.acoes || [])) {
+    const prods = ac.produtos || [], rede = d.acoes_rede || {}, pdvMin = ac.escopo && ac.escopo.pdv_min, feita = ac.status === "feita";
+    const grupo = pdvMin ? "do topo de preço" : "dos modelos da ação", mesEst = d.acoes_mes ? mmaa(d.acoes_mes) : mesBase;
+    const estT = prods.reduce((s, p) => s + (p.est || 0), 0), vmT = prods.reduce((s, p) => s + (+p.vm || 0), 0), cobT = vmT ? estT / vmT : null;
+    const cobR = rede.vm ? rede.est / rede.vm : null, cobDepois = ac.meta_pares && vmT ? Math.max(0, estT - ac.meta_pares) / vmT : null;
+    const brl = v => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const per = ac.periodo_ini && ac.periodo_fim ? `<b>De</b> ${dmy(ac.periodo_ini).slice(0, 5)} <b>a</b> ${dmy(ac.periodo_fim).slice(0, 5)}` : ac.periodo_ini ? `<b>Desde</b> ${dmy(ac.periodo_ini).slice(0, 5)}` : ac.periodo ? esc(ac.periodo) : "";
+    const metaTxt = ac.meta_pares ? `<b>meta</b> de ${n0(ac.meta_pares)} pares` : "";
+    const cashback = /cash\s*back/i.test((ac.mecanica || "") + " " + (ac.titulo || ""));
+    const titulo = cashback ? "Cashback ao vendedor nos produtos que mais seguram a cobertura" : esc(bonito(ac.titulo || "Ação em andamento"));
+    const sub = pdvMin ? `Os tênis acima de ${brl(pdvMin)} são os de giro mais lento da loja: é neles que a ação está concentrada.` : prods.length ? "Os modelos da ação são os que mais seguram a cobertura da loja: é neles que a ação está concentrada." : "";
+    const topo = prods.slice(0, 8), cols = [["Modelo", "left"], ["PDV", "center"], [`Estoque<br>${esc(mesEst)}`, "center"], ["Venda/mês", "center"], ["Cobertura<br>(meses)", "center"]], LG = [360, 220, 200, 170, 170];
+    const lin = topo.map(p => ({ bg: "transparent", cells: [[`<b>${esc(bonito(p.modelo))}</b>`, ""], [p.pdv != null ? brl(p.pdv) : "—", ""], [n0(p.est), ""], [n0(p.vm), ""], [`<b>${n1(+p.vm ? p.est / +p.vm : null)}</b>`, ""]] }));
+    const tot = { bg: AMARELO, cells: [[`<b>${pdvMin ? "Topo de preço" : "Modelos da ação"} · total</b>`, ""], [`<b>${pdvMin ? "acima de " + brl(pdvMin) : prods.length + " modelo" + (prods.length > 1 ? "s" : "")}</b>`, ""], [`<b>${n0(estT)}</b>`, ""], [`<b>${n0(vmT)}</b>`, ""], [`<b>${n1(cobT)}</b>`, ""]] };
+    const cardAzul = cobT != null ? `<div style="background:${AZUL};color:${OFF};border-radius:10px;padding:24px 28px;display:flex;flex-direction:column;gap:4px"><p style="font-size:24px">Cobertura ${grupo}</p><p style="font-size:64px;font-weight:800;line-height:1.05">${n1(cobT)} meses</p>${cobR != null ? `<p style="font-size:24px">contra ${n1(cobR)} da rede inteira</p>` : ""}</div>` : "";
+    const cardMec = `<div style="border:2px solid ${CINZA2};border-radius:10px;padding:22px 28px;display:flex;flex-direction:column;gap:8px"><p style="font-size:26px;line-height:1.35"><b>Mecânica:</b> ${esc(ac.mecanica || ac.titulo || "")}</p>${per || metaTxt ? `<p style="font-size:26px;line-height:1.35">${[per, metaTxt].filter(Boolean).join(" · ")}.</p>` : ""}</div>`;
+    const cardMeta = cobDepois != null ? `<div style="border:2px solid ${CINZA2};border-radius:10px;padding:22px 28px;display:flex;flex-direction:column;gap:8px"><p style="font-size:64px;font-weight:800;line-height:1.05;color:${AZUL}">${n1(cobT)} → ${n1(cobDepois)}</p><p style="font-size:26px;line-height:1.35">meses de cobertura ${grupo} ao bater a meta de ${n0(ac.meta_pares)} pares.</p></div>` : "";
+    const cab = `<div style="display:flex;flex-direction:column;gap:8px">${kick((feita ? "Ação concluída" : "Ação em andamento") + " · tênis Olympikus" + (pdvMin ? " · topo de preço" : ""))}<h2 style="font-size:60px;font-weight:700;line-height:1.1;color:${PRETO}">${titulo}</h2>${sub ? `<p style="font-size:26px;color:${CINZA}">${sub}</p>` : ""}</div>`;
+    const corpo = prods.length
+      ? cab + `<div style="display:flex;flex-direction:row;gap:48px;align-items:flex-start"><div style="flex:none;width:1120px">${tabela(cols, [...lin, tot], LG, 26, "10px 12px")}</div><div style="flex:1;display:flex;flex-direction:column;gap:20px">${cardAzul}${cardMec}${cardMeta}</div></div>`
+      : cab + `<div style="width:1100px;display:flex;flex-direction:column;gap:20px">${cardMec}${ac.objetivo ? leitura([esc(ac.objetivo)], 26) : ""}</div>`;
+    const slide = pagina(corpo, `análise de giro consolidada da rede · venda média dos últimos ${d.acoes_meses_venda || 3} meses · estoque ${esc(mesEst)} · PDV de tabela`, 28);
+    const vaza = /aprov|propost|verba|d[ée]bito|marquinhos|denise|\bcaio\b/i.exec(slide.replace(/<[^>]+>/g, " "));
+    if (vaza) throw new Error(`o slide da ação "${ac.titulo}" sairia com termo interno ("${vaza[0]}") — não monto; corrija a mecânica/produtos na planilha de verbas`);
+    pags.push(slide);
   }
   // fecho: o número da página na ordem final e a guarda do que não sai para o cliente
   const paginas = pags.filter(Boolean).map((p, i) => p.replace("{{pg}}", String(i + 1)));
