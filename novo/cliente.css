@@ -291,3 +291,8 @@ html,body{overflow-x:clip}
 @media (max-width:991.98px){.bento>.car,.bento>.cob{grid-column:span 12}}
 
 .bento>.cob .lb:after{content:none}
+
+/* Tabler 1.6.1 pinta h1 com a cor de título: no topo de vidro o nome é branco */
+.hero h1,.hero h2,.hero h3,.hero .topo h1{color:#fff!important}
+/* modo de apresentação ao cliente: o que é interno não aparece */
+body.cliente .bento>.dec,body.cliente .bento>.agv,body.cliente .bro,body.cliente .bro-fab,body.cliente .rail .bro-m{display:none!important}

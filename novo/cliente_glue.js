@@ -20,7 +20,7 @@
   }
   function barra() {
     const div = document.createElement("div"); div.id = "ti-barra";
-    div.style.cssText = "position:fixed;right:16px;top:16px;z-index:30;display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif";
+    div.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:30;display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif;background:rgba(246,245,240,.92);padding:6px;border-radius:14px";   // embaixo, para não cobrir o topo nem o nome do cliente
     div.innerHTML = (Dados.MODO_CLIENTE ? "" : `<select id="ti-sel" style="border:1px solid #E6E7E8;border-radius:12px;padding:8px 10px;background:#fff;font-weight:600;font-size:13px;max-width:240px"></select>
       <a href="../" style="background:#fff;border:1px solid #E6E7E8;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;color:#000;text-decoration:none">Gestor completo</a>`)
       + `<a href="#" id="ti-sair" style="font-size:12px;color:#787B86;text-decoration:underline">sair</a>`;
@@ -33,7 +33,7 @@
     const s = await Dados.sessao();
     if (!s) { overlayLogin(); return; }
     LISTA = await Dados.clientes();
-    const h = new URLSearchParams(location.hash.slice(1)), pedido = h.get("cliente");
+    const h = new URLSearchParams(location.hash.slice(1)), q = new URLSearchParams(location.search), pedido = h.get("cliente") || q.get("cliente");   // ?cliente= ou #cliente=
     CLIENTE = LISTA.some(c => c.cliente === pedido) ? pedido : (LISTA.some(c => c.cliente === "BANBAN CALCADOS") ? "BANBAN CALCADOS" : (LISTA[0] || {}).cliente);
     if (Dados.MODO_CLIENTE) { for (const el of document.querySelectorAll(".bro-fab, .bro-m, #bro, .rail")) el.remove(); document.querySelector(".main").style.marginLeft = "16px"; }   // modo cliente: sem Bro, sem menu
     barra(); abrir();

@@ -2,7 +2,7 @@
    ZERO dado aqui dentro. O TI chama  desenhar(DADOS)  depois do login e a cada troca de cliente.
 
    CONTRATO (nomes do TI) — o que cada bloco lê, o tipo e o que aparece quando vem vazio:
-   ┌ cliente      { nome:str, codigo:str, lojas_ativas:int, recorte:str }        → topo. Vazio: "—".
+   ┌ cliente      { nome:str, codigo:str, lojas_ativas:int, recorte:str, cidade?:str } → topo (cidade · lojas; recorte só se faltar cidade). Vazio: "—".
    ├ decidir      [ { id, texto:str, urgente:bool, criado_em:'AAAA-MM-DD', bloco:str } ]
    │                                                                             → "O que decidir hoje". Vazio: "nada pendente no TOPICS".
    ├ topics       (igual a decidir; usado só se decidir vier ausente)
@@ -12,7 +12,8 @@
    ├ giro         { recorte:str, serie:[ { mes:'AAAA-MM', v:num, e:num, parcial:bool } ], estoque:num, estoque_mes:'AAAA-MM',
    │                cobertura:num, cobertura_base:str }                          → cartão Cobertura (régua da casa: <4 ruptura · 4–5 forçar · ≥5 no teto),
    │                                                                               venda média = média dos meses NÃO parciais da serie (3 últimos). Vazio: "—".
-   ├ anos         { lista:[2024,2025,2026], sellin:{'2024':[12 núm|null]}, sellout:{…}, meta:{…}, estoque:{…} }
+   ├ anos         { lista:[2024,2025,2026], sellin:{'2024':[12 núm|null]}, sellout:{…}, meta:{…}, estoque:{…},
+   │                sellin_carteira?:{…} (parte do sell-in do mês que ainda é carteira → ponto vazado) }
    │                                                                             → gráfico (já filtrado pelo filtro ativo). null = sem dado (vazio, nunca 0).
    ├ filtro       { marca:['OLY'|'UA'], tipo:'tenis'|'meias'|'chinelo'|'acess'|'conf', genero:[...], categoria:[...] }
    │                genero (tênis): 'MASCULINO','FEMININO','INFANTIL','UNISSEX' · genero (meias): 'MASCULINO','FEMININO'
@@ -38,16 +39,21 @@ let D={},CAM={so:1,si:1,mt:1,es:1},ANS={},FIL=null,AB=false;
 
 // ---------------- topo ----------------
 function topo(){const c=D.cliente||{};$('c_nome').textContent=c.nome||'—';document.title='Gestor · '+(c.nome||'Cliente');
- $('c_sub').textContent=[c.lojas_ativas!=null?c.lojas_ativas+' lojas ativas':null,c.recorte||null].filter(Boolean).join(' · ')||'—';
+ $('c_sub').textContent=[c.cidade||null,c.lojas_ativas!=null?c.lojas_ativas+' lojas ativas':null,c.cidade?null:(c.recorte||null)].filter(Boolean).join(' · ')||'—';
  $('brctx').textContent=(c.nome||'—')+' · aba Cliente'}
 // ---------------- TOPICS ----------------
+const escRe=x=>String(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const limpa=(t,b)=>{let x=String(t||'');if(b)x=x.replace(new RegExp('^\\s*'+escRe(b)+'\\s*[-–—:·]\\s*','i'),'');return x};
+const ehCli=b=>{const n=((D.cliente||{}).nome||'').toUpperCase().replace(/\s+/g,''),bb=String(b||'').toUpperCase().replace(/\s+/g,'');return !bb||bb===n||n.startsWith(bb)||bb.startsWith(n)};
 function decidir(){const L=D.decidir||D.topics||[];$('c_ntp').textContent=L.length+' no TOPICS';
- $('tpl').innerHTML=L.length?L.map(t=>`<div class="it" id="tp_${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(t.texto)}</b><small>${esc([t.bloco,t.criado_em?t.criado_em.slice(8,10)+'/'+t.criado_em.slice(5,7):null].filter(Boolean).join(' · '))}</small><div class="nota" id="tpn_${esc(t.id)}"></div>
+ $('tpl').innerHTML=L.length?L.map(t=>`<div class="it" id="tp_${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(limpa(t.texto,t.bloco))}</b><small>${esc([ehCli(t.bloco)?null:t.bloco,t.criado_em?t.criado_em.slice(8,10)+'/'+t.criado_em.slice(5,7):null].filter(Boolean).join(' · '))}</small><div class="nota" id="tpn_${esc(t.id)}"></div>
   <div class="acts"><button class="ok" onclick="CLI.topico('feito','${esc(t.id)}')">✓ feito</button><button onclick="CLI.ori('${esc(t.id)}')">✎ orientar</button><button onclick="CLI.topico('abrir','${esc(t.id)}')">abrir no TOPICS</button></div>
   <div class="ori" id="tpo_${esc(t.id)}"><input id="tpi_${esc(t.id)}" placeholder="escreva a orientação…" onkeydown="if(event.key==='Enter')CLI.salva('${esc(t.id)}')"><button onclick="CLI.salva('${esc(t.id)}')">salvar</button></div></div></div>`).join('')
   :'<div class="it" style="border:0"><div style="opacity:.8">nada pendente no TOPICS</div></div>'}
 // ---------------- agenda ----------------
 let CM=null,SD=null;
+const tituloAg=t=>{const n=((D.cliente||{}).nome||'').toUpperCase();let x=String(t||'').replace(/^\s*(ATA|PAUTA)\s*[—–-]\s*/i,'');if(n)x=x.replace(new RegExp('\\s*'+escRe(n)+'\\s*[·—–:-]?\\s*','gi'),' ').trim();x=x.replace(/^REUNI[ÃA]O\b/i,'Reunião');x=x.charAt(0).toUpperCase()+x.slice(1);return x||String(t||'')};
+const ondeAg=o=>{if(Array.isArray(o))o=o.join(',');return String(o||'').split(',').map(s=>s.trim()).filter(s=>s&&!ehCli(s)).join(' · ')};
 function agenda(){const EV=(D.agenda||[]).filter(e=>e&&e.data).sort((a,b)=>a.data<b.data?1:-1),hoje=new Date().toISOString().slice(0,10);
  if(!CM){const b=(EV.find(e=>e.data<=hoje)||EV[0]||{data:hoje}).data;CM=[+b.slice(0,4),+b.slice(5,7)-1]}
  const [y,m]=CM,f=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate(),kk=d=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -57,11 +63,11 @@ function agenda(){const EV=(D.agenda||[]).filter(e=>e&&e.data).sort((a,b)=>a.dat
  $('cal').innerHTML=h+'</div>';
  const L=SD?EV.filter(x=>x.data.slice(0,10)===SD):EV;
  $('evl').innerHTML=(SD?`<div class="d-flex mb-1"><b>${SD.slice(8,10)}/${SD.slice(5,7)}</b><a href="#" class="ms-auto small" onclick="CLI.dia(null);return false">ver tudo</a></div>`:'<div class="d-flex mb-1"><b>Linha do tempo</b><span class="ms-auto hora">da mais nova</span></div>')+
-  (L.length?L.map(x=>`<div class="e ${x.data>hoje?'fut':''}"><div class="dt">${x.data.slice(8,10)}<small>${MSX[+x.data.slice(5,7)-1].slice(0,3)}/${x.data.slice(2,4)}</small></div><div><b>${esc(x.titulo)}</b><small class="d2">${esc(x.onde||'')}</small></div><span></span></div>`).join(''):'<div class="hora" style="color:#fff;opacity:.8">sem eventos</div>')}
+  (L.length?L.map(x=>`<div class="e ${x.data>hoje?'fut':''}"><div class="dt">${x.data.slice(8,10)}<small>${MSX[+x.data.slice(5,7)-1].slice(0,3)}/${x.data.slice(2,4)}</small></div><div><b>${esc(tituloAg(x.titulo))}</b><small class="d2">${esc(ondeAg(x.onde))}</small></div><span></span></div>`).join(''):'<div class="hora" style="color:#fff;opacity:.8">sem eventos</div>')}
 // ---------------- carteira ----------------
 function carteira(){const c=D.carteira||{},M=c.meses||[];$('c_cart').textContent=fmt(c.a_faturar);$('c_cart_u').textContent=' a faturar';
- const tot=M.reduce((a,x)=>a+(x.cart||0),0)||1;
- $('c_mes3').innerHTML=M.length?M.map(x=>`<div style="flex:${Math.max(1,x.cart||0)/tot*10}">${MS2[+String(x.mes).slice(5,7)-1]||'—'}<b>${fmt(x.cart)}</b></div>`).join(''):'';
+ const MC=M.filter(x=>(x.cart||0)>0),tot=MC.reduce((a,x)=>a+(x.cart||0),0)||1;
+ $('c_mes3').innerHTML=MC.length?MC.map(x=>`<div style="flex:${Math.max(1,x.cart||0)/tot*10}">${MS2[+String(x.mes).slice(5,7)-1]||'—'}<b>${fmt(x.cart)}</b></div>`).join(''):'';
  const be=(M.find(x=>x.base_em)||{}).base_em;$('c_cart_base').textContent=be?'carteira lida em '+String(be).slice(8,10)+'/'+String(be).slice(5,7)+(String(be).length>10?' '+String(be).slice(11,16):''):''}
 // ---------------- cobertura ----------------
 function cobertura(){const g=D.giro||{},c=g.cobertura;$('c_recorte').textContent=g.recorte||'—';$('c_cob').textContent=dec(c);
@@ -108,7 +114,7 @@ function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String),k=(y,i)=>{con
  on.forEach(y=>{const c=cor(y);
   if(CAM.mt){g+=linha('meta',y,'stroke-dasharray="10 6"',2.2);MS2.forEach((_,i)=>{const v=val('meta',y,i);if(v==null)return;const bat=(val('sellin',y,i)||0)>=v;g+=`<rect x="${X(i)-4}" y="${Y(v)-4}" width="8" height="8" fill="${bat?c:'#fff'}" stroke="${c}" stroke-width="2" transform="rotate(45 ${X(i)} ${Y(v)})"/>`})}
   if(CAM.so)g+=linha('sellout',y,'',3.2);
-  if(CAM.si){g+=linha('sellin',y,'stroke-dasharray="2 4" stroke-linecap="round"',3);MS2.forEach((_,i)=>{const v=val('sellin',y,i);if(v!=null)g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="4.5" fill="${c}" stroke="${c}" stroke-width="2"/>`})}});
+  if(CAM.si){g+=linha('sellin',y,'stroke-dasharray="2 4" stroke-linecap="round"',3);MS2.forEach((_,i)=>{const v=val('sellin',y,i);if(v==null)return;const ca=(val('sellin_carteira',y,i)||0)>0;g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="4.5" fill="${ca?'#fff':c}" stroke="${c}" stroke-width="2"><title>${ca?'inclui carteira ainda não faturada':'faturado'}</title></circle>`})}});
  // botão do ano no começo da linha (posição fixa: escala por todos os anos)
  const yJ={};AN.forEach(y=>{const v=[val('sellout',y,0),val('sellin',y,0),val('meta',y,0)].find(x=>x!=null);yJ[y]=v!=null?Y(v):HH/2});
  const ord=AN.slice().sort((a,b)=>yJ[a]-yJ[b]);let last=-99;ord.forEach(y=>{if(yJ[y]-last<24)yJ[y]=last+24;last=yJ[y]});
@@ -153,6 +159,7 @@ window.desenhar=function(dados){D=dados||{};FIL=JSON.parse(JSON.stringify(D.filt
  FIL.marca=FIL.marca||['OLY'];FIL.genero=FIL.genero||[];FIL.categoria=FIL.categoria||[];
  topo();decidir();agenda();carteira();cobertura();$('htit').textContent=titulo(FIL);if(AB)painel();grafico()};
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(grafico,150)});
+if(new URLSearchParams(location.search).get('modo')==='cliente')document.body.classList.add('cliente');
 // sem DADOS ainda: desenha a casca vazia ("—")
 desenhar(window.DADOS||{});
 })();
