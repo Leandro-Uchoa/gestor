@@ -65,6 +65,8 @@ window.Dados = (() => {
       agenda, decidir, carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), recorte: "tênis Olympikus", outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: cart.length ? cart[cart.length - 1].base_em : null },
       giro, anos, filtro,
       etiquetas: { sellin: "sell-in pelo EBM · faturado por NF, líquido de devolução", sellout: "sell-out pela AG do cliente", meta: "meta rateada por cliente · leitura nossa (a Vulcabras dá a meta ao preposto)", estoque: "estoque na AG (tênis Olympikus)" },
+      fontes: { sellout_ate: (() => { const sz = ((rx || {}).sazonal || {})["TÊNIS"]; const ms = sz ? Object.keys(sz.mensal || {}).sort() : []; return ms.length ? ms[ms.length - 1] : null; })(),
+                sellin_ate: sellin.length ? String(sellin[sellin.length - 1].puxado_em).slice(0, 10) : null, meta_lida_em: meta.length ? String(meta[meta.length - 1].meta_lida_em).slice(0, 10) : null },
       topics: decidir, modo_cliente: MODO_CLIENTE, atualizado: { carteira: cart.length ? cart[cart.length - 1].base_em : null, sellin: sellin.length ? sellin[sellin.length - 1].puxado_em : null }
     };
   }

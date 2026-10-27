@@ -18,7 +18,13 @@
    ├ filtro       { marca:['OLY'|'UA'], tipo:'tenis'|'meias'|'chinelo'|'acess'|'conf', genero:[...], categoria:[...] }
    │                genero (tênis): 'MASCULINO','FEMININO','INFANTIL','UNISSEX' · genero (meias): 'MASCULINO','FEMININO'
    │                categoria (tênis): 'CONF_MASC','CONF_FEM','CORRIDA/TREINO','CORRE','CLASSICOS','INFANTIL'
-   └ etiquetas    { sellin:str, sellout:str, meta:str, estoque?:str }            → legenda dos blocos e nota de fonte.
+   ├ etiquetas    { sellin:str, sellout:str, meta:str, estoque?:str }            → legenda dos blocos e nota de fonte.
+   ├ fontes?      { sellout_ate:'AAAA-MM', sellin_ate:'AAAA-MM-DD', meta_lida_em:'AAAA-MM-DD…' }
+   │                                                                             → a data de cada fonte na manchete (Conselho 0045). Vazio: nome da fonte.
+   └ giro.segmentos? [ { nome:str, cobertura:num } ]                            → "falta: … · sobra: …" no cartão de cobertura (<4 falta, ≥7 sobra). Vazio: some.
+   MANCHETE da 1ª dobra (sem campo próprio, sai de decidir + anos + giro): prioridade (1º urgente ou "Sem urgência hoje") ·
+     evidência (últimos 3 meses FECHADOS: sell-out × sell-in × meta + estoque, "abastecendo acima do que vende" se sell-in > 115% do sell-out)
+     · decisão pendente (cobertura; "sem base para estimar" se < 3 meses fechados com venda — nunca semáforo tranquilizador).
 
    EVENTOS (a casca chama, o TI atende; se não existir, nada quebra):
      window.onFiltro(filtro)                 → recalcular DADOS.anos e chamar desenhar(DADOS) de novo
@@ -69,10 +75,34 @@ function carteira(){const c=D.carteira||{},M=c.meses||[];$('c_cart').textContent
  const MC=M.filter(x=>(x.cart||0)>0),tot=MC.reduce((a,x)=>a+(x.cart||0),0)||1;
  $('c_mes3').innerHTML=MC.length?MC.map(x=>`<div style="flex:${Math.max(1,x.cart||0)/tot*10}">${MS2[+String(x.mes).slice(5,7)-1]||'—'}<b>${fmt(x.cart)}</b></div>`).join(''):'';
  const be=(M.find(x=>x.base_em)||{}).base_em;$('c_cart_base').textContent=be?'carteira lida em '+String(be).slice(8,10)+'/'+String(be).slice(5,7)+(String(be).length>10?' '+String(be).slice(11,16):''):''}
+// ---------------- base da cobertura (Conselho 0045): sem venda ou com base curta não há semáforo ----------------
+// "sem base" quando: cobertura nula, venda média nula/zero ou menos de 3 meses fechados com venda. Ausência de sell-out não é venda zero.
+function baseCob(){const g=D.giro||{},S=(g.serie||[]).filter(x=>x&&!x.parcial&&x.v!=null&&x.v>0),u3=S.slice(-3);
+ const vm=u3.length?u3.reduce((a,x)=>a+x.v,0)/u3.length:null;return {ok:g.cobertura!=null&&u3.length>=3&&vm>0,vm,n:u3.length}}
+// ---------------- manchete da 1ª dobra: prioridade · evidência · decisão pendente ----------------
+function manchete(){const L=(D.decidir||D.topics||[]),urg=L.filter(t=>t.urgente),A=D.anos||{},AN=(A.lista||[]).map(String),y=AN[AN.length-1],g=D.giro||{},b=baseCob(),c=g.cobertura;
+ // prioridade: o primeiro urgente do TOPICS; sem urgência, diz isso
+ const pri=urg[0]?`<div class="h">${esc(limpa(urg[0].texto,urg[0].bloco))}</div><div class="s">${urg.length>1?`+ ${urg.length-1} urgente${urg.length>2?'s':''} no TOPICS`:'único urgente no TOPICS'}</div>`
+  :`<div class="h">Sem urgência hoje</div><div class="s">${L.length?L.length+(L.length===1?' item':' itens')+' em aberto no TOPICS, nenhum marcado como urgente':'nada pendente no TOPICS'}</div>`;
+ // evidência: "vendendo ao consumidor ou só abastecendo estoque?" — últimos 3 meses FECHADOS de sell-out × sell-in × meta + estoque, com a data de cada fonte
+ const so=(A.sellout||{})[y]||[],si=(A.sellin||{})[y]||[],mt=(A.meta||{})[y]||[];let ult=-1;for(let i=11;i>=0;i--)if(so[i]!=null){ult=i;break}
+ const m3=ult>=0?[ult-2,ult-1,ult].filter(i=>i>=0):[],sm=a=>m3.length&&m3.every(i=>a[i]!=null)?m3.reduce((t,i)=>t+a[i],0):null;
+ const S=sm(so),I=sm(si),M=sm(mt),per=m3.length?`${MS2[m3[0]]}–${MS2[ult]}/${String(y).slice(2)}`:'—';
+ let ler='';if(S!=null&&I!=null){const r=I/S;ler=r>1.15?`<span class="tag al">abastecendo acima do que vende (sell-in ${Math.round((r-1)*100)}% acima)</span>`:r<0.85?`<span class="tag rd">vendendo acima do que compra (sell-in ${Math.round((1-r)*100)}% abaixo)</span>`:`<span class="tag ok">compra no ritmo em que vende</span>`}
+ else ler=`<span class="tag ok">${S==null?'sem sell-out fechado no período':'sell-in do período ainda em carga'}</span>`;
+ const F=D.fontes||{},dt=v=>v?String(v).slice(8,10)?String(v).slice(8,10)+'/'+String(v).slice(5,7):MS2[+String(v).slice(5,7)-1]+'/'+String(v).slice(2,4):'—';
+ const ev=`<div class="ev"><div><small>sell-out ${per}</small><b>${fmt(S)}</b><small>${F.sellout_ate?'até '+dt(F.sellout_ate):'AG'}</small></div><div><small>sell-in ${per}</small><b>${fmt(I)}</b><small>${F.sellin_ate?'até '+dt(F.sellin_ate):'EBM'}</small></div><div><small>meta ${per}</small><b>${fmt(M)}</b><small>${F.meta_lida_em?'lida '+dt(F.meta_lida_em):'rateio'}</small></div><div><small>estoque</small><b>${fmt(g.estoque)}</b><small>${g.estoque_mes?MS2[+g.estoque_mes.slice(5,7)-1]+'/'+g.estoque_mes.slice(2,4):'—'}</small></div></div>${ler}`;
+ // decisão pendente: a cobertura (só com base) + quantos itens esperam decisão
+ const dc=!b.ok?`<div class="h">Cobertura sem base para estimar</div><div class="s">${b.n<3?'menos de 3 meses fechados com venda':'venda média nula'} — não dá para dizer se falta ou sobra</div>`
+  :c<4?`<div class="h">Ruptura: ${dec(c)} meses</div><div class="s">antecipar já · abaixo de 4 meses</div>`:c<5?`<div class="h">Forçar a barra: ${dec(c)} meses</div><div class="s">abaixo do teto de 5 meses</div>`:`<div class="h">No teto: ${dec(c)} meses</div><div class="s">não antecipar · ${L.length} ${L.length===1?'decisão':'decisões'} no TOPICS</div>`;
+ $('manch').innerHTML=`<div><div class="t">Prioridade</div>${pri}</div><div><div class="t">Evidência · vendendo ao consumidor ou só abastecendo?</div>${ev}</div><div><div class="t">Decisão pendente</div>${dc}</div>`}
 // ---------------- cobertura ----------------
-function cobertura(){const g=D.giro||{},c=g.cobertura;$('c_recorte').textContent=g.recorte||'—';$('c_cob').textContent=dec(c);
- const p=c==null?'—':c<4?'ruptura':c<5?'forçar a barra':'no teto';$('c_cob_pill').textContent=p;
+function cobertura(){const g=D.giro||{},B=baseCob(),c=B.ok?g.cobertura:null;$('c_recorte').textContent=g.recorte||'—';$('c_cob').textContent=B.ok?dec(c):'—';
+ const p=!B.ok?'sem base para estimar':c<4?'ruptura':c<5?'forçar a barra':'no teto';$('c_cob_pill').textContent=p;
  $('c_cob_pill').style.background=c==null?'#E6E7E8':c<4?'#FDE3E5':c<5?'#FFFF1A':'#E6E7E8';$('c_cob_pill').style.color=c!=null&&c<4?'#E3001B':'#000';
+ // onde falta / onde sobra por segmento (giro.segmentos opcional: [{nome, cobertura}]); sem o campo, some
+ const SG=(g.segmentos||[]).filter(s=>s&&s.cobertura!=null),fal=SG.filter(s=>s.cobertura<4).sort((a,b)=>a.cobertura-b.cobertura),sob=SG.filter(s=>s.cobertura>=7).sort((a,b)=>b.cobertura-a.cobertura);
+ $('c_segs').innerHTML=SG.length?(fal.length?`<span class="f">falta: ${fal.slice(0,3).map(s=>esc(s.nome)+' '+dec(s.cobertura)).join(' · ')}</span>`:'')+(sob.length?`<span class="s">sobra: ${sob.slice(0,3).map(s=>esc(s.nome)+' '+dec(s.cobertura)).join(' · ')}</span>`:'')+(!fal.length&&!sob.length?'<span class="s">segmentos dentro da régua</span>':''):'';
  // posição na régua de 3 faixas iguais: 0–4 | 4–5 | 5–7 (acima de 7 encosta no fim)
  const pos=c==null?-99:c<4?c/4*33.3:c<5?33.3+(c-4)*33.3:Math.min(99,66.7+(c-5)/2*33.3);$('c_cob_mk').style.left=c==null?'-99px':pos+'%';
  $('c_est').textContent=fmt(g.estoque);$('c_est_mes').textContent=g.estoque_mes?MS2[+g.estoque_mes.slice(5,7)-1]+'/'+g.estoque_mes.slice(2,4):'';
@@ -157,7 +187,7 @@ window.tpNovo=function(){const i=$('tpnovo'),v=i.value.trim();if(!v)return;i.val
 // ---------------- desenhar(DADOS) ----------------
 window.desenhar=function(dados){D=dados||{};FIL=JSON.parse(JSON.stringify(D.filtro||{marca:['OLY'],tipo:'tenis',genero:[],categoria:[]}));
  FIL.marca=FIL.marca||['OLY'];FIL.genero=FIL.genero||[];FIL.categoria=FIL.categoria||[];
- topo();decidir();agenda();carteira();cobertura();$('htit').textContent=titulo(FIL);if(AB)painel();grafico()};
+ topo();manchete();decidir();agenda();carteira();cobertura();$('htit').textContent=titulo(FIL);if(AB)painel();grafico()};
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(grafico,150)});
 if(new URLSearchParams(location.search).get('modo')==='cliente')document.body.classList.add('cliente');
 // sem DADOS ainda: desenha a casca vazia ("—")
