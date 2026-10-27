@@ -542,7 +542,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.14</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.15</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -925,7 +925,13 @@ async function prepararPergunta(){
   montarChips();
   await Praca.mostrarBotao(sb);                                  // 23/10: "Análise por praça" só para quem é interno (Léo e Caio)
   // 19/10: endereço com aba (#aba=vitrine&cliente=POLYELLE&vista=montando) abre direto nela — serve para link no WhatsApp e para o PDF por fora
-  const hAba = new URLSearchParams(location.hash.slice(1)).get("aba"); if (hAba && ABAS[hAba] && (hAba !== "praca" || await Praca.ehInterno(sb))) ABA = hAba;
+  const hp = new URLSearchParams(location.hash.slice(1)), hAba = hp.get("aba"); if (hAba && ABAS[hAba] && (hAba !== "praca" || await Praca.ehInterno(sb))) ABA = hAba;
+  // 27/10 (PICASSO, botão "tratar" do giro baixo na aba Cliente): #aba=cg&cliente=X&ref=R&cor=C abre a carteira e giro já no cliente e
+  // filtrada no modelo-cor — o filtro entra no autofiltro (coluna ref / cor), igual a se ele tivesse marcado à mão; limpa como os outros
+  if (ABA === "cg") {
+    const hc = hp.get("cliente"); if (hc) { TODOS_CLI = false; CLIENTE_SEL.clear(); CLIENTE_SEL.add(hc); if (!CLIENTES.includes(hc)) CLIENTES.push(hc); montarChips(); }
+    for (const k of ["ref", "cor"]) { const v = hp.get(k); if (v) FILTROS.set(k, { tipo: "txt", v: new Set([v]) }); }
+  }
   trocarAba(ABA);
 }
 // os botões de filtro (12/10): cliente, família e subfamília; um toque escolhe e a tabela já muda — sem botão "perguntar"
