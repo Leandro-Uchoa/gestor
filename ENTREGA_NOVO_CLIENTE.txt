@@ -1,0 +1,9 @@
+Entrega local: novo/cliente — carregamento, falhas e concorrência
+Base: 73784c4bc0ed22acef49f06a6c81cbb0c1155fd6
+Escopo: respostas/cache antigos não substituem cliente atual; estado carregando/erro/retry; interações dependentes de dados bloqueadas.
+Verificação: 9 testes novos + 25 existentes; revisão independente com 3 cenários próprios. Corrigido gráfico desenhado com main oculta; revisor retestou.
+Não verificado: navegador real, dados reais, autenticação/RLS, publicação. Nenhum acesso ao banco nos testes.
+Conector recusou criar branch do Gestor: HTTP403 Resource not accessible by integration. PR18 da ponte incorporado; resposta0047 é ADUANA, sem atribuição BOSS/TI.
+Prévia: novo/demo_cliente_estado.html?cliente=CLIENTE%20B, só dados fictícios e CSP connect-src none. Não é a versão publicada.
+Testes: node teste_novo_cliente_estado.js; node teste_gestor_lib.js.
+Revisão SHA256: glue c9aa196ee3bed706a26c34ab0a9f09e77d405740906766e1f5db9bc16df4a5d8; dados c855ed066f8e2505d81bc4f4b47382d43f22ad27e60c0efcabfd26629f7dfe3a.

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prévia isolada · Cliente</title><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data:; font-src 'self'">
+<!-- Gestor · aba Cliente — CASCA (PICASSO, 27/10/2026). Forma aprovada pelo Léo no piloto cliente_v19.
+     ZERO dado embutido: tudo vem do objeto DADOS que o TI entrega e de desenhar(DADOS). Contrato no topo de cliente_tela.js. -->
+
+
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<link rel="stylesheet" href="cliente.css?v=7">
+</head>
+<body>
+<div style="position:relative;z-index:50;margin:12px 12px 12px 70px;padding:12px;background:#fff3cd;color:#222;border-radius:10px;font:14px Arial">
+<strong>PRÉVIA ISOLADA · dados fictícios · sem banco/rede</strong>
+<button onclick="demoEscolher('CLIENTE A')">A lento (3s)</button>
+<button onclick="demoEscolher('CLIENTE B')">B rápido</button>
+<button onclick="demoFalhar()">Simular falha</button>
+<span>Troque A → B antes de 3s: deve permanecer B. Falha → Tentar novamente recupera.</span>
+</div>
+<nav class="rail">
+ <div class="marca"></div>
+ <a href="#" title="Início"><i class="ti ti-home"></i></a>
+ <a href="#" class="on" title="Clientes"><i class="ti ti-building-store"></i></a>
+ <a href="#" class="bro-m" title="Bro" onclick="abrirBro();return false" style="font-weight:800;font-size:20px">✦</a>
+ <a href="#" title="Análise de giro"><i class="ti ti-chart-bar"></i></a>
+ <a href="#" title="TOPICS"><i class="ti ti-checklist"></i></a>
+ <div class="pe">LP</div>
+</nav>
+<button class="bro-fab" onclick="abrirBro()" title="Falar com o Bro"><span class="st">✦</span>Bro</button>
+<div class="main">
+ <section class="hero">
+  <img class="marcadagua" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="" onerror="this.remove()">
+  <div class="topo">
+   <div><div class="pre">CLIENTES · KEY ACCOUNT</div><h1 id="c_nome">—</h1>
+    <div style="font-size:13px" id="c_sub">—</div></div>
+  </div>
+  <div class="bento">
+   <div class="vd manch" id="manch"></div>
+   <div class="vd dec">
+    <div class="d-flex align-items-center"><span class="lb"><i class="ti ti-bolt"></i> O que decidir hoje</span><span class="ms-auto selo" style="background:#FFFF1A;color:#000" id="c_ntp">—</span></div>
+    <div class="mt-2" id="tpl"></div>
+    <div class="novo"><input id="tpnovo" placeholder="+ novo item no TOPICS deste cliente…" onkeydown="if(event.key==='Enter')tpNovo()"><button onclick="tpNovo()">incluir</button></div>
+   </div>
+   <div class="vd agv"><div class="d-flex align-items-center mb-2"><span class="lb"><i class="ti ti-calendar-event"></i> Agenda do cliente</span><span class="ms-auto" style="font-size:11px;opacity:.85">clique no dia</span></div>
+    <div class="ag"><div class="cal" id="cal"></div><div class="evl" id="evl"></div></div></div>
+   <div class="vd k car">
+    <div class="lb">Carteira</div>
+    <div class="mt-2"><span class="ns" id="c_cart">—</span><small id="c_cart_u">a faturar</small></div>
+    <div class="mes3" id="c_mes3"></div>
+    <div class="hora mt-2" style="color:#fff;opacity:.8" id="c_cart_base"></div>
+   </div>
+   <div class="vd k cob">
+    <div class="lb">Cobertura · <span style="text-transform:none;letter-spacing:0;font-weight:600;opacity:.8" id="c_recorte">—</span></div>
+    <div class="mt-2"><span class="ns" id="c_cob">—</span><span class="teto" id="c_cob_pill">—</span></div>
+    <div class="regua"><span class="z1"></span><span class="z2"></span><span class="z3"></span><i id="c_cob_mk" style="left:-99px"></i></div>
+    <div class="rleg"><span><b class="p">ruptura </b>&lt;4</span><span><b class="p">forçar </b>4–5</span><span><b class="p">teto </b>≥5</span></div>
+    <div class="d-flex gap-4 mt-3 flex-wrap" style="font-size:12.5px"><div>estoque <b id="c_est" style="font:800 18px Barlow">—</b> <span id="c_est_mes" style="opacity:.8"></span></div><div>venda média <b id="c_vm" style="font:800 18px Barlow">—</b><span style="opacity:.8">/mês</span></div></div>
+    <svg class="spark" id="c_spark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
+    <div class="hora" style="color:#fff;opacity:.8" id="c_cob_base">—</div>
+    <div class="segs" id="c_segs"></div>
+   </div>
+  </div>
+ </section>
+
+ <div class="sec"><h2>Sell-in × sell-out × meta × estoque</h2><span class="hora ms-auto">toque no ano, no começo da linha, para esconder ou mostrar · toque no bloco para ligar a camada</span></div>
+ <div class="pn">
+  <div class="seltit"><button id="htit" onclick="abreFiltro()">—</button><div class="menu" id="menu"></div></div>
+  <div class="gwrap"><svg class="graf mt-2" id="gx" style="height:280px"></svg><div class="tip" id="tip"></div><div class="vazio" id="vazio">nada ligado — toque num ano ou num bloco</div></div>
+  <div class="blk" id="blk"></div>
+  <div class="nota" id="nx"></div>
+ </div>
+ <div class="text-center hora mt-3" id="rodape">Gestor · aba Cliente · forma aprovada em 27/10/2026</div>
+</div>
+
+<aside class="bro" id="bro" aria-label="Bro">
+ <div class="hd"><div class="av">✦</div><div><b>Bro</b><small>a IA do Gestor · lê o banco da casa</small></div><button onclick="abrirBro()" title="fechar">×</button></div>
+ <div class="ctx">Você está em: <i id="brctx">—</i></div>
+ <div class="msgs" id="brmsg"></div>
+ <form onsubmit="return false"><input id="brin" placeholder="Escreve para o Bro…" autocomplete="off"><button>enviar</button></form>
+</aside>
+<script src="cliente_tela.js?v=7"></script>
+
+<script src="demo_cliente_mock.js"></script>
+<script src="cliente_dados.js?v=9"></script>
+<script src="cliente_glue.js?v=9"></script>
+</body></html>
