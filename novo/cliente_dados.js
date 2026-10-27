@@ -54,12 +54,12 @@ window.Dados = (() => {
     const giro = { recorte: doc.giro_recorte || "tênis Olympikus · AG consolidada", serie: g.slice(-12), estoque: ue ? ue.e : null, estoque_mes: ue ? ue.mes : null,
                    cobertura: ue && media ? ue.e / media : null, cobertura_base: ue ? `estoque de ${mesBR(ue.mes)} · média dos ${tres.length} meses fechados` : "sem estoque no banco" };
     // TOPICS → o que decidir
-    const t = doc.topics || {}, limpa = s => { const b = String(t.bloco || "").trim(); let x = String(s || "").trim(); if (b && x.toUpperCase().startsWith(b.toUpperCase())) x = x.slice(b.length).replace(/^\s*[-–:·]\s*/, ""); return x; },
+    const t = MODO_CLIENTE ? {} : (doc.topics || {}), limpa = s => { const b = String(t.bloco || "").trim(); let x = String(s || "").trim(); if (b && x.toUpperCase().startsWith(b.toUpperCase())) x = x.slice(b.length).replace(/^\s*[-–:·]\s*/, ""); return x; },
           decidir = (t.itens || []).filter(i => !i.feito_em && !i.feito).map(i => ({ id: i.id, texto: limpa(i.txt || i.texto), urgente: !!i.alerta, criado_em: i.criado_em || i.data || null, bloco: "", sub: i.sub || "", prazo: i.prazo || null, dono: i.dono || "" }));
     // agenda: as últimas atas (não há agenda futura no banco ainda)
-    const agenda = (doc.atas || []).slice(0, 3).map(a => ({ data: a.data, titulo: a.titulo, onde: a.assunto || "" }));
+    const agenda = (MODO_CLIENTE ? [] : (doc.atas || [])).slice(0, 3).map(a => ({ data: a.data, titulo: a.titulo, onde: a.assunto || "" }));
     // anos: sell-in × sell-out × meta × estoque, pelo filtro
-    const anos = montarAnos(filtro, sellin, rx, meta, hist, g, BRUTO.cartFam || []);
+    const anos = montarAnos(filtro, sellin, rx, MODO_CLIENTE ? [] : meta, MODO_CLIENTE ? [] : hist, g, BRUTO.cartFam || []);   // modo cliente: sem a meta rateada do Léo (BOSS)
     return {
       cliente: { nome: perfil.nome || cliente, codigo: perfil.cod_lider || "", lojas_ativas: ((doc.raio_x || {}).base || {}).lojas_ativas || null, recorte: "" },
       agenda, decidir, carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), recorte: "tênis Olympikus", outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null) },   // a base é a leitura mais nova entre os meses (GAMER: o rótulo dizia 29/09 com dado de 27/10)
@@ -67,7 +67,7 @@ window.Dados = (() => {
       etiquetas: { sellin: "sell-in = faturado (EBM até jun/26 · DETALHADA por data de NF depois); carteira a faturar à parte", sellout: "sell-out pela AG do cliente", meta: "meta rateada por cliente · leitura nossa (a Vulcabras dá a meta ao preposto)", estoque: "estoque na AG (tênis Olympikus)" },
       fontes: { sellout_ate: (() => { const sz = ((rx || {}).sazonal || {})["TÊNIS"]; const ms = sz ? Object.keys(sz.mensal || {}).sort() : []; return ms.length ? ms[ms.length - 1] : null; })(),
                 sellin_ate: sellin.length ? String(sellin[sellin.length - 1].puxado_em).slice(0, 10) : null, meta_lida_em: meta.length ? String(meta[meta.length - 1].meta_lida_em).slice(0, 10) : null },
-      topics: decidir, modo_cliente: MODO_CLIENTE, atualizado: { carteira: cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null), sellin: sellin.length ? sellin[sellin.length - 1].puxado_em : null }
+      sem_bloco_topics: !(doc.perfil || {}).bloco_topics, topics: decidir, modo_cliente: MODO_CLIENTE, atualizado: { carteira: cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null), sellin: sellin.length ? sellin[sellin.length - 1].puxado_em : null }
     };
   }
 
