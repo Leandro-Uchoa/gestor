@@ -601,18 +601,37 @@ function montarApresentacao(d, modo){
   }
   // 14 · mix de meias (modelo · gênero · cor), quando o documento traz `mix_meias` ({periodo, modelo:{nome: packs}, genero, cor}):
   // os modelos que mais vendem em barras, e gênero e cor ao lado. Invisível + invisível sem fleece já vêm somadas (regra dele, 20/10).
+  // 27/10, palavra dele (raio-x da Universo aberto): "as meias são enganosas… se bota ali qual vendeu mais, mas às vezes é porque não
+  // tem estoque… de repente o estoque está muito alto e a meia não está se comportando bem; nesse formato ele está cego". Quando o
+  // pacote traz MIX_MEIAS.estoque ({mes, modelo:{nome: packs}, genero, cor} — o estoque do último mês fechado, nas MESMAS chaves da
+  // venda), cada barra ganha o estoque e a cobertura (meses = estoque ÷ venda/mês; régua das meias: amarelo abaixo de 2, cinza acima
+  // de 12) e a leitura diz quem pode estar vendendo menos por falta de estoque e quem tem estoque alto e não gira. Sem estoque no
+  // pacote o slide sai como antes — e o rodapé avisa que a leitura é só de venda.
   const MX = d.mix_meias;
   if (MX && MX.modelo && Object.keys(MX.modelo).length) {
-    const bar = (obj, larg, top) => { const ent = Object.entries(obj || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, top || 8), tot = Object.values(obj || {}).reduce((s, v) => s + (v > 0 ? v : 0), 0), mx = Math.max(...ent.map(([, v]) => v), 1);
-      const lw = larg < 800 ? 0.5 : 0.42, bw = larg < 800 ? 0.33 : 0.4;
-      return ent.map(([k, v], i) => `<div style="display:flex;flex-direction:row;align-items:center;gap:14px"><p style="flex:none;width:${Math.round(larg * lw)}px;font-size:24px;font-weight:${i ? 500 : 800};line-height:1.2;white-space:nowrap">${esc(k)}</p><div style="flex:none;width:${Math.max(6, Math.round(larg * bw * v / mx))}px;height:34px;background:${i ? AZUL : AMARELO};${i ? "" : `border:2px solid ${PRETO};`}box-sizing:border-box;border-radius:6px"></div><p style="font-size:24px;font-weight:700;white-space:nowrap">${pc1(tot ? v / tot : null)}</p></div>`).join(""); };
-    const tot = Object.values(MX.modelo).reduce((s, v) => s + (v > 0 ? v : 0), 0), nM = MX.meses || 1;
-    const topo = Object.entries(MX.modelo).sort((a, b) => b[1] - a[1]);
+    const nM = MX.meses || 1, EST = MX.estoque && typeof MX.estoque === "object" ? MX.estoque : null;
+    const cobDe = (grupo, k, v) => { const e = EST && EST[grupo] ? EST[grupo][k] : null; return e == null || !(v > 0) ? null : { e, cob: e / (v / nM) }; };
+    // régua da leitura: abaixo de 2 meses falta meia; acima de 8 o estoque pesa (a mesma régua das lojas pesadas do slide de portas —
+    // a Universo em set/26 tinha a Média com 11 meses, que a régua de 12 da tabela por loja deixaria passar em branco)
+    const corCob = c => c == null ? "" : c < 2 ? `background:${AMARELO};font-weight:800;` : c > 8 ? `background:${CINZA2};` : "";
+    const bar = (obj, larg, top, grupo) => { const ent = Object.entries(obj || {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, top || 8), tot = Object.values(obj || {}).reduce((s, v) => s + (v > 0 ? v : 0), 0), mx = Math.max(...ent.map(([, v]) => v), 1);
+      const comEst = !!(grupo && EST && EST[grupo]), lw = larg < 800 ? 0.5 : comEst ? 0.36 : 0.42, bw = larg < 800 ? 0.33 : comEst ? 0.26 : 0.4;
+      return ent.map(([k, v], i) => { const c = comEst ? cobDe(grupo, k, v) : null;
+        return `<div style="display:flex;flex-direction:row;align-items:center;gap:14px"><p style="flex:none;width:${Math.round(larg * lw)}px;font-size:24px;font-weight:${i ? 500 : 800};line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(k)}</p><div style="flex:none;width:${Math.max(6, Math.round(larg * bw * v / mx))}px;height:34px;background:${i ? AZUL : AMARELO};${i ? "" : `border:2px solid ${PRETO};`}box-sizing:border-box;border-radius:6px"></div><p style="flex:none;width:72px;font-size:24px;font-weight:700;white-space:nowrap">${pc1(tot ? v / tot : null)}</p>${comEst ? `<p style="font-size:22px;white-space:nowrap;color:${CINZA}">est. <b style="color:${PRETO}">${c ? n0(c.e) : "—"}</b> · <span style="color:${PRETO};padding:2px 8px;border-radius:6px;${corCob(c && c.cob)}">${c ? n1(c.cob) + " m" : "—"}</span></p>` : ""}</div>`; }).join(""); };
+    const tot = Object.values(MX.modelo).reduce((s, v) => s + (v > 0 ? v : 0), 0);
+    const topo = Object.entries(MX.modelo).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
     const f1 = topo.length ? `<b>${esc(topo[0][0])}</b> é o modelo que mais vende: ${pc1(tot ? topo[0][1] / tot : null)} dos packs${topo[1] ? `; ${esc(topo[1][0])} vem em seguida, com ${pc1(tot ? topo[1][1] / tot : null)}` : ""}.` : "";
-    pags.push(pagina(cabec("Meias · mix · " + esc(MX.periodo || KSAZ), "Os modelos que mais vendem", `packs · participação na venda do período · ${n0(tot / nM)} packs/mês`)
-      + `<div style="flex:1;display:flex;flex-direction:row;gap:56px"><div style="flex:none;width:1000px;display:flex;flex-direction:column;gap:12px">${kick("Por modelo")}${bar(MX.modelo, 1000, 8)}</div>`
+    const cobs = EST && EST.modelo ? topo.map(([k, v]) => [k, cobDe("modelo", k, v)]).filter(([, c]) => c) : [];
+    const secos = cobs.filter(([, c]) => c.cob < 2).sort((a, b) => a[1].cob - b[1].cob), pesados = cobs.filter(([, c]) => c.cob > 8).sort((a, b) => b[1].cob - a[1].cob);
+    const f2 = secos.length ? `<b>Falta estoque:</b> ${lista(secos.map(([k, c]) => `${esc(k)} (${n1(c.cob)} ${c.cob < 1.95 ? "mês" : "meses"})`))} — ${secos.length === 1 ? "pode estar vendendo menos do que poderia" : "podem estar vendendo menos do que poderiam"}; a venda aqui não mede a procura.` : "";
+    const f3 = pesados.length ? `<b>Estoque alto:</b> ${lista(pesados.map(([k, c]) => `${esc(k)} (${n1(c.cob)} meses)`))} — ${pesados.length === 1 ? "não gira no ritmo do estoque" : "não giram no ritmo do estoque"}.` : "";
+    const f4 = cobs.length && !secos.length && !pesados.length ? "Nenhum modelo está sem estoque nem acima de 8 meses: a venda reflete a procura." : "";
+    const cabEst = EST ? ` · estoque de ${esc(EST.mes || mesBase)} · cobertura em meses: amarelo abaixo de 2 · cinza acima de 8` : "";
+    pags.push(pagina(cabec(`Meias · mix${EST ? " e estoque" : ""} · ` + esc(MX.periodo || KSAZ), "Os modelos que mais vendem", `packs · participação na venda do período · ${n0(tot / nM)} packs/mês${cabEst}`)
+      + `<div style="flex:1;display:flex;flex-direction:row;gap:56px"><div style="flex:none;width:1000px;display:flex;flex-direction:column;gap:12px">${kick("Por modelo")}${bar(MX.modelo, 1000, 8, "modelo")}</div>`
       + `<div style="flex:1;display:flex;flex-direction:column;gap:12px">${MX.genero ? kick("Por gênero") + bar(MX.genero, 620, 3) : ""}${MX.cor ? kick("Por cor") + bar(MX.cor, 620, 5) : ""}</div></div>`
-      + (f1 ? leitura([f1 + " A invisível antiga e a invisível sem fleece estão somadas."], 24) : ""), FONTE_RD, 16));
+      + (f1 ? leitura([f1 + " A invisível antiga e a invisível sem fleece estão somadas.", f2, f3, f4].filter(Boolean), EST ? 22 : 24) : ""),
+      FONTE_RD + (EST ? ` · estoque por modelo em ${esc(EST.mes || mesBase)}` : " · só venda: o estoque por modelo ainda não veio no pacote"), 16));
   }
   // 15 · chinelos, acessórios e meias por loja: venda e cobertura, duas colunas, leitura do NÚCLEO embaixo
   const OC = [[catChi, "Chinelos", AZUL], [catAcc, "Acessórios", CINZA], [catMei, "Meias", PRETO]].filter(([c]) => c);
