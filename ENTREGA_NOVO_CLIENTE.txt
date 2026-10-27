@@ -1,0 +1,8 @@
+Entrega: novo/cliente — carregamento, falhas e concorrência
+Base reconciliada: e43b75cfa60ddcd3da538440c29d0ec6c7d517d1
+Preservados seletor no topo, aviso de cliente inexistente e baseMax da carteira do TI.
+Verificação: 12 testes novos + 25 existentes; revisão independente e 3 cenários próprios do revisor.
+Navegador: fixture com scripts reais, dados fictícios e connect-src none. Carregamento, A lento seguido de B rápido, falha, seletor acessível e recuperação por nova tentativa passaram.
+Limites: dados reais, autenticação/RLS e celular não testados. Fixture sem fontes/CDN externas não representa fidelidade visual integral.
+Publicação e versão no destino serão registradas no PR1. Nenhuma escrita no banco real.
+Testes: node teste_novo_cliente_estado.js; node teste_gestor_lib.js.
