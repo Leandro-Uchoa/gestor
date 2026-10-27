@@ -667,7 +667,8 @@ async function gerarPdf(d, avisa, o){
   avisa = avisa || (() => {}); o = o || {};
   await carregarPdfLib();
   const { paginas, nomeArq, css } = montarApresentacao(d, o.modo || "portas");
-  if (paginas.length > 18) throw new Error("a apresentação passou do teto de 18 páginas (" + paginas.length + ")");
+  // teto = só a guarda contra laço (o molde tinha 18; desde 22/10 há tênis × meias e mix de meias — a Noroeste deu 19 em 26/10 e travou)
+  if (paginas.length > 26) throw new Error("a apresentação passou do teto de 26 páginas (" + paginas.length + ")");
   // o palco: 1_920 px de largura, atrás da página (fora da tela sai em branco); uma foto por página
   const q = document.createElement("div"); q.style.cssText = "position:absolute;left:0;top:0;z-index:-1;width:1920px;background:" + OFF + ";pointer-events:none"; q.innerHTML = `<style>${css}</style>` + paginas.join(""); document.body.appendChild(q);
   const pdf = new window.jspdf.jsPDF({ unit: "px", format: [1_920, 1_080], orientation: "landscape", hotfixes: ["px_scaling"] });
