@@ -20,11 +20,11 @@
   }
   function barra() {
     const div = document.createElement("div"); div.id = "ti-barra";
-    div.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:30;display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif;background:rgba(246,245,240,.92);padding:6px;border-radius:14px";   // embaixo, para não cobrir o topo nem o nome do cliente
+    div.style.cssText = "display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif";   // 27/10: no slot do topo da casca (PICASSO), ao lado do nome
     div.innerHTML = (Dados.MODO_CLIENTE ? "" : `<select id="ti-sel" style="border:1px solid #E6E7E8;border-radius:12px;padding:8px 10px;background:#fff;font-weight:600;font-size:13px;max-width:240px"></select>
       <a href="../" style="background:#fff;border:1px solid #E6E7E8;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;color:#000;text-decoration:none">Gestor completo</a>`)
       + `<a href="#" id="ti-sair" style="font-size:12px;color:#787B86;text-decoration:underline">sair</a>`;
-    document.body.appendChild(div);
+    (document.getElementById("slot_seletor") || document.body).appendChild(div);
     $("ti-sair").onclick = ev => { ev.preventDefault(); Dados.sair(); };
     if (!Dados.MODO_CLIENTE) { const sel = $("ti-sel"); sel.innerHTML = LISTA.map(c => `<option value="${esc(c.cliente)}">${esc(c.nome || c.cliente)}</option>`).join(""); sel.value = CLIENTE; sel.onchange = () => { CLIENTE = sel.value; location.hash = "cliente=" + encodeURIComponent(CLIENTE); abrir(); }; }
   }
