@@ -67,9 +67,17 @@
       await abrir();
     } catch (e) { console.error(e); aviso("A página não conseguiu arrancar", Dados.MODO_CLIENTE ? "tente de novo em instantes" : "sem resposta do banco ou da lista de clientes: " + (e && e.message || e)); }
   }
+  let cargaAtual = 0;                                                   // Conselho (PR #1, 27/10): trocar de cliente no meio da carga não pode desenhar o cliente antigo por cima do novo
   async function abrir() {
-    try { DADOS = await Dados.carregar(CLIENTE); BLOCO = ((DADOS.decidir || [])[0] || {}).bloco || null; window.desenhar(DADOS); depois(); }
-    catch (e) { console.error(e); window.desenhar({ cliente: { nome: CLIENTE }, prioridade: { titulo: "Não foi possível carregar os dados", detalhe: Dados.MODO_CLIENTE ? "tente de novo em instantes" : "não consegui ler o banco: " + (e && e.message || e) }, sem_bloco_topics: true }); }
+    const carga = ++cargaAtual, cliente = CLIENTE;
+    try {
+      const dados = await Dados.carregar(cliente);
+      if (carga !== cargaAtual) return;                                 // chegou atrasado: o seletor já está em outro cliente
+      DADOS = dados; BLOCO = ((DADOS.decidir || [])[0] || {}).bloco || null; window.desenhar(DADOS); depois();
+    } catch (e) {
+      if (carga !== cargaAtual) return;
+      console.error(e); window.desenhar({ cliente: { nome: cliente }, prioridade: { titulo: "Não foi possível carregar os dados", detalhe: Dados.MODO_CLIENTE ? "tente de novo em instantes" : "não consegui ler o banco: " + (e && e.message || e) + " — troque o cliente no seletor ou recarregue a página" }, sem_bloco_topics: true });
+    }
   }
   // o que a casca ainda não desenha sozinha (combinado com o PICASSO para absorver): "sem bloco no TOPICS" e o bloco da ação de trade
   function depois() {
