@@ -103,15 +103,17 @@ async function carregarVitrine(sb){
     if (!VIT.cliente) VIT.cliente = VIT.clientes.includes("POLYELLE") ? "POLYELLE" : (VIT.clientes[0] || null);
   }
   if (VIT.cliente && VIT.carregadoPara !== VIT.cliente) {
-    const [r, a, sg, cd] = await Promise.all([tudo(sb.from("vitrine").select("colecao,marca,referencia,cor,estado,grade,pares,pares6,pares_mes,grade_texto,pares6_mes,grades").eq("cliente", VIT.cliente)), sb.rpc("vitrine_atual_consulta", { p_cliente: VIT.cliente, p_colecao: null }),
+    const [r, a, sg, cd, cc] = await Promise.all([tudo(sb.from("vitrine").select("colecao,marca,referencia,cor,estado,grade,pares,pares6,pares_mes,grade_texto,pares6_mes,grades").eq("cliente", VIT.cliente)), sb.rpc("vitrine_atual_consulta", { p_cliente: VIT.cliente, p_colecao: null }),
       tudo(sb.from("vitrine_sugestao").select("marca,referencia,cor,pares_mes,inicio_faturamento,motivo,classe,tipo_item,venda_media_mes,continuidade").eq("cliente", VIT.cliente)),
-      tudo(sb.from("cliente_condicao").select("marca,tipo,prazo,markup").eq("cliente", VIT.cliente))]);
+      tudo(sb.from("cliente_condicao").select("marca,tipo,prazo,markup").eq("cliente", VIT.cliente)),
+      VIT.condCms ? { data: null } : tudo(sb.from("cliente_condicao").select("marca,tipo,prazo,markup").eq("cliente", "CMS"))]);   // 27/10: a condição da CMS (GTM) vem do banco, uma vez
     if (r.error) { VIT.erro = "não consegui ler a vitrine: " + r.error.message; return; }
     VIT.marcas = new Map(); VIT.grades = new Map(); VIT.pares = new Map(); VIT.pares6 = new Map(); VIT.meses = new Map(); VIT.meses6 = new Map(); VIT.gradesL = new Map(); VIT.gradeTx = new Map(); VIT.sug = new Map();
     for (const x of r.data) { const k = x.marca + "|" + x.referencia + "|" + x.cor; marcas(x.colecao).set(k, x.estado || "escolhida"); if (x.grade) VIT.grades.set(k, x.grade); if (x.pares != null) VIT.pares.set(k, x.pares); if (x.pares6) VIT.pares6.set(k, x.pares6); if (x.pares_mes) VIT.meses.set(k, x.pares_mes); if (x.pares6_mes) VIT.meses6.set(k, x.pares6_mes); if (x.grade_texto) VIT.gradeTx.set(k, x.grade_texto); if (Array.isArray(x.grades) && x.grades.length) VIT.gradesL.set(k, x.grades); }
     for (const x of (sg && sg.data) || []) VIT.sug.set(x.marca + "|" + x.referencia + "|" + x.cor, { pm: x.pares_mes || {}, inicio: x.inicio_faturamento || "", motivo: x.motivo || "", classe: x.classe || "", tipo: x.tipo_item || "", vmm: x.venda_media_mes == null ? null : +x.venda_media_mes, cont: !!x.continuidade });
     // a condição do cliente (ele, 19/10 16:1x: "clientes grandes que eu acompanho, você já tem o markup: abre automaticamente com o markup e o prazo dele")
     VIT.cond = new Map(); for (const x of (cd && cd.data) || []) VIT.cond.set(x.marca + "|" + x.tipo, { prazo: x.prazo, markup: +x.markup });
+    if (cc && cc.data) { VIT.condCms = new Map(); for (const x of cc.data) VIT.condCms.set(x.marca + "|" + x.tipo, { prazo: x.prazo, markup: +x.markup }); }
     VIT.atual = (!a.error && a.data && a.data.n > 0) ? a.data : null;
     VIT.carregadoPara = VIT.cliente; VIT.erro = a.error ? "não consegui ler a coleção atual: " + a.error.message : "";
     VIT.vista = VIT.vistaPedida === "montando" ? "montando" : (VIT.atual ? "atual" : "montando"); VIT.vistaPedida = null;
@@ -664,9 +666,9 @@ async function baixarSaida(b){
 // estado é repouso; paleta só a oficial.
 const MF = { busca: "", marca: "OLY", tipo: "", bloco: new Set(), gen: new Set(), esp: false, passo: "" };   // filtros da esquerda (a coleção); esp = só os que chegam ao 48; passo = o roteiro
 const VF = { gen: new Set(), bloco: new Set(), tipo: new Set(), marca: new Set() };
-// custo para a CMS (ele, 19/10 16:0x): "markup 2,0, padrão para o prazo médio de 63 dias" → custo = PDV ÷ 2; no GTM o placar mostra custo × pares, não PDV
-const MARKUP_CMS = 2;
-const condDe = it => ehGtm() ? { markup: MARKUP_CMS, prazo: 63 } : (VIT.cond.get(it.m + "|" + it.t) || VIT.cond.get(it.m + "|TENIS") || null);
+// custo para a CMS (ele, 19/10): no GTM o placar mostra custo × pares, não PDV — custo = PDV ÷ markup. 27/10 (BOSS: este arquivo é
+// PÚBLICO no GitHub): o markup e o prazo padrão da CMS NÃO ficam aqui; moram em cliente_condicao, linha 'CMS', lida depois do login (VIT.condCms)
+const condDe = it => ehGtm() ? ((VIT.condCms && (VIT.condCms.get(it.m + "|" + it.t) || VIT.condCms.get(it.m + "|TENIS"))) || null) : (VIT.cond.get(it.m + "|" + it.t) || VIT.cond.get(it.m + "|TENIS") || null);
 const VF_MES = { v: new Set() };   // meses marcados na linha "mês / pares" do placar (ele, 17:1x): vazio = tudo; vários ao mesmo tempo
 const mesCasa = kc => !VF_MES.v.size || entradasDe(kc).some(e => [...VF_MES.v].some(m => m in (e.pm || {})));                      // filtros da direita (a vitrine)
 let PAINEL = "esq";                                                                    // no celular: qual metade está na tela
@@ -892,9 +894,9 @@ function desenharDireita(pg){
   // a linha "mês / pares": os meses de TODAS as cores do tipo que passam nos outros filtros (para o mês não sumir quando é desmarcado)
   const semMes = todas.filter(it => (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && casaGrupo(it) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))));
   const placar = TIPOS.filter(([v]) => v && ct.has(v)).map(([v, r]) => { const its = base.filter(it => it.t === v); if (!its.length) return "";
-    const temCond = gtm || its.some(it => condDe(it));
+    const temCond = its.some(it => condDe(it));
     const soma = temCond ? its.reduce((s, it) => { const c = condDe(it); return s + (c ? paresDe(it) * ((+it.p || 0) / c.markup) : 0); }, 0) : its.reduce((s, it) => s + (+it.p || 0), 0);
-    const c0 = its.map(condDe).find(Boolean), rotCusto = temCond ? (gtm ? "custo · markup 2,0 · 63 d" : `custo · markup ${c0 ? c0.markup.toFixed(2).replace(".", ",") : "?"}${c0 && c0.prazo ? ` · ${c0.prazo} d` : ""}`) : "em PDV";
+    const c0 = its.map(condDe).find(Boolean), rotCusto = temCond ? `custo · markup ${c0 ? c0.markup.toFixed(2).replace(".", ",") : "?"}${c0 && c0.prazo ? ` · ${c0.prazo} d` : ""}` : "em PDV";
     const pares = gtm ? its.reduce((s, it) => s + (VIT.pares.get(chaveCor(it)) || 0), 0) : null;
     const teto = gtm ? [...new Map(its.map(it => [it.m + "|" + it.r, it])).values()].reduce((s, it) => s + (((gtmDe(it) || { vm: {} }).vm[mes]) || 0), 0) : null;
     const pm = {}, skus = {}; if (!gtm) for (const it of semMes.filter(x => x.t === v)) { const m = VIT.meses.get(chaveCor(it)); if (m) for (const k of MESES_V) if (k in m) { pm[k] = (pm[k] || 0) + (m[k] || 0); skus[k] = (skus[k] || 0) + 1; } }
