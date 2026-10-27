@@ -13,7 +13,7 @@ window.Dados = (() => {
   const TIPO_FAM = { tenis: /T[EÊ]NIS/i, meias: /MEIA/i, chinelo: /CHINEL/i, acessorio: /ACESS/i, confeccao: /CONFEC/i };
   const TIPO_CHAVE = { tenis: k => FAIXAS_TENIS.includes(k) || k === "TT FTW_UA", meias: k => k === "MEOLY" || k === "UA_ME", chinelo: k => k === "CHOLY" || k === "UA_CH", acessorio: k => k === "ACOLY" || k === "UA_AC", confeccao: k => k === "UA_CF" };
   const marcaDe = m => /^UA/i.test(m) ? "UA" : "OLY";
-  let BRUTO = null;                                                      // o que veio do banco para o cliente atual (o filtro recalcula em cima)
+  let BRUTO = null, cargaAtual = 0;                                                      // o que veio do banco para o cliente atual (o filtro recalcula em cima)
 
   async function tudo(q) {                                               // a API corta em 1.000 linhas: lê em páginas
     const out = []; for (let i = 0; ; i += 1000) { const { data, error } = await q.range(i, i + 999); if (error) throw error; out.push(...(data || [])); if (!data || data.length < 1000) break; } return out;
@@ -24,6 +24,8 @@ window.Dados = (() => {
   async function clientes() { const { data, error } = await sb.rpc("clientes_lista"); if (error) throw error; return (data || []).map(c => ({ cliente: c.cliente, nome: c.nome })); }
 
   async function carregar(cliente) {
+    const carga = ++cargaAtual;
+    BRUTO = null; // nunca filtrar dados do cliente anterior durante uma nova leitura
     const [doc, rx, sellin, meta, hist] = await Promise.all([
       sb.rpc("cliente_consulta", { p_cliente: cliente }).then(r => { if (r.error) throw r.error; return r.data; }),
       sb.rpc("raio_x_consulta", { p_cliente: cliente }).then(r => r.error ? null : r.data),
@@ -32,20 +34,23 @@ window.Dados = (() => {
       tudo(sb.from("v_meta_cliente_hist").select("mes,chave,unidade,meta_cliente,faturado,base").eq("cliente", cliente).order("mes")),
       tudo(sb.from("venda_mensal").select("mes,marca,pares_fat,pares_cart,base_em").eq("cliente", cliente).eq("fonte", "DETALHADA").gte("mes", new Date().toISOString().slice(0, 7) + "-01")),
     ]);
-    BRUTO = { cliente, doc, rx, sellin, meta, hist, cartFam: [] };
-    BRUTO.cartFam = (await tudo(sb.from("venda_mensal").select("mes,marca,faixa,pares_fat,pares_cart,base_em").eq("cliente", cliente).eq("fonte", "DETALHADA").gte("mes", "2026-07-01")));
-    return montar({ marca: ["OLY"], tipo: "tenis", genero: [], categoria: [] });
+    const bruto = { cliente, doc, rx, sellin, meta, hist, cartFam: [] };
+    bruto.cartFam = (await tudo(sb.from("venda_mensal").select("mes,marca,faixa,pares_fat,pares_cart,base_em").eq("cliente", cliente).eq("fonte", "DETALHADA").gte("mes", "2026-07-01")));
+    const dados = montar({ marca: ["OLY"], tipo: "tenis", genero: [], categoria: [] }, bruto);
+    if (carga === cargaAtual) BRUTO = bruto;
+    return dados;
   }
 
   // ---------- o objeto DADOS a partir do bruto + filtro
-  function montar(filtro) {
-    const { cliente, doc, rx, sellin, meta, hist } = BRUTO, perfil = doc.perfil || {}, reg = ((doc.raio_x || {}).escopo || {}).regulador || {};
+  function montar(filtro, bruto = BRUTO) {
+    if (!bruto) throw new Error("dados do cliente ainda indisponíveis");
+    const { cliente, doc, rx, sellin, meta, hist } = bruto, perfil = doc.perfil || {}, reg = ((doc.raio_x || {}).escopo || {}).regulador || {};
     const hoje = new Date().toISOString().slice(0, 7);
     // carteira
     // carteira por família (venda_mensal, DETALHADA): tênis OLY é o número; as outras ao lado, na unidade delas (chinelo nunca no total do tênis)
     const FAM = m => /^OLY$/i.test(m) ? "tênis OLY" : /^UA_TN$/i.test(m) ? "tênis UA" : /^MEOLY$|^UA_ME$/i.test(m) ? "meias (packs)" : /^CHOLY$|^UA_CH$/i.test(m) ? "chinelo" : /^ACOLY$|^UA_AC$/i.test(m) ? "acessórios (peças)" : "confecção (peças)";
     const porMesFam = {}, outras = {};
-    for (const r of (BRUTO.cartFam || [])) { const m = String(r.mes).slice(0, 7), f = FAM(r.marca); if (m < hoje) continue; porMesFam[m] = porMesFam[m] || {}; porMesFam[m][f] = (porMesFam[m][f] || 0) + (r.pares_cart || 0); if (f !== "tênis OLY") outras[f] = (outras[f] || 0) + (r.pares_cart || 0); }
+    for (const r of (bruto.cartFam || [])) { const m = String(r.mes).slice(0, 7), f = FAM(r.marca); if (m < hoje) continue; porMesFam[m] = porMesFam[m] || {}; porMesFam[m][f] = (porMesFam[m][f] || 0) + (r.pares_cart || 0); if (f !== "tênis OLY") outras[f] = (outras[f] || 0) + (r.pares_cart || 0); }
     const cart = (doc.carteira || []).map(x => ({ mes: String(x.mes).slice(0, 7), fat: x.fat || 0, cart: (porMesFam[String(x.mes).slice(0, 7)] || {})["tênis OLY"] || 0, cart_todas: x.cart || 0, base_em: x.base_em }));
     const baseMax = cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null); for (const x of cart) x.base_em = baseMax;   // GAMER: a casca lia o base_em do 1º mês (29/09); a base da carteira é UMA, a leitura mais nova
     // giro (já vem só tênis OLY do banco) + cobertura: último mês COM estoque ÷ média dos 3 meses fechados — "—" quando falta
@@ -60,7 +65,7 @@ window.Dados = (() => {
     // agenda: as últimas atas (não há agenda futura no banco ainda)
     const agenda = (MODO_CLIENTE ? [] : (doc.atas || [])).slice(0, 3).map(a => ({ data: a.data, titulo: a.titulo, onde: a.assunto || "" }));
     // anos: sell-in × sell-out × meta × estoque, pelo filtro
-    const anos = montarAnos(filtro, sellin, rx, MODO_CLIENTE ? [] : meta, MODO_CLIENTE ? [] : hist, g, BRUTO.cartFam || []);   // modo cliente: sem a meta rateada do Léo (BOSS)
+    const anos = montarAnos(filtro, sellin, rx, MODO_CLIENTE ? [] : meta, MODO_CLIENTE ? [] : hist, g, bruto.cartFam || []);   // modo cliente: sem a meta rateada do Léo (BOSS)
     return {
       cliente: { nome: perfil.nome || cliente, codigo: perfil.cod_lider || "", lojas_ativas: ((doc.raio_x || {}).base || {}).lojas_ativas || null, recorte: "" },
       agenda, decidir, carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), recorte: "tênis Olympikus", outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null) },   // a base é a leitura mais nova entre os meses (GAMER: o rótulo dizia 29/09 com dado de 27/10)
