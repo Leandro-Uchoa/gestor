@@ -373,7 +373,12 @@ function montarApresentacao(d, modo){
   const xc = (l, c) => ((l.cat || {})[c] || {});
   const texto = t => esc(t);
   // famílias e categorias: pelo nome, não pela posição
-  const cats = d.cats || [], ehOutra = c => /CHINEL|ACESS|MEIA/i.test(c), ehUA = c => /^UA\b/i.test(c);
+  // CONFECÇÃO não é tênis (NÚCLEO, 27/10: a calça e as camisas UV do Noroeste vinham como "OUTROS TÊNIS"; a categoria agora vem
+  // como CONFECÇÃO e não pode entrar nas tabelas de tênis). Só sai coluna da categoria que veio no pacote — nada fixo no código.
+  const cats = d.cats || [], ehOutra = c => /CHINEL|ACESS|MEIA|CONFEC/i.test(c), ehUA = c => /^UA\b/i.test(c);
+  // a versão que vai ao CLIENTE (ordem dele via NÚCLEO, 27/10): no POR PORTA não saem "Tênis × Meias", "Under Armour · tênis" e
+  // "Onde o UA gira" — ficam só na tela do Gestor
+  const paraCliente = !consolidada;
   const catsTenis = cats.filter(c => !ehOutra(c) && !ehUA(c)), catChi = cats.find(c => /CHINEL/i.test(c)), catAcc = cats.find(c => /ACESS/i.test(c)), catMei = cats.find(c => /MEIA/i.test(c)), catUA = chaveUA(cats) || cats.find(ehUA);
   const SZ = d.sazonal || {}, famDe = re => Object.keys(SZ).find(k => re.test(k) && !/^UA/i.test(k));
   const famTen = famDe(/T[EÊ]NIS/i), famChi = famDe(/CHINEL/i), famAcc = famDe(/ACESS/i), famMei = famDe(/MEIA/i), famUA = chaveUA(Object.keys(SZ));
@@ -567,7 +572,7 @@ function montarApresentacao(d, modo){
   if (famMei) pags.push(sazSlide(famMei, "Meias", unid(catMei || famMei), "Sazonalidade e preço · " + KSAZ, dirPreco(pirDe(/MEIA/i), catMei, true), FONTE_RD));
   // 13b · TÊNIS × MEIAS na sazonalidade (ele, 22/10/2026, para todos os clientes): barras lado a lado mês a mês, tênis em pares e meias
   // em packs, e a relação packs de meia por par de tênis embaixo de cada mês; cartões por ano e a leitura dos meses de maior e menor relação
-  if (famTen && famMei) {
+  if (famTen && famMei && !paraCliente) {
     const sT = SZ[famTen].mensal || {}, sM = SZ[famMei].mensal || {}, meses = Object.keys(sT).filter(m => sM[m] != null).sort();
     if (meses.length >= 2) {
       const vt = meses.map(m => sT[m] || 0), vm = meses.map(m => sM[m] || 0), rel = meses.map((m, i) => vt[i] ? vm[i] / vt[i] : null);
@@ -621,8 +626,8 @@ function montarApresentacao(d, modo){
       + duas(tabela(cols, e1.map(lin), LG, fs, pad, grp), tabela(cols, [...e2.map(lin), rede], LG, fs, pad, grp)) + leitura([fr0, ...frs], fsL), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 14));
   }
   // 16 · Under Armour na rede e 17 · onde o UA gira: só quando a família vem no documento
-  if (famUA) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(chaveUA(Object.keys(PIR)), catUA, true), FONTE_RD));
-  if (catUA && porLoja) {
+  if (famUA && !paraCliente) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(chaveUA(Object.keys(PIR)), catUA, true), FONTE_RD));
+  if (catUA && porLoja && !paraCliente) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ["Venda/mês", "center"], ["Estoque", "center"], ["Cob.", "center"], ["Índice", "center"]], LG = [52, 236, 140, 140, 120, 128], t = T[catUA] || {}, cobU = t.v ? t.e / t.v : null;
     const [e1, e2] = corte(L);
     const topU = L.slice().sort((a, b) => (xc(b, catUA).v || 0) - (xc(a, catUA).v || 0)).slice(0, 6), somaTop = topU.reduce((s, l) => s + (xc(l, catUA).v || 0), 0), par = L.filter(l => (xc(l, catUA).v || 0) < 1.5 && (xc(l, catUA).e || 0) >= 40);
