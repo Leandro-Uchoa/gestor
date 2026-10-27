@@ -64,7 +64,7 @@ window.Dados = (() => {
       cliente: { nome: perfil.nome || cliente, codigo: perfil.cod_lider || "", lojas_ativas: ((doc.raio_x || {}).base || {}).lojas_ativas || null, recorte: "" },
       agenda, decidir, carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), recorte: "tênis Olympikus", outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null) },   // a base é a leitura mais nova entre os meses (GAMER: o rótulo dizia 29/09 com dado de 27/10)
       giro, anos, filtro,
-      etiquetas: { sellin: "sell-in pelo EBM · faturado por NF, líquido de devolução", sellout: "sell-out pela AG do cliente", meta: "meta rateada por cliente · leitura nossa (a Vulcabras dá a meta ao preposto)", estoque: "estoque na AG (tênis Olympikus)" },
+      etiquetas: { sellin: "sell-in = faturado (EBM até jun/26 · DETALHADA por data de NF depois); carteira a faturar à parte", sellout: "sell-out pela AG do cliente", meta: "meta rateada por cliente · leitura nossa (a Vulcabras dá a meta ao preposto)", estoque: "estoque na AG (tênis Olympikus)" },
       fontes: { sellout_ate: (() => { const sz = ((rx || {}).sazonal || {})["TÊNIS"]; const ms = sz ? Object.keys(sz.mensal || {}).sort() : []; return ms.length ? ms[ms.length - 1] : null; })(),
                 sellin_ate: sellin.length ? String(sellin[sellin.length - 1].puxado_em).slice(0, 10) : null, meta_lida_em: meta.length ? String(meta[meta.length - 1].meta_lida_em).slice(0, 10) : null },
       topics: decidir, modo_cliente: MODO_CLIENTE, atualizado: { carteira: cart.reduce((m, x) => (x.base_em && (!m || x.base_em > m)) ? x.base_em : m, null), sellin: sellin.length ? sellin[sellin.length - 1].puxado_em : null }
@@ -92,7 +92,7 @@ window.Dados = (() => {
       if (f.tipo === "tenis" && marcaDe(r.marca) === "OLY" && (!catOk(fx) || !genOk(fx))) continue;
       const [a, mi] = [m.slice(0, 4), +m.slice(5, 7) - 1]; if (!S[a]) continue;
       if (r.pares_fat) S[a][mi] = (S[a][mi] || 0) + (+r.pares_fat || 0);
-      if (r.pares_cart) { SC[a][mi] = (SC[a][mi] || 0) + (+r.pares_cart || 0); S[a][mi] = (S[a][mi] || 0) + (+r.pares_cart || 0); }   // potencial = faturado + carteira; a parte da carteira vai em sellin_carteira
+      if (r.pares_cart) SC[a][mi] = (SC[a][mi] || 0) + (+r.pares_cart || 0);   // NÚCLEO, 27/10: sell-in é só FATURADO; a carteira vai à parte (sellin_carteira, trecho 'a faturar'), nunca somada
     }
     // sell-out (AG, raio-x): família do tipo; tênis por categoria (categorias) ou gênero (subs) quando pedido
     const SZ = (rx || {}).sazonal || {};
