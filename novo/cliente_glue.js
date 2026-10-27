@@ -37,7 +37,12 @@
     CLIENTE = LISTA.some(c => c.cliente === pedido) ? pedido : null;   // BOSS (segurança): sem cliente válido na URL, a página pede para escolher — não abre num cliente por conta própria
     if (Dados.MODO_CLIENTE) { for (const el of document.querySelectorAll(".bro-fab, .bro-m, #bro, .rail")) el.remove(); document.querySelector(".main").style.marginLeft = "16px"; }   // modo cliente: sem Bro, sem menu
     barra();
-    if (!CLIENTE) { window.desenhar({ cliente: { nome: Dados.MODO_CLIENTE ? "link sem cliente" : "escolha um cliente" } }); return; }
+    if (!CLIENTE) {   // GAMER (DEPOIS 4): nome que não casa NUNCA vira página zerada que parece verdadeira — diz que não achou, na manchete também
+      const naoAchou = !!pedido, nome = naoAchou ? "cliente não encontrado" : (Dados.MODO_CLIENTE ? "link sem cliente" : "escolha um cliente");
+      const aviso = naoAchou ? "Cliente não encontrado" + (Dados.MODO_CLIENTE ? "" : ": “" + pedido + "” não está na lista — escolha no seletor") : (Dados.MODO_CLIENTE ? "Este link não aponta para um cliente" : "Escolha um cliente no seletor, no topo da página");
+      window.desenhar({ cliente: { nome, codigo: "" }, prioridade: { titulo: aviso, detalhe: "nenhum dado foi lido" }, sem_bloco_topics: true });
+      return;
+    }
     abrir();
   }
   async function abrir() {
