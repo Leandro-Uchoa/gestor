@@ -123,7 +123,7 @@ function carteiraGiro(d){
   const cart = c.filter(x => (x.fat || 0) + (x.cart || 0) > 0);
   const tabela = cart.length ? `<table class="mini"><thead><tr><th>carteira</th>${cart.map(x => `<th class="n">${mesBR(x.mes)}</th>`).join("")}</tr></thead>
     <tbody><tr><td>faturado</td>${cart.map(x => `<td class="n">${x.fat ? fmt(x.fat) : "—"}</td>`).join("")}</tr><tr><td>em carteira</td>${cart.map(x => `<td class="n c">${x.cart ? fmt(x.cart) : "—"}</td>`).join("")}</tr></tbody></table>` : "";
-  return `<div class="card">${tit("Análise de giro", "AG · sellout por mês · pares", ir("cg", est, "abrir a AG"))}
+  return `<div class="card">${tit("Análise de giro", (d.giro_recorte || "AG") + " · sellout por mês · pares", ir("cg", est, "abrir a AG"))}
     <div class="num"><div><b>${ult ? fmt(ult.v) : "—"}</b><small>sellout ${ult ? mesBR(ult.mes) + (parcial(ult) ? "*" : "") : ""}</small></div><div><b>${ue ? fmt(ue.e) : "—"}</b><small>estoque ${ue ? mesBR(ue.mes) : "— sem estoque no banco"}</small></div><div class="${cob != null && cob < 4 ? "al" : ""}"><b>${cob != null ? dec(cob) : "—"}</b><small>cobertura (meses${ue ? " · estoque de " + mesBR(ue.mes) : ""})</small></div><div><b>${fmt(c.reduce((s, x) => s + (x.cart || 0), 0))}</b><small>carteira a faturar</small></div></div>
     ${barras}${tabela}
   </div>`;
