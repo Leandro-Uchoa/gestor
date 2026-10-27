@@ -7,16 +7,16 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<link rel="stylesheet" href="cliente.css?v=11">
+<link rel="stylesheet" href="cliente.css?v=16">
 </head>
 <body>
 <nav class="rail">
  <div class="marca"></div>
- <a href="#" title="Início"><i class="ti ti-home"></i></a>
- <a href="#" class="on" title="Clientes"><i class="ti ti-building-store"></i></a>
- <a href="#" class="bro-m" title="Bro" onclick="abrirBro();return false" style="font-weight:800;font-size:20px">✦</a>
- <a href="#" title="Análise de giro"><i class="ti ti-chart-bar"></i></a>
- <a href="#" title="TOPICS"><i class="ti ti-checklist"></i></a>
+ <a href="#" id="nav_inicio" title="Início"><i class="ti ti-home"></i><span class="rl">Início</span></a>
+ <a href="#" id="nav_cliente" class="on" title="Clientes"><i class="ti ti-building-store"></i><span class="rl">Cliente</span></a>
+ <a href="#" id="nav_bro" class="bro-m" title="Bro" onclick="abrirBro();return false"><i class="st">✦</i><span class="rl">Bro</span></a>
+ <a href="#" id="nav_giro" title="Análise de giro"><i class="ti ti-chart-bar"></i><span class="rl">Giro</span></a>
+ <a href="#" id="nav_topics" title="TOPICS"><i class="ti ti-checklist"></i><span class="rl">TOPICS</span></a>
  <div class="pe">LP</div>
 </nav>
 <button class="bro-fab" onclick="abrirBro()" title="Falar com o Bro"><span class="st">✦</span>Bro</button>
@@ -72,9 +72,9 @@
  <div class="msgs" id="brmsg"></div>
  <form onsubmit="return false"><input id="brin" placeholder="Escreve para o Bro…" autocomplete="off"><button>enviar</button></form>
 </aside>
-<script src="cliente_tela.js?v=11"></script>
+<script src="cliente_tela.js?v=16"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="cliente_dados.js?v=11"></script>
-<script src="cliente_glue.js?v=12"></script>
+<script src="cliente_dados.js?v=16"></script>
+<script src="cliente_glue.js?v=16"></script>
 </body></html>

@@ -6,6 +6,8 @@
    ├ decidir      [ { id, texto:str, urgente:bool, criado_em:'AAAA-MM-DD', bloco:str } ]
    │                                                                             → "O que decidir hoje". Vazio: "nada pendente no TOPICS".
    ├ topics       (igual a decidir; usado só se decidir vier ausente)
+   ├ sem_bloco_topics? bool → o bloco do TOPICS some (cliente sem bloco ou não encontrado)
+   ├ prioridade?  str ou {titulo, detalhe} → 1ª coluna da manchete (vence a leitura de estoque)
    ├ agenda       [ { data:'AAAA-MM-DD', titulo:str, onde:str } ]                → calendário + linha do tempo. Vazio: "sem eventos".
    ├ carteira     { meses:[ { mes:'AAAA-MM', fat:num, cart:num, base_em:'AAAA-MM-DD…' } ], a_faturar:num }
    │                                                                             → cartão Carteira (a_faturar em pares; um chip por mês com cart). Vazio: "—".
@@ -52,6 +54,8 @@ const escRe=x=>String(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const limpa=(t,b)=>{let x=String(t||'');if(b)x=x.replace(new RegExp('^\\s*'+escRe(b)+'\\s*[-–—:·]\\s*','i'),'');return x};
 const ehCli=b=>{const n=((D.cliente||{}).nome||'').toUpperCase().replace(/\s+/g,''),bb=String(b||'').toUpperCase().replace(/\s+/g,'');return !bb||bb===n||n.startsWith(bb)||bb.startsWith(n)};
 function decidir(){const L=D.decidir||D.topics||[];$('c_ntp').textContent=L.length+' no TOPICS';
+ // cliente sem bloco no TOPICS (ou não encontrado): o bloco some em vez de dizer "nada pendente"
+ document.querySelector('.bento>.dec').style.display=D.sem_bloco_topics?'none':'';
  // sem urgente, o bloco não se chama "o que decidir hoje" (GAMER: não pode competir com a prioridade da manchete)
  $('c_dec_tit').innerHTML=L.some(t=>t.urgente)?'<i class="ti ti-bolt"></i> O que decidir hoje':'<i class="ti ti-checklist"></i> TOPICS · sem urgente';
  $('tpl').innerHTML=L.length?L.map(t=>`<div class="it" id="tp_${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(limpa(t.texto,t.bloco))}</b><small>${esc([ehCli(t.bloco)?null:t.bloco,t.criado_em?t.criado_em.slice(8,10)+'/'+t.criado_em.slice(5,7):null].filter(Boolean).join(' · '))}</small><div class="nota" id="tpn_${esc(t.id)}"></div>
@@ -112,6 +116,9 @@ function manchete(){const L=(D.decidir||D.topics||[]),urg=L.filter(t=>t.urgente)
  // decisão pendente: a cobertura (só com base) + quantos itens esperam decisão
  const dc=!b.ok?`<div class="h">Cobertura sem base para estimar</div><div class="s">${b.n<3?'menos de 3 meses fechados com venda':'venda média nula'} — não dá para dizer se falta ou sobra</div>`
   :c<4?`<div class="h">Ruptura: ${dec(c)} meses</div><div class="s">antecipar já · abaixo de 4 meses</div>`:c<5?`<div class="h">Forçar a barra: ${dec(c)} meses</div><div class="s">abaixo do teto de 5 meses</div>`:`<div class="h">No teto: ${dec(c)} meses</div><div class="s">não antecipar · ${L.length} ${L.length===1?'decisão':'decisões'} no TOPICS</div>`;
+ // estado vazio (cliente não encontrado / nada lido): só a prioridade, sem colunas de traço
+ if(!D.giro&&!D.anos){$('manch').style.gridTemplateColumns='1fr';$('manch').innerHTML=`<div><div class="t">Prioridade</div>${pri}</div>`;return}
+ $('manch').style.gridTemplateColumns='';
  $('manch').innerHTML=`<div><div class="t">Prioridade</div>${pri}</div><div><div class="t">Evidência · vendendo ao consumidor ou só abastecendo?</div>${ev}</div><div><div class="t">Decisão pendente</div>${dc}</div>`}
 // ---------------- cobertura ----------------
 function cobertura(){const g=D.giro||{},B=baseCob(),c=B.ok?g.cobertura:null;$('c_recorte').textContent=g.recorte||'—';$('c_cob').textContent=B.ok?dec(c):'—';
