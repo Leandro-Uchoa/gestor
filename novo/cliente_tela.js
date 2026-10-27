@@ -71,7 +71,10 @@ function agenda(){const EV=(D.agenda||[]).filter(e=>e&&e.data).sort((a,b)=>a.dat
  $('evl').innerHTML=(SD?`<div class="d-flex mb-1"><b>${SD.slice(8,10)}/${SD.slice(5,7)}</b><a href="#" class="ms-auto small" onclick="CLI.dia(null);return false">ver tudo</a></div>`:'<div class="d-flex mb-1"><b>Linha do tempo</b><span class="ms-auto hora">da mais nova</span></div>')+
   (L.length?L.map(x=>`<div class="e ${x.data>hoje?'fut':''}"><div class="dt">${x.data.slice(8,10)}<small>${MSX[+x.data.slice(5,7)-1].slice(0,3)}/${x.data.slice(2,4)}</small></div><div><b>${esc(tituloAg(x.titulo))}</b><small class="d2">${esc(ondeAg(x.onde))}</small></div><span></span></div>`).join(''):'<div class="hora" style="color:#fff;opacity:.8">sem eventos</div>')}
 // ---------------- carteira ----------------
-function carteira(){const c=D.carteira||{},M=c.meses||[];$('c_cart').textContent=fmt(c.a_faturar);$('c_cart_u').textContent=' a faturar';
+function carteira(){const c=D.carteira||{},M=c.meses||[];$('c_cart').textContent=fmt(c.a_faturar);$('c_cart_u').textContent=' pares de tênis a faturar';
+ // as outras famílias ficam AO LADO, nunca somadas ao tênis (chinelo nunca no total)
+ let ou=$('c_cart_out');if(!ou){ou=document.createElement('div');ou.id='c_cart_out';ou.className='hora mt-2';ou.style.cssText='color:#fff;opacity:.85;font-size:11.5px';$('c_cart_base').before(ou)}
+ ou.textContent=c.outras?'fora do tênis: '+c.outras:'';
  const MC=M.filter(x=>(x.cart||0)>0),tot=MC.reduce((a,x)=>a+(x.cart||0),0)||1;
  $('c_mes3').innerHTML=MC.length?MC.map(x=>`<div style="flex:${Math.max(1,x.cart||0)/tot*10}">${MS2[+String(x.mes).slice(5,7)-1]||'—'}<b>${fmt(x.cart)}</b></div>`).join(''):'';
  const be=(M.find(x=>x.base_em)||{}).base_em;$('c_cart_base').textContent=be?'carteira lida em '+String(be).slice(8,10)+'/'+String(be).slice(5,7)+(String(be).length>10?' '+String(be).slice(11,16):''):''}
@@ -136,6 +139,9 @@ function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String),k=(y,i)=>{con
  MS2.forEach((m,i)=>g+=`<text x="${X(i)}" y="${HH-8}" text-anchor="middle" font-size="12" font-weight="600" fill="#787B86" font-family="Inter">${CEL?m[0].toUpperCase():m}</text>`);
  const on=AN.filter(y=>ANS[y]);
  if(CAM.es){const ev=[];AN.forEach(y=>MS2.forEach((_,i)=>{const v=val('estoque',y,i);if(v!=null)ev.push(v)}));const emx=Math.max(1,...ev)*1.15,YE=v=>HH-P-(HH-2*P)*v/emx;
+  // eixo próprio do estoque (GAMER): 3 marcas na borda direita, em azul claro, com o rótulo "estoque"
+  if(ev.length){g+=`<text x="${W-4}" y="${P-10}" text-anchor="end" font-size="9.5" font-weight="700" fill="#2E3EFC" opacity=".7" font-family="Inter">estoque</text>`;
+   [0,.5,1].forEach(f=>{const v=emx/1.15*f;g+=`<text x="${W-4}" y="${YE(v)+4}" text-anchor="end" font-size="10" fill="#2E3EFC" opacity=".7" font-family="Inter">${v?(v/1000).toFixed(v>=10000?0:1).replace('.',',')+'k':'0'}</text>`})}
   on.forEach(y=>{const pts=MS2.map((_,i)=>{const v=val('estoque',y,i);return v==null?null:[X(i),YE(v),v]}).filter(Boolean);if(!pts.length)return;
    g+=`<polygon points="${pts[0][0]},${HH-P} ${pts.map(p=>p[0]+','+p[1]).join(' ')} ${pts[pts.length-1][0]},${HH-P}" fill="${cor(y)}" opacity=".10"/><polyline points="${pts.map(p=>p[0]+','+p[1]).join(' ')}" fill="none" stroke="${cor(y)}" stroke-width="1.2" opacity=".55" vector-effect="non-scaling-stroke"/>`;
    pts.forEach((p,j)=>{if(j%2===0||j===pts.length-1)g+=`<text x="${p[0]}" y="${p[1]-6}" text-anchor="middle" font-size="10" fill="${cor(y)}" opacity=".85" font-family="Inter">${(p[2]/1000).toFixed(1).replace('.',',')}k</text>`})})}
@@ -161,7 +167,9 @@ function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String),k=(y,i)=>{con
  const tot=(c,y)=>ser(c,y).reduce((a,v)=>a+(v||0),0),lastm=(c,y)=>{const s=ser(c,y);for(let i=11;i>=0;i--)if(s[i]!=null)return [i,s[i]];return null};
  const am=(st,cr)=>`<svg width="40" height="14"><line x1="2" x2="38" y1="7" y2="7" stroke="${cr}" stroke-width="3" ${st}/></svg>`;
  const B=[['so','sellout','Sell-out',E.sellout||'venda na loja',am('','#000')],['si','sellin','Sell-in',E.sellin||'faturado ao cliente',am('stroke-dasharray="2 4" stroke-linecap="round"','#000')],['mt','meta','Metas',E.meta||'meta rateada por cliente',am('stroke-dasharray="10 6"','#000')],['es','estoque','Estoque',E.estoque||'área clara · escala própria',`<svg width="40" height="14"><rect x="2" y="3" width="36" height="9" rx="2" fill="#2E3EFC" opacity=".18"/></svg>`]];
- $('blk').innerHTML=B.map(([c,s,n,d,sv])=>{const y=ult(s),lm=y&&lastm(s,y);const txt=!y?'sem dado neste recorte':s==='estoque'?`${MS2[lm[0]]}/${y.slice(2)}: ${fmt(lm[1])}`:`${y}: ${fmt(tot(s,y))}`;
+ // legenda com PERÍODO (GAMER): "jan–set/26: 45.629", nunca só o ano
+ const faixa=(c,y)=>{const s=ser(c,y),ix=s.map((v,i)=>v!=null?i:-1).filter(i=>i>=0);return ix.length?`${MS2[ix[0]]}${ix.length>1?'–'+MS2[ix[ix.length-1]]:''}/${y.slice(2)}`:y};
+ $('blk').innerHTML=B.map(([c,s,n,d,sv])=>{const y=ult(s),lm=y&&lastm(s,y);const txt=!y?'sem dado neste recorte':s==='estoque'?`${MS2[lm[0]]}/${y.slice(2)}: ${fmt(lm[1])}`:`${faixa(s,y)}: ${fmt(tot(s,y))}`;
   return `<button class="${CAM[c]?'':'off'}" onclick="CLI.cam('${c}')">${sv}<span><b>${n}</b><small>${esc(d)}</small><small>${txt}</small></span><span class="sw"></span></button>`}).join('');
  $('nx').textContent=[E.sellout,E.sellin,E.meta,E.estoque].filter(Boolean).join(' · ')}
 // ---------------- Bro ----------------

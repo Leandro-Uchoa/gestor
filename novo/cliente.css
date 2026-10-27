@@ -311,3 +311,6 @@ body.cliente .bento>.dec,body.cliente .bento>.agv,body.cliente .bro,body.cliente
 
 /* modo cliente: a prioridade vem do TOPICS (interno) e some; a evidência e a cobertura ficam */
 body.cliente .manch{grid-template-columns:1.4fr .9fr}body.cliente .manch>div:first-child{display:none}body.cliente .manch>div:nth-child(2){border-left:0}
+
+/* GAMER: no celular os NÚMEROS vêm na 1ª tela — manchete, carteira e cobertura logo depois do nome; TOPICS e agenda abaixo */
+@media (max-width:991.98px){.bento>.manch{order:0}.bento>.car{order:1}.bento>.cob{order:2}.bento>.dec{order:3}.bento>.agv{order:4}}
