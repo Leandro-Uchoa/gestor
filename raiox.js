@@ -355,8 +355,6 @@ function precoBarras(fx, larg){
 // modo (ele, 20/10: "deixa as duas apresentações disponíveis: portas e consolidada"): 'portas' = a rede E os slides por loja;
 // 'consolidada' = só a rede (capa, posicionamento, sazonalidade, peso do mês, pirâmide, categorias, chinelos/acessórios/meias, UA rede,
 // oportunidade de giro). O que cita "N de 12 lojas" vira a versão de rede, como quando o documento só tem uma linha.
-// os slides que não vão ao cliente no deck POR PORTA, cliente a cliente (nome como no banco); quem não está aqui sai completo
-const SLIDES_FORA = { "LOJAS NOROESTE": ["tenis_meias", "ua_sazonal", "ua_lojas"] };
 function montarApresentacao(d, modo){
   NOME_DECK = bonito(d.nome);
   const pags = [], ESC = d.escopo || {}, cob = ESC.v ? ESC.e / ESC.v : null;
@@ -378,9 +376,8 @@ function montarApresentacao(d, modo){
   // CONFECÇÃO não é tênis (NÚCLEO, 27/10: a calça e as camisas UV do Noroeste vinham como "OUTROS TÊNIS"; a categoria agora vem
   // como CONFECÇÃO e não pode entrar nas tabelas de tênis). Só sai coluna da categoria que veio no pacote — nada fixo no código.
   const cats = d.cats || [], ehOutra = c => /CHINEL|ACESS|MEIA|CONFEC/i.test(c), ehUA = c => /^UA\b/i.test(c);
-  // slides fora POR CLIENTE, só no POR PORTA (ele, 27/10: "cada cliente tem sua particularidade… aquilo eu orientei somente para
-  // Noroeste"). O padrão é o deck COMPLETO; o que sai fica só na tela do Gestor. Chaves: tenis_meias · ua_sazonal · ua_lojas
-  const fora = new Set(consolidada ? [] : (SLIDES_FORA[d.cliente] || [])), sai = k => fora.has(k);
+  // 27/10, palavra dele: "para o Gestor continua tudo como está; essa situação é só para essa apresentação, pontualmente" — o deck
+  // sai COMPLETO para todo cliente (o corte do Noroeste daquele dia foi à mão, no PDF); não existe exclusão por cliente no código
   const catsTenis = cats.filter(c => !ehOutra(c) && !ehUA(c)), catChi = cats.find(c => /CHINEL/i.test(c)), catAcc = cats.find(c => /ACESS/i.test(c)), catMei = cats.find(c => /MEIA/i.test(c)), catUA = chaveUA(cats) || cats.find(ehUA);
   const SZ = d.sazonal || {}, famDe = re => Object.keys(SZ).find(k => re.test(k) && !/^UA/i.test(k));
   const famTen = famDe(/T[EÊ]NIS/i), famChi = famDe(/CHINEL/i), famAcc = famDe(/ACESS/i), famMei = famDe(/MEIA/i), famUA = chaveUA(Object.keys(SZ));
@@ -574,7 +571,7 @@ function montarApresentacao(d, modo){
   if (famMei) pags.push(sazSlide(famMei, "Meias", unid(catMei || famMei), "Sazonalidade e preço · " + KSAZ, dirPreco(pirDe(/MEIA/i), catMei, true), FONTE_RD));
   // 13b · TÊNIS × MEIAS na sazonalidade (ele, 22/10/2026, para todos os clientes): barras lado a lado mês a mês, tênis em pares e meias
   // em packs, e a relação packs de meia por par de tênis embaixo de cada mês; cartões por ano e a leitura dos meses de maior e menor relação
-  if (famTen && famMei && !sai("tenis_meias")) {
+  if (famTen && famMei) {
     const sT = SZ[famTen].mensal || {}, sM = SZ[famMei].mensal || {}, meses = Object.keys(sT).filter(m => sM[m] != null).sort();
     if (meses.length >= 2) {
       const vt = meses.map(m => sT[m] || 0), vm = meses.map(m => sM[m] || 0), rel = meses.map((m, i) => vt[i] ? vm[i] / vt[i] : null);
@@ -628,8 +625,8 @@ function montarApresentacao(d, modo){
       + duas(tabela(cols, e1.map(lin), LG, fs, pad, grp), tabela(cols, [...e2.map(lin), rede], LG, fs, pad, grp)) + leitura([fr0, ...frs], fsL), FONTE_LJ + " · — = sem venda ou estoque negativo no relatório", 14));
   }
   // 16 · Under Armour na rede e 17 · onde o UA gira: só quando a família vem no documento
-  if (famUA && !sai("ua_sazonal")) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(chaveUA(Object.keys(PIR)), catUA, true), FONTE_RD));
-  if (catUA && porLoja && !sai("ua_lojas")) {
+  if (famUA) pags.push(sazSlide(famUA, "Under Armour · tênis", unid(catUA || famUA), "Under Armour · sazonalidade e preço · " + KSAZ, dirPreco(chaveUA(Object.keys(PIR)), catUA, true), FONTE_RD));
+  if (catUA && porLoja) {
     const cols = [["Cl.", "center"], ["Loja", "left"], ["Venda/mês", "center"], ["Estoque", "center"], ["Cob.", "center"], ["Índice", "center"]], LG = [52, 236, 140, 140, 120, 128], t = T[catUA] || {}, cobU = t.v ? t.e / t.v : null;
     const [e1, e2] = corte(L);
     const topU = L.slice().sort((a, b) => (xc(b, catUA).v || 0) - (xc(a, catUA).v || 0)).slice(0, 6), somaTop = topU.reduce((s, l) => s + (xc(l, catUA).v || 0), 0), par = L.filter(l => (xc(l, catUA).v || 0) < 1.5 && (xc(l, catUA).e || 0) >= 40);
