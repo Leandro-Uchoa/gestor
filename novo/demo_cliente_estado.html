@@ -7,7 +7,7 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<link rel="stylesheet" href="cliente.css?v=7">
+<link rel="stylesheet" href="cliente.css?v=11">
 </head>
 <body>
 <div style="position:relative;z-index:50;margin:12px 12px 12px 70px;padding:12px;background:#fff3cd;color:#222;border-radius:10px;font:14px Arial">
@@ -17,6 +17,7 @@
 <button onclick="demoFalhar()">Simular falha</button>
 <span>Troque A → B antes de 3s: deve permanecer B. Falha → Tentar novamente recupera.</span>
 </div>
+
 <nav class="rail">
  <div class="marca"></div>
  <a href="#" title="Início"><i class="ti ti-home"></i></a>
@@ -33,11 +34,12 @@
   <div class="topo">
    <div><div class="pre">CLIENTES · KEY ACCOUNT</div><h1 id="c_nome">—</h1>
     <div style="font-size:13px" id="c_sub">—</div></div>
+   <div id="slot_seletor" class="ms-auto"></div>
   </div>
   <div class="bento">
    <div class="vd manch" id="manch"></div>
    <div class="vd dec">
-    <div class="d-flex align-items-center"><span class="lb"><i class="ti ti-bolt"></i> O que decidir hoje</span><span class="ms-auto selo" style="background:#FFFF1A;color:#000" id="c_ntp">—</span></div>
+    <div class="d-flex align-items-center"><span class="lb" id="c_dec_tit"><i class="ti ti-bolt"></i> O que decidir hoje</span><span class="ms-auto selo" style="background:#FFFF1A;color:#000" id="c_ntp">—</span></div>
     <div class="mt-2" id="tpl"></div>
     <div class="novo"><input id="tpnovo" placeholder="+ novo item no TOPICS deste cliente…" onkeydown="if(event.key==='Enter')tpNovo()"><button onclick="tpNovo()">incluir</button></div>
    </div>
@@ -78,9 +80,9 @@
  <div class="msgs" id="brmsg"></div>
  <form onsubmit="return false"><input id="brin" placeholder="Escreve para o Bro…" autocomplete="off"><button>enviar</button></form>
 </aside>
-<script src="cliente_tela.js?v=7"></script>
+<script src="cliente_tela.js?v=11"></script>
 
 <script src="demo_cliente_mock.js"></script>
-<script src="cliente_dados.js?v=9"></script>
-<script src="cliente_glue.js?v=9"></script>
+<script src="cliente_dados.js?v=13"></script>
+<script src="cliente_glue.js?v=13"></script>
 </body></html>

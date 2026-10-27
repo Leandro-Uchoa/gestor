@@ -6,12 +6,20 @@
   const ESC = "lp-uchoa";
   let CLIENTE = null, DADOS = null, LISTA = [], cargaAtual = 0, pronto = false;
 
-  // Estado fora da casca: evita apresentar ausência de dados como zero e preserva o desenho.
+  // Mantém o topo/seletor do TI disponível; oculta somente conteúdo ainda não válido.
+  function conteudo(visivel) {
+    for (const painel of document.querySelectorAll(".bento, .main > .sec, .main > .pn, #rodape")) {
+      painel.hidden = !visivel;
+      painel.inert = !visivel;
+      painel.style.display = visivel ? "" : "none";
+    }
+  }
   function estado(tipo, texto, tentar) {
     pronto = tipo === "pronto";
     const main = document.querySelector(".main");
-    main.hidden = !pronto;
-    main.inert = !pronto;
+    main.hidden = false;
+    main.inert = false;
+    conteudo(pronto);
     main.setAttribute("aria-busy", String(tipo === "carregando"));
     for (const controle of document.querySelectorAll(".bro-fab, .bro-m, #bro")) {
       controle.inert = !pronto;
@@ -22,12 +30,16 @@
       if ($("brctx")) $("brctx").textContent = "Cliente indisponível";
       if ($("brmsg")) $("brmsg").replaceChildren();
     }
+    if (!pronto) {
+      if ($("c_nome")) $("c_nome").textContent = CLIENTE || "Gestor · Cliente";
+      if ($("c_sub")) $("c_sub").textContent = tipo === "carregando" ? "Consulta em andamento" : "Nenhum dado disponível nesta consulta";
+    }
     let aviso = $("ti-estado");
     if (!aviso) {
       aviso = document.createElement("section"); aviso.id = "ti-estado";
-      aviso.style.cssText = "margin:80px auto;padding:24px;max-width:560px;width:calc(100% - 48px);background:white;border:1px solid #E6E7E8;border-radius:16px;font:16px Inter,Arial,sans-serif";
+      aviso.style.cssText = "margin:24px auto;padding:24px;max-width:560px;width:calc(100% - 48px);background:white;border:1px solid #E6E7E8;border-radius:16px;font:16px Inter,Arial,sans-serif";
       aviso.setAttribute("role", "status"); aviso.setAttribute("aria-live", "polite");
-      document.body.appendChild(aviso);
+      main.appendChild(aviso);
     }
     aviso.hidden = pronto;
     aviso.replaceChildren();
@@ -57,11 +69,11 @@
   function barra() {
     if ($("ti-barra")) $("ti-barra").remove();
     const div = document.createElement("div"); div.id = "ti-barra";
-    div.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:30;display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif;background:rgba(246,245,240,.92);padding:6px;border-radius:14px";   // embaixo, para não cobrir o topo nem o nome do cliente
+    div.style.cssText = "display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif";   // 27/10: no slot do topo da casca (PICASSO), ao lado do nome
     div.innerHTML = (Dados.MODO_CLIENTE ? "" : `<select id="ti-sel" style="border:1px solid #E6E7E8;border-radius:12px;padding:8px 10px;background:#fff;font-weight:600;font-size:13px;max-width:240px"></select>
       <a href="../" style="background:#fff;border:1px solid #E6E7E8;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;color:#000;text-decoration:none">Gestor completo</a>`)
       + `<a href="#" id="ti-sair" style="font-size:12px;color:#787B86;text-decoration:underline">sair</a>`;
-    document.body.appendChild(div);
+    (document.getElementById("slot_seletor") || document.body).appendChild(div);
     $("ti-sair").onclick = ev => { ev.preventDefault(); Dados.sair(); };
     if (!Dados.MODO_CLIENTE) { const sel = $("ti-sel"); sel.innerHTML = `<option value="">Escolha um cliente</option>` + LISTA.map(c => `<option value="${esc(c.cliente)}">${esc(c.nome || c.cliente)}</option>`).join(""); sel.value = CLIENTE || ""; sel.onchange = () => { CLIENTE = sel.value; location.hash = "cliente=" + encodeURIComponent(CLIENTE); abrir(); }; }
   }
@@ -76,20 +88,28 @@
     CLIENTE = LISTA.some(c => c.cliente === pedido) ? pedido : null;   // BOSS (segurança): sem cliente válido na URL, a página pede para escolher — não abre num cliente por conta própria
     if (Dados.MODO_CLIENTE) { for (const el of document.querySelectorAll(".bro-fab, .bro-m, #bro, .rail")) el.remove(); document.querySelector(".main").style.marginLeft = "16px"; }   // modo cliente: sem Bro, sem menu
     barra();
+    if (!CLIENTE) { semCliente(pedido); return; }
     await abrir();
     } catch (e) { DADOS = null; estado("erro", "Não foi possível iniciar a consulta. Tente novamente.", arranque); }
+  }
+  function semCliente(pedido) {
+    const naoAchou = !!pedido, nome = naoAchou ? "cliente não encontrado" : (Dados.MODO_CLIENTE ? "link sem cliente" : "escolha um cliente");
+    const aviso = naoAchou ? "Cliente não encontrado" + (Dados.MODO_CLIENTE ? "" : ": “" + pedido + "” não está na lista — escolha no seletor") : (Dados.MODO_CLIENTE ? "Este link não aponta para um cliente" : "Escolha um cliente no seletor, no topo da página");
+    estado("aguardando", aviso);
+    if ($("c_nome")) $("c_nome").textContent = nome;
+    if ($("c_sub")) $("c_sub").textContent = "nenhum dado foi lido";
   }
   async function abrir() {
     const carga = ++cargaAtual, cliente = CLIENTE;
     DADOS = null;
-    if (!cliente) { estado("aguardando", Dados.MODO_CLIENTE ? "Link sem cliente válido" : "Escolha um cliente para consultar"); return; }
+    if (!cliente) { semCliente(null); return; }
     estado("carregando", "Carregando " + cliente + "…");
     try {
       const dados = await Dados.carregar(cliente);
       if (carga !== cargaAtual) return;
       DADOS = dados;
-      // A casca mede o gráfico durante desenhar: visível para layout, ainda inerte.
-      document.querySelector(".main").hidden = false;
+      // A casca mede o gráfico durante desenhar: os painéis precisam participar do layout.
+      conteudo(true);
       window.desenhar(dados); estado("pronto");
     } catch (e) {
       if (carga !== cargaAtual) return;

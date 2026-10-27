@@ -52,6 +52,8 @@ const escRe=x=>String(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const limpa=(t,b)=>{let x=String(t||'');if(b)x=x.replace(new RegExp('^\\s*'+escRe(b)+'\\s*[-–—:·]\\s*','i'),'');return x};
 const ehCli=b=>{const n=((D.cliente||{}).nome||'').toUpperCase().replace(/\s+/g,''),bb=String(b||'').toUpperCase().replace(/\s+/g,'');return !bb||bb===n||n.startsWith(bb)||bb.startsWith(n)};
 function decidir(){const L=D.decidir||D.topics||[];$('c_ntp').textContent=L.length+' no TOPICS';
+ // sem urgente, o bloco não se chama "o que decidir hoje" (GAMER: não pode competir com a prioridade da manchete)
+ $('c_dec_tit').innerHTML=L.some(t=>t.urgente)?'<i class="ti ti-bolt"></i> O que decidir hoje':'<i class="ti ti-checklist"></i> TOPICS · sem urgente';
  $('tpl').innerHTML=L.length?L.map(t=>`<div class="it" id="tp_${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(limpa(t.texto,t.bloco))}</b><small>${esc([ehCli(t.bloco)?null:t.bloco,t.criado_em?t.criado_em.slice(8,10)+'/'+t.criado_em.slice(5,7):null].filter(Boolean).join(' · '))}</small><div class="nota" id="tpn_${esc(t.id)}"></div>
   <div class="acts"><button class="ok" onclick="CLI.topico('feito','${esc(t.id)}')">✓ feito</button><button onclick="CLI.ori('${esc(t.id)}')">✎ orientar</button><button onclick="CLI.topico('abrir','${esc(t.id)}')">abrir no TOPICS</button></div>
   <div class="ori" id="tpo_${esc(t.id)}"><input id="tpi_${esc(t.id)}" placeholder="escreva a orientação…" onkeydown="if(event.key==='Enter')CLI.salva('${esc(t.id)}')"><button onclick="CLI.salva('${esc(t.id)}')">salvar</button></div></div></div>`).join('')
@@ -82,10 +84,22 @@ function carteira(){const c=D.carteira||{},M=c.meses||[];$('c_cart').textContent
 // "sem base" quando: cobertura nula, venda média nula/zero ou menos de 3 meses fechados com venda. Ausência de sell-out não é venda zero.
 function baseCob(){const g=D.giro||{},S=(g.serie||[]).filter(x=>x&&!x.parcial&&x.v!=null&&x.v>0),u3=S.slice(-3);
  const vm=u3.length?u3.reduce((a,x)=>a+x.v,0)/u3.length:null;return {ok:g.cobertura!=null&&u3.length>=3&&vm>0,vm,n:u3.length}}
+// leitura de estoque do cliente (régua da casa): teto → rever a próxima entrada; forçar → forçar a barra; ruptura → antecipar
+function leituraEstoque(){const g=D.giro||{},b=baseCob(),c=g.cobertura;if(!b.ok)return null;
+ const hoje=new Date().toISOString().slice(0,7),M=((D.carteira||{}).meses||[]).filter(x=>(x.cart||0)>0&&String(x.mes).slice(0,7)>hoje),prox=M[0];
+ const mn=m=>MSX[+String(m).slice(5,7)-1];
+ if(c>=5&&prox)return {t:`Rever a entrada de ${mn(prox.mes)}: ${fmt(prox.cart)} pares de tênis com ${dec(c)} meses de cobertura`,s:'acima do teto de 5 meses · leitura da régua de cobertura'};
+ if(c<4)return {t:`Antecipar: cobertura de ${dec(c)} meses, abaixo de 4`,s:'ruptura · leitura da régua de cobertura'};
+ if(c<5)return {t:`Forçar a barra: cobertura de ${dec(c)} meses`,s:'abaixo do teto de 5 meses · leitura da régua de cobertura'};
+ return null}
 // ---------------- manchete da 1ª dobra: prioridade · evidência · decisão pendente ----------------
 function manchete(){const L=(D.decidir||D.topics||[]),urg=L.filter(t=>t.urgente),A=D.anos||{},AN=(A.lista||[]).map(String),y=AN[AN.length-1],g=D.giro||{},b=baseCob(),c=g.cobertura;
- // prioridade: o primeiro urgente do TOPICS; sem urgência, diz isso
- const pri=urg[0]?`<div class="h">${esc(limpa(urg[0].texto,urg[0].bloco))}</div><div class="s">${urg.length>1?`+ ${urg.length-1} urgente${urg.length>2?'s':''} no TOPICS`:'único urgente no TOPICS'}</div>`
+ // prioridade (GAMER/NÚCLEO): 1º DADOS.prioridade (leitura do NÚCLEO, R1–R5) · 2º a leitura de ESTOQUE do próprio cliente
+ // (não pode contradizer a evidência) · 3º o urgente do TOPICS · senão "Sem urgência hoje"
+ const PR=D.prioridade?(typeof D.prioridade==='string'?{titulo:D.prioridade}:D.prioridade):null,leit=leituraEstoque();
+ const pri=PR?`<div class="h">${esc(PR.titulo)}</div><div class="s">${esc(PR.detalhe||'leitura do NÚCLEO')}</div>`
+  :leit?`<div class="h">${esc(leit.t)}</div><div class="s">${esc(leit.s)}</div>`
+  :urg[0]?`<div class="h">${esc(limpa(urg[0].texto,urg[0].bloco))}</div><div class="s">${urg.length>1?`+ ${urg.length-1} urgente${urg.length>2?'s':''} no TOPICS`:'único urgente no TOPICS'}</div>`
   :`<div class="h">Sem urgência hoje</div><div class="s">${L.length?L.length+(L.length===1?' item':' itens')+' em aberto no TOPICS, nenhum marcado como urgente':'nada pendente no TOPICS'}</div>`;
  // evidência: "vendendo ao consumidor ou só abastecendo estoque?" — últimos 3 meses FECHADOS de sell-out × sell-in × meta + estoque, com a data de cada fonte
  const so=(A.sellout||{})[y]||[],si=(A.sellin||{})[y]||[],mt=(A.meta||{})[y]||[];let ult=-1;for(let i=11;i>=0;i--)if(so[i]!=null){ult=i;break}
