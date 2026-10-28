@@ -328,6 +328,8 @@ const pdfTipoIdx = t => { const i = PDF_TIPOS.findIndex(([v]) => v === t); retur
 const pdfNomeTipo = t => (PDF_TIPOS.find(([v]) => v === t) || [t, String(t).toUpperCase()])[1];
 const pdfFamilia = it => pdfTipo(it) === "TENIS" ? String(familiaDe(it) || "").toUpperCase() : "";
 const pdfPdv = it => it.p == null ? -1 : +it.p;
+// 28/10 (ele): cada PDF por vitrine em ORDEM DE FAIXA DE PREÇO, do mais barato ao mais caro; sem PDV vai para o fim
+const pdfCmpPdv = (a, b) => (a.p == null ? 1e9 : +a.p) - (b.p == null ? 1e9 : +b.p);
 const pdfModelos = lista => new Set(lista.map(it => it.m + "|" + it.r)).size;
 // a PAREDE (gênero) da cor: chinelo à parte; o gênero do cadastro decide; unissex vai para o lado da GRADE que ele escolheu na vitrine
 // (feminina → feminino; masculina ou especial → masculino) ou do bloco do catálogo (… FEMININO / … MASCULINO); sem lado, UNISSEX — nunca duplicado
@@ -476,54 +478,79 @@ const PDF_MES_IDX = { DEZ: -1, JAN: 0, FEV: 1, MAR: 2, ABR: 3, MAI: 4, JUN: 5 };
 const pdfMesInicio = txt => { const m = String(txt || "").toLowerCase().match(/quinzena\s+([a-z]{3})/); return m && PDF_MES_IDX[m[1].toUpperCase()] != null ? PDF_MES_IDX[m[1].toUpperCase()] : null; };
 // os meses (com pares > 0) anteriores ao início de faturamento da cor; [] quando não há início parseável
 const pdfForaDoInicio = (it, pm) => { const sg = VIT.sug.get(chaveCor(it)), i0 = pdfMesInicio(it.if || (sg && sg.inicio)); if (i0 == null || !pm) return []; return Object.keys(pm).filter(m => (pm[m] || 0) > 0 && PDF_MES_IDX[m] != null && PDF_MES_IDX[m] < i0); };
+// 28/10 (ele, 17h44: "tudo junto aqui… vou pedir para ele ser separada"): o PDF sai UM ARQUIVO POR VITRINE (feminino · masculino · unissex ·
+// infantil · chinelos), cada um com capa própria e os cartões em ordem de faixa de preço (PDV crescente, a faixa no topo da página);
+// "todas" baixa as que têm cor, em sequência. Vitrine vazia não gera arquivo; chinelo nunca no mesmo arquivo que o tênis (pdfParede).
+const PDF_ESTADO = { grade: false, gerando: false };
+function listaDoPdf(){
+  const atual = VIT.vista === "atual" && VIT.atual, gtm = ehGtm(), f = (!atual && !gtm) ? filtroDaTela() : null;
+  return { atual, gtm, f, lista: atual ? VIT.atual.itens.slice() : (f ? cartoesFiltrados() : escolhidas()) };
+}
+// os chips "PDF por vitrine": uma vitrine por chip com o nº de cores (vazia = desligado) + "todas"; o modo (sem grade / com grade) ao lado
+function desenharPdfChips(){
+  const o = ELV && ELV.querySelector("#vit-pdf-viz"); if (!o) return;
+  const { lista } = listaDoPdf(), n = Object.fromEntries(PDF_PAREDES.map(p => [p, lista.filter(it => pdfParede(it) === p).length])), cheias = PDF_PAREDES.filter(p => n[p]).length;
+  o.innerHTML = PDF_PAREDES.map(p => `<button type="button" class="sec sai pdf-b" data-p="${p}"${n[p] && !PDF_ESTADO.gerando ? "" : " disabled"} title="${n[p] ? "um PDF só da vitrine " + titulo(p).toLowerCase() : "vitrine vazia: não gera arquivo"}">${esc(titulo(p))} <small>${n[p]}</small></button>`).join("")
+    + `<button type="button" class="sec sai pdf-b todas" data-p="TODAS"${cheias && !PDF_ESTADO.gerando ? "" : " disabled"} title="baixa um PDF por vitrine, em sequência">todas <small>${cheias} ${cheias === 1 ? "arquivo" : "arquivos"}</small></button>`;
+  for (const b of o.querySelectorAll(".pdf-b")) b.onclick = () => imprimirVitrine({ grade: PDF_ESTADO.grade, parede: b.dataset.p });
+  for (const b of ELV.querySelectorAll("#vit-pdf-modo button")) { b.classList.toggle("ativa", (b.dataset.g === "1") === PDF_ESTADO.grade); b.disabled = PDF_ESTADO.gerando; }
+}
 // DUAS SAÍDAS (NÚCLEO, 20/10): SEM GRADE = "VITRINE" (a vitrine de escolha: nenhum par em lugar nenhum); COM GRADE = "PROGRAMAÇÃO" (o programa
-// fechado, com os pares por mês). Nas duas, nada interno. opcoes.grade decide.
+// fechado, com os pares por mês). Nas duas, nada interno. opcoes.grade decide; opcoes.parede = uma vitrine ou "TODAS".
 async function imprimirVitrine(opcoes){
-  const grade = !!(opcoes && opcoes.grade);
-  if (!VIT.cliente || !DADOS) return;
-  const atual = VIT.vista === "atual" && VIT.atual, gtm = ehGtm(), mes = gtmMes();
-  const f = (!atual && !gtm) ? filtroDaTela() : null;
-  const lista = atual ? VIT.atual.itens.slice() : (f ? cartoesFiltrados() : escolhidas());
+  const grade = !!(opcoes && opcoes.grade), pedida = (opcoes && opcoes.parede) || "TODAS";
+  if (!VIT.cliente || !DADOS || PDF_ESTADO.gerando) return;
+  const { atual, gtm, f, lista } = listaDoPdf(), mes = gtmMes();
   if (!lista.length) { alert(f ? "Com esse filtro não sobra nenhuma cor para o PDF." : "A vitrine está vazia: nada para o PDF."); return; }
+  const alvos = (pedida === "TODAS" ? PDF_PAREDES : [pedida]).filter(p => lista.some(it => pdfParede(it) === p));
+  if (!alvos.length) { alert(`A vitrine ${titulo(pedida)} está vazia: não gera arquivo.`); return; }
   if (f && !(await confirmar("PDF com o filtro da tela", `Deseja realmente gerar o PDF apenas com ${f.texto} — ${lista.length} cor(es) de ${escolhidas().length}?`))) return;
-  const bt = ELV && ELV.querySelector(grade ? "#vit-pdf-prog" : "#vit-pdf"), antes = bt ? bt.textContent : "", avisa = t => { if (bt) bt.textContent = t; };
+  const msg = ELV && ELV.querySelector("#vit-pdf-msg"), avisa = t => { if (msg) msg.textContent = t; };
   const erro = t => { VIT.erro = t; const e = ELV && ELV.querySelector("#vit-erro"); if (e) { e.textContent = t; e.classList.toggle("oculto", !t); } };
-  try {
-    avisa("montando…");
-    const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col), cli = nomeCli(VIT.cliente);
-    // a ordem do gerador: tipo → família oficial (ordem da circular; as outras por nome) → do mais caro ao mais barato → modelo → cor
-    lista.sort((a, b) => (pdfTipoIdx(pdfTipo(a)) - pdfTipoIdx(pdfTipo(b))) || (famOrd(pdfFamilia(a) ? familiaDe(a) : "") - famOrd(pdfFamilia(b) ? familiaDe(b) : "")) || pdfFamilia(a).localeCompare(pdfFamilia(b))
-      || (pdfPdv(b) - pdfPdv(a)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
-    // os pares por mês de cada cor nesta saída (GTM: o mês da distribuição; cliente: os meses marcados, com o filtro de mês da tela); null = sem programação
-    const mesesDe = it => { const k = chaveCor(it); if (atual) return null; if (gtm) { const p = VIT.pares.get(k); return p == null ? null : { [mes]: p }; }
-      const pm0 = VIT.meses.get(k); return (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : (pm0 || null); };
-    // a trava de data, antes de gerar: na tela, nunca no arquivo
-    if (grade) {
-      const fora = lista.map(it => ({ it, ms: pdfForaDoInicio(it, mesesDe(it)) })).filter(x => x.ms.length);
-      if (fora.length) { const txt = `${fora.length} cor(es) com pares antes do início de faturamento: ${fora.map(x => `${x.it.r} ${x.it.c} (${x.ms.join(", ")})`).join(" · ")} — acerte os meses no cartão e gere de novo.`; erro(txt); avisa(`${fora.length} cor(es) com pares antes do início`); setTimeout(() => avisa(antes), 8e3); return; }
-    }
-    const ctxDe = it => { const k = chaveCor(it), ctx = { grade, retirada: !!(atual && M.get(k) === "retirar"), linha: "" };
-      if (!grade) return ctx;
-      const pm = mesesDe(it), p = pm ? Object.values(pm).reduce((x, y) => x + y, 0) : null, gr = VIT.grades.get(k);
-      if (gtm) ctx.linha = pm ? `<b>${p.toLocaleString("pt-BR")}</b> pares ${esc(mes)}${gr ? ` · ${esc(ROTULO_GRADE[gr] || gr)}` : ""}` : "pares a definir";
-      else if (!atual) ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir";
-      return ctx; };
+  const col = atual ? VIT.atual.colecao : DADOS.colecao, M = marcas(col), cli = nomeCli(VIT.cliente), tituloDoc = grade ? "PROGRAMAÇÃO" : "VITRINE";
+  // os pares por mês de cada cor nesta saída (GTM: o mês da distribuição; cliente: os meses marcados, com o filtro de mês da tela); null = sem programação
+  const mesesDe = it => { const k = chaveCor(it); if (atual) return null; if (gtm) { const p = VIT.pares.get(k); return p == null ? null : { [mes]: p }; }
+    const pm0 = VIT.meses.get(k); return (pm0 && f && f.mes) ? Object.fromEntries(f.mes.filter(m => m in pm0).map(m => [m, pm0[m] || 0])) : (pm0 || null); };
+  // a trava de data, antes de gerar (a lista inteira): na tela, nunca no arquivo
+  if (grade) {
+    const fora = lista.map(it => ({ it, ms: pdfForaDoInicio(it, mesesDe(it)) })).filter(x => x.ms.length);
+    if (fora.length) { const txt = `${fora.length} cor(es) com pares antes do início de faturamento: ${fora.map(x => `${x.it.r} ${x.it.c} (${x.ms.join(", ")})`).join(" · ")} — acerte os meses no cartão e gere de novo.`; erro(txt); avisa(`${fora.length} cor(es) com pares antes do início`); setTimeout(() => avisa(""), 8e3); return; }
+  }
+  const ctxDe = it => { const k = chaveCor(it), ctx = { grade, retirada: !!(atual && M.get(k) === "retirar"), linha: "" };
+    if (!grade) return ctx;
+    const pm = mesesDe(it), p = pm ? Object.values(pm).reduce((x, y) => x + y, 0) : null, gr = VIT.grades.get(k);
+    if (gtm) ctx.linha = pm ? `<b>${p.toLocaleString("pt-BR")}</b> pares ${esc(mes)}${gr ? ` · ${esc(ROTULO_GRADE[gr] || gr)}` : ""}` : "pares a definir";
+    else if (!atual) ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir";
+    return ctx; };
+  const paresDe = it => { const pm = mesesDe(it); return pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; };
+  // um arquivo: a capa própria da vitrine + os cartões dela (tipo → família oficial → PDV crescente) + a parede dela
+  const gerar = async (p, sub, pref) => {
+    sub.sort((a, b) => (pdfTipoIdx(pdfTipo(a)) - pdfTipoIdx(pdfTipo(b))) || (famOrd(pdfFamilia(a) ? familiaDe(a) : "") - famOrd(pdfFamilia(b) ? familiaDe(b) : "")) || pdfFamilia(a).localeCompare(pdfFamilia(b))
+      || pdfCmpPdv(a, b) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
     // a capa: uma linha por tipo (cores · modelos; na programação os pares), nunca somando chinelo com tênis — sem total geral
-    const paresDe = it => { const pm = mesesDe(it); return pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; };
-    const linhas = PDF_TIPOS.map(([v, r]) => { const its = lista.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const p = grade ? its.reduce((s, it) => s + paresDe(it), 0) : 0;
-      return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${p ? ` · ${p.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : (grade ? " · pares a definir" : "")}`; }).filter(Boolean);   // PICASSO 19/10 21:0x: na programação o tipo sem pares diz "a definir", nunca some nem soma ao tênis
-    const tituloDoc = grade ? "PROGRAMAÇÃO" : "VITRINE";
-    const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)}` };
-    const paginas = [`<div class="pg capa"><h1>${tituloDoc}<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
-<p>${linhas.join("<br>")}<br>Do mais caro ao mais barato, por tipo · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
-      ...pdfBlocos(lista, ctxDe, rod), ...pdfParedes(lista, rod)];
-    erro("");
-    const r = await GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, tituloDoc + " " + col),
-      { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: palco => { pdfRepaginarParedes(palco); pdfAjustarParedes(palco); }, avisa: t => avisa("gerando o PDF… " + t) });
-    const semFoto = r.semFoto ? ` · ${r.semFoto} sem foto` : "";
-    if (r.modo === "cancelado") { avisa(antes); return; }
-    avisa((r.modo === "compartilhado" ? "compartilhado ✓" : "baixado: " + r.nome) + ` · ${r.paginas} pág.` + semFoto); setTimeout(() => avisa(antes), 6e3);
-  } catch (e) { avisa(antes); alert("não montei o PDF da vitrine: " + (e.message || e)); }
+    const linhas = PDF_TIPOS.map(([v, r]) => { const its = sub.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const pr = grade ? its.reduce((s, it) => s + paresDe(it), 0) : 0;
+      return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${pr ? ` · ${pr.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : (grade ? " · pares a definir" : "")}`; }).filter(Boolean);   // PICASSO 19/10 21:0x: na programação o tipo sem pares diz "a definir", nunca some nem soma ao tênis
+    const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)} · ${esc(titulo(p))}` };
+    const paginas = [`<div class="pg capa"><h1>${tituloDoc} ${esc(p)}<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
+<p>${linhas.join("<br>")}<br>Cartões do mais barato ao mais caro, por tipo · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
+      ...pdfBlocos(sub, ctxDe, rod), ...pdfParedes(sub, rod)];
+    return GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, tituloDoc + " " + col + " " + p),
+      { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: palco => { pdfRepaginarParedes(palco); pdfAjustarParedes(palco); }, avisa: t => avisa(pref + "gerando o PDF… " + t) });
+  };
+  PDF_ESTADO.gerando = true; desenharPdfChips(); erro("");
+  const feitos = []; let semFoto = 0;
+  try {
+    for (let i = 0; i < alvos.length; i++) {
+      const p = alvos[i], pref = alvos.length > 1 ? `${i + 1}/${alvos.length} ${titulo(p)}: ` : "";
+      avisa(pref + "montando…");
+      const r = await gerar(p, lista.filter(it => pdfParede(it) === p), pref);
+      if (r.modo === "cancelado") break;
+      feitos.push(r); semFoto += r.semFoto || 0;
+    }
+    avisa(feitos.length ? (feitos.length === 1 ? (feitos[0].modo === "compartilhado" ? "compartilhado ✓" : "baixado: " + feitos[0].nome) + ` · ${feitos[0].paginas} pág.` : `${feitos.length} PDFs: ${feitos.map(r => r.nome).join(" · ")}`) + (semFoto ? ` · ${semFoto} sem foto` : "") : "");
+    setTimeout(() => avisa(""), 12e3);
+  } catch (e) { avisa(""); alert("não montei o PDF da vitrine: " + (e.message || e)); }
+  finally { PDF_ESTADO.gerando = false; desenharPdfChips(); }
 }
 const contaEscolhidas = () => [...marcas(DADOS.colecao).values()].filter(v => v === "escolhida").length;
 const contaRetiradas = () => VIT.atual ? [...marcas(VIT.atual.colecao).values()].filter(v => v === "retirar").length : 0;
@@ -532,11 +559,14 @@ function desenharVitrine(){
   const el = ELV;
   if (!el.querySelector(".cat")) {
     el.innerHTML = `<div class="cat colecao vitrine">
+      <div class="vit-cli-fixo" id="vit-cli-fixo"><b></b><span></span></div>
+      <div class="vit-desfaz oculto" id="vit-desfaz" role="status"></div>
       <div class="card filtros">
         <label>cliente</label><div class="chips" id="vit-cliente"></div>
         <label>coleção</label><div class="chips" id="vit-colecao"></div>
         <div class="vit-topo"><div class="vit-conta" id="vit-conta"></div></div>
-        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" id="vit-pdf" class="sec sai" title="a vitrine de escolha: sem pares — MM,AA CLIENTE - VITRINE.pdf">PDF vitrine (sem grade)</button><button type="button" id="vit-pdf-prog" class="sec sai" title="o programa fechado, com os pares por mês — MM,AA CLIENTE - PROGRAMAÇÃO.pdf">PDF programação (com grade)</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm" title="os três arquivos e o PDF da vitrine">todos</button><div class="mu" id="vit-saidas"></div></div>
+        <div class="saidas"><span class="fl">gerar</span><button type="button" class="sec sai" data-t="giro">alimentar análise de giro</button><button type="button" class="sec sai" data-t="imagem">pedido com imagem</button><button type="button" class="sec sai" data-t="portas" title="Excel de pedido: uma aba por loja do cliente e uma aba principal que soma">pedido por porta (Excel)</button><button type="button" class="sec sai" data-t="ebm">Excel pedido EBM</button><button type="button" class="sec sai todos" data-t="giro,imagem,ebm" title="os três arquivos e os PDFs da vitrine, um por vitrine">todos</button><div class="mu" id="vit-saidas"></div></div>
+        <div class="saidas pdfs"><span class="fl">PDF</span><span id="vit-pdf-modo" class="pdf-modo"><button type="button" class="sec sai" data-g="0" title="a vitrine de escolha: sem pares — MM,AA CLIENTE - VITRINE 1S27 FEMININO.pdf">vitrine (sem grade)</button><button type="button" class="sec sai" data-g="1" title="o programa fechado, com os pares por mês — MM,AA CLIENTE - PROGRAMAÇÃO 1S27 FEMININO.pdf">programação (com grade)</button></span><span class="fl">por vitrine</span><span id="vit-pdf-viz" class="pdf-viz"></span><span class="mu" id="vit-pdf-msg" role="status"></span></div>
         <div class="mu" id="vit-nota"></div>
         <div class="msg erro oculto" id="vit-erro"></div>
       </div>
@@ -544,10 +574,9 @@ function desenharVitrine(){
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
     // 19/10: PDF no padrão do PICASSO, gerado aqui mesmo (sem janela nova); 20/10 (NÚCLEO): duas saídas — vitrine sem grade e programação com grade
-    el.querySelector("#vit-pdf").onclick = () => imprimirVitrine({ grade: false });
-    el.querySelector("#vit-pdf-prog").onclick = () => imprimirVitrine({ grade: true });
+    for (const b of el.querySelectorAll("#vit-pdf-modo button")) b.onclick = () => { PDF_ESTADO.grade = b.dataset.g === "1"; desenharPdfChips(); };
     // "todos" = os três arquivos + o PDF (ele, 19/10 15:3x: "bota exportar PDF junto, e todos — tudo pertinho, senão fica dessincronizado")
-    for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = async () => { await pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) el.querySelector("#vit-pdf").onclick(); };
+    for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = async () => { await pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) imprimirVitrine({ grade: false, parede: "TODAS" }); };
     el.querySelector("#vit-luz").onclick = (ev) => { if (ev.target.id === "vit-luz" || ev.target.classList.contains("fecha")) fecharLuz(el); };
   }
   chipsClientes(el, "vit-cliente");
@@ -569,26 +598,28 @@ function desenharVitrine(){
     desenharMontador(pg);
   }
   const er = el.querySelector("#vit-erro"); er.textContent = VIT.erro; er.classList.toggle("oculto", !VIT.erro);
+  atualizarBarraVitrine(); faixaDesfazer();
   mostrarSaidas(el);
 }
 // as SAÍDAS da vitrine (19/10, ordem dele): a página não escreve no OneDrive — o botão anota o pedido no banco (vitrine_saida) e o TI,
 // na máquina dele, gera o arquivo e devolve o caminho; a lista abaixo dos botões mostra o que está na fila e o que ficou pronto
-const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", ebm: "Excel pedido EBM" };
+const ROTULO_SAIDA = { giro: "análise de giro", imagem: "pedido com imagem", portas: "pedido por porta (Excel)", ebm: "Excel pedido EBM" };
 // o FILTRO da tela (ele, 19/10 16:5x: "o Excel e o PDF do cliente saem de acordo com o que estou filtrando — e você pergunta antes:
 // deseja subir apenas tênis Olympikus de janeiro?"). Vazio = a vitrine inteira. O GTM não pergunta (é uma vez por semestre).
 const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.v.size) f.mes = MESES_V.filter(m => VF_MES.v.has(m)); if (VF.marca.size) f.marca = [...VF.marca]; if (VF.tipo.size) f.tipo = [...VF.tipo]; if (VF.gen.size) { const g = [...VF.gen].filter(x => x !== "Grade especial"); if (g.length) f.gen = g; if (VF.gen.has("Grade especial")) f.esp = true; } if (VF.bloco.size) f.familia = [...VF.bloco];
   const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen || f.esp) partes.push([...(f.gen || []).map(g => g.toLowerCase()), ...(f.esp ? ["grade especial"] : [])].join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes.join(" e "));
   f.texto = partes.length ? partes.join(" · ") : ""; return Object.keys(f).length > 1 || f.texto ? f : null; };
 const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && ((!f.gen && !f.esp) || gruposDe(it).some(g => (f.gen || []).includes(g) || (f.esp && g === "Grade especial"))) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes.some(m => m in (e.pm || {})))))); };
-function confirmar(titulo, texto){
+function confirmar(titulo, texto, op){
+  op = op || {};   // 28/10: rótulos próprios; padraoNao = ação que apaga (o foco fica em "voltar" e Enter não confirma); grande = o nome em letra grande
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
-    luz.innerHTML = `<div class="quadro grade-quadro"><div class="gq-nome">${esc(titulo)}</div><div class="gq-perg">${esc(texto)}</div><div class="gq-acoes"><button type="button" class="gq-sobe">sim, só isso</button><button type="button" class="sec gq-deixa">não, deixa</button></div></div>`;
+    luz.innerHTML = `<div class="quadro grade-quadro${op.grande ? " gq-grande" : ""}"><div class="gq-nome">${esc(titulo)}</div><div class="gq-perg">${esc(texto)}</div><div class="gq-acoes"><button type="button" class="gq-sobe">${esc(op.sim || "sim, só isso")}</button><button type="button" class="sec gq-deixa">${esc(op.nao || "não, deixa")}</button></div></div>`;
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
-    const tecla = ev => { if (ev.key === "Escape") fecha(false); if (ev.key === "Enter") fecha(true); };
+    const tecla = ev => { if (ev.key === "Escape") fecha(false); if (ev.key === "Enter" && !op.padraoNao) fecha(true); };
     document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(false); };
     luz.querySelector(".gq-sobe").onclick = () => fecha(true); luz.querySelector(".gq-deixa").onclick = () => fecha(false);
-    document.body.appendChild(luz); luz.querySelector(".gq-sobe").focus();
+    document.body.appendChild(luz); luz.querySelector(op.padraoNao ? ".gq-deixa" : ".gq-sobe").focus();
   });
 }
 async function pedirSaida(tipos){
@@ -659,6 +690,86 @@ async function baixarSaida(b){
   volta("baixado ✓", 2.5e3);
 }
 
+// ---------- LIMPAR A VITRINE, COM DESFAZER (ele, 28/10 15h13: "na vitrine, um botão para excluir tudo"). Às 15h15 ele apagou sem querer a vitrine de um
+// cliente achando que era a de outro: a trava é VER e VOLTAR, nunca senha nem digitar o nome (ele vetou o que trava o fluxo). (a) o nome do cliente grande e
+// fixo no topo da vitrine; (b) a confirmação escreve o nome e a quantidade de cores; (c) faixa fixa "N cores apagadas… · desfazer" que fica até ele agir, e
+// o "desfazer um apagamento" lista os lotes de mais cedo. O banco copia tudo para a lixeira (vitrine_limpar) e devolve só o que falta (vitrine_desfazer).
+const LIMPA = { ultima: null, msg: null, ocupado: false };   // ultima = o apagamento que o desfazer ainda desfaz; msg = {texto, erro} do último desfazer
+const nomeGrande = () => nomeCli(VIT.cliente || "").toUpperCase();
+const nCores = n => `${n} ${n === 1 ? "cor" : "cores"}`;
+const horaCurta = x => x ? new Date(x).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+// a barra do cliente (fixa no topo enquanto rola) e o estado dos botões; chamada sempre que a vitrine se redesenha
+function atualizarBarraVitrine(){
+  if (!ELV) return;
+  const b = ELV.querySelector("#vit-cli-fixo"); if (!b) return;
+  const atual = VIT.vista === "atual" && VIT.atual, n = !VIT.cliente ? 0 : (atual ? VIT.atual.itens.length : escolhidas().length);
+  b.querySelector("b").textContent = nomeGrande();
+  b.querySelector("span").textContent = VIT.cliente ? `vitrine ${atual ? VIT.atual.colecao : (DADOS.colecao || "")} · ${nCores(n)}` : "";
+  const bl = ELV.querySelector("#vf-limpar"); if (bl) bl.disabled = LIMPA.ocupado || !n;
+  desenharPdfChips();
+}
+function faixaDesfazer(){
+  const el = ELV && ELV.querySelector("#vit-desfaz"); if (!el) return;
+  const u = LIMPA.ultima, m = LIMPA.msg;
+  const cat = el.closest(".cat"); if (cat) cat.classList.toggle("com-faixa", !!(u || m));   // a faixa fixa não cobre o pé da página
+  if (!u && !m) { el.classList.add("oculto"); el.innerHTML = ""; return; }
+  el.classList.remove("oculto"); el.classList.toggle("erro", !!(m && m.erro));
+  el.innerHTML = (u ? `<span class="vd-tx">${esc(nCores(u.n))} ${u.n === 1 ? "apagada" : "apagadas"} da vitrine ${esc(u.colecao)} da ${esc(u.nome)}</span> <span class="vd-pt">·</span> <button type="button" class="vd-desf">desfazer</button>` : "")
+    + (m ? `<span class="vd-msg">${esc(m.texto)}</span>` : "") + `<button type="button" class="vd-x" title="${u ? "dispensar esta faixa (o desfazer continua em 'desfazer um apagamento')" : "fechar"}">${u ? "×" : "ok"}</button>`;
+  const d = el.querySelector(".vd-desf"); if (d) d.onclick = () => desfazerApagamento(u.lote, u.nome, u.colecao);
+  el.querySelector(".vd-x").onclick = () => { if (u) LIMPA.ultima = null; LIMPA.msg = null; faixaDesfazer(); };
+}
+async function limparVitrine(){
+  if (LIMPA.ocupado || !VIT.cliente || !DADOS || !SB || VIT.vista === "atual") return;
+  const col = DADOS.colecao, n = escolhidas().length, nome = nomeGrande(), cliente = VIT.cliente;
+  if (!n) return;
+  const ok = await confirmar(nome, `apagar ${n === 1 ? "a 1 cor" : "as " + n + " cores"} da vitrine ${col} da ${nome}?`, { sim: "apagar", nao: "voltar", grande: true, padraoNao: true });
+  if (!ok) return;
+  LIMPA.ocupado = true; atualizarBarraVitrine();
+  const r = await SB.rpc("vitrine_limpar", { p_cliente: cliente, p_colecao: col });
+  LIMPA.ocupado = false;
+  if (r.error) { LIMPA.msg = { texto: "o banco recusou o apagamento: " + r.error.message, erro: true }; faixaDesfazer(); atualizarBarraVitrine(); return; }
+  const d = Array.isArray(r.data) ? r.data[0] : r.data, apagadas = d && d.n_cores != null ? +d.n_cores : 0;
+  LIMPA.msg = null;
+  LIMPA.ultima = (apagadas && d.lote != null) ? { lote: d.lote, n: apagadas, colecao: col, nome } : null;
+  if (!LIMPA.ultima) LIMPA.msg = { texto: `a vitrine ${col} da ${nome} já estava vazia no banco: nada foi apagado` };
+  await relerVitrine();
+  faixaDesfazer();
+}
+async function desfazerApagamento(lote, nome, col){
+  if (LIMPA.ocupado) return;
+  LIMPA.ocupado = true;
+  const r = await SB.rpc("vitrine_desfazer", { p_lote: lote });
+  LIMPA.ocupado = false;
+  if (r.error) { LIMPA.msg = { texto: "o banco recusou o desfazer: " + r.error.message, erro: true }; faixaDesfazer(); return false; }
+  const d = Array.isArray(r.data) ? r.data[0] : r.data, n = d && d.n_cores != null ? +d.n_cores : 0, ja = d && d.ja_existiam != null ? +d.ja_existiam : 0;
+  if (LIMPA.ultima && LIMPA.ultima.lote === lote) LIMPA.ultima = null;
+  LIMPA.msg = { texto: n ? `${nCores(n)} de volta na vitrine ${col} da ${nome}${ja ? ` · ${ja} já estava${ja === 1 ? "" : "m"} lá` : ""}` : `esse apagamento já tinha sido desfeito (a vitrine ${col} da ${nome} não mudou)` };
+  if (d && d.cliente === VIT.cliente) await relerVitrine();
+  faixaDesfazer();
+  return true;
+}
+// "desfazer um apagamento": os lotes de mais cedo (mais novo primeiro), com quando, quantas cores, quem e se já voltou
+async function listarApagamentos(){
+  if (!VIT.cliente || !DADOS || !SB) return;
+  const col = DADOS.colecao, nome = nomeGrande(), cliente = VIT.cliente;
+  const luz = document.createElement("div"); luz.className = "luz grade-luz";
+  luz.innerHTML = `<div class="quadro grade-quadro gq-grande gq-lotes"><div class="gq-nome">${esc(nome)}</div><div class="gq-perg">apagamentos da vitrine ${esc(col)} da ${esc(nome)}</div><div class="gq-lista" id="gq-lotes">lendo…</div><div class="gq-acoes"><button type="button" class="sec gq-deixa">fechar</button></div></div>`;
+  const fecha = () => { luz.remove(); document.removeEventListener("keydown", tecla); };
+  const tecla = ev => { if (ev.key === "Escape") fecha(); };
+  document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(); }; luz.querySelector(".gq-deixa").onclick = fecha;
+  document.body.appendChild(luz);
+  const pintar = async () => {
+    const lista = luz.querySelector("#gq-lotes"), r = await SB.rpc("vitrine_lotes", { p_cliente: cliente, p_colecao: col });
+    if (r.error) { lista.textContent = "o banco recusou a leitura: " + r.error.message; return; }
+    const ls = Array.isArray(r.data) ? r.data : [];
+    if (!ls.length) { lista.textContent = "nenhum apagamento registrado para esta vitrine."; return; }
+    lista.innerHTML = ls.map(l => `<div class="gq-lote${l.restaurado ? " feito" : ""}" data-lote="${esc(l.lote)}"><span><b>${esc(horaCurta(l.apagado_em))}</b> · ${esc(nCores(+l.n_cores))} · ${esc(l.apagado_por || "—")}</span>${l.restaurado ? `<em>já restaurado</em>` : `<button type="button" class="gq-sobe">desfazer</button>`}</div>`).join("");
+    for (const b of lista.querySelectorAll(".gq-sobe")) b.onclick = async () => { b.disabled = true; b.textContent = "desfazendo…"; await desfazerApagamento(+b.parentElement.dataset.lote, nome, col); if (luz.isConnected) pintar(); };
+  };
+  pintar();
+}
+
 // ---------- o MONTADOR (15/10, orientação dele, ao vivo): "parta a tela no meio: do lado esquerdo os produtos da 1S27 com filtros
 // (marca, tipo, família, gênero) e um campo para digitar o nome; clicou no produto, abre do lado como fica a vitrine do cliente,
 // de cima para baixo em ordem decrescente de valor — em cima os mais caros — com filtro de feminino / masculino / infantil / família,
@@ -722,7 +833,7 @@ function desenharMontador(pg){
       <div class="mont-divisor" title="arraste para mudar a largura dos dois lados"></div>
       <div class="mont-dir"><div class="mont-zoom" data-lado="dir" title="zoom da vitrine"><button type="button" data-d="-1">−</button><b></b><button type="button" data-d="1">+</button></div>
         <div class="mont-cab">
-          <div class="mont-tit" id="vf-tit"></div><div class="vf-confere"><button type="button" class="sec" id="vf-reler" title="relê o que está gravado no banco">↻ conferir no banco</button><span class="mu" id="vf-lido"></span></div>
+          <div class="mont-tit" id="vf-tit"></div><div class="vf-confere"><button type="button" class="sec" id="vf-reler" title="relê o que está gravado no banco">↻ conferir no banco</button><button type="button" class="sec" id="vf-limpar" title="apaga todas as cores desta vitrine — pede confirmação e dá para desfazer">limpar a vitrine</button><button type="button" class="sec" id="vf-lotes" title="lista os apagamentos desta vitrine e desfaz um deles">desfazer um apagamento</button><span class="mu" id="vf-lido"></span></div>
           <div class="mont-placar" id="vf-placar"></div>
           <div class="frow"><span class="fl">marca</span><div class="chips" id="vf-marca"></div></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
@@ -734,6 +845,7 @@ function desenharMontador(pg){
     </div>`;
     pg.querySelector("#mf-busca").oninput = (ev) => { MF.busca = ev.target.value; clearTimeout(desenharMontador._t); desenharMontador._t = setTimeout(() => desenharEsquerda(pg), 120); };
     ligarZoomEDivisor(pg);
+    pg.querySelector("#vf-limpar").onclick = limparVitrine; pg.querySelector("#vf-lotes").onclick = listarApagamentos;
     // "um botão para eu conferir que você está salvando o que eu oriento" (ele, 19/10 15:5x): relê o banco e diz o que achou
     pg.querySelector("#vf-reler").onclick = async () => { const o = pg.querySelector("#vf-lido"); o.textContent = "lendo…"; await relerVitrine(); const its = escolhidas(), p = its.reduce((a, it) => a + (VIT.pares.get(chaveCor(it)) || 0), 0); const o2 = ELV.querySelector("#vf-lido"); if (o2) o2.textContent = `lido do banco às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}: ${its.length} cor(es) · ${p.toLocaleString("pt-BR")} pares`; };
     for (const b of pg.querySelectorAll(".mont-troca button")) b.onclick = () => { PAINEL = b.dataset.p; pg.querySelector(".montador").dataset.painel = PAINEL; for (const x of pg.querySelectorAll(".mont-troca button")) x.classList.toggle("ativa", x === b); };
@@ -883,6 +995,7 @@ function desenharDireita(pg){
     .sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || (gtm ? (String(a.n).localeCompare(String(b.n)) || ((VIT.pares.get(chaveCor(b)) || 0) - (VIT.pares.get(chaveCor(a)) || 0))) : 0)
       || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
+  atualizarBarraVitrine();
   // 19/10 (regra dele, chinelo-separado-do-tenis; PICASSO na conferência da v5.18): UM PLACAR POR TIPO, sem total geral — o chinelo
   // nunca soma com o tênis. O valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
   const dinheiroCheio = s => s ? "R$ " + Number(s).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";

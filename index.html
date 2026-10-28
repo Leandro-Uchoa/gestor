@@ -492,6 +492,20 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 .colecao.vitrine .saidas{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}.colecao.vitrine .saidas .fl{width:auto;margin-right:2px}.colecao.vitrine .saidas .sai{width:auto;margin:0;padding:6px 10px;font-size:.72rem}.colecao.vitrine .saidas .sai.todos{background:var(--azul);color:var(--off-white);border-color:var(--azul)}
 #vit-saidas{flex-basis:100%;display:grid;gap:3px;margin-top:2px}.sai-item{font-size:.68rem;padding:3px 8px 3px 26px;border-left:3px solid var(--cinza-claro);background:var(--cartao);color:var(--preto);position:relative}.sai-x{position:absolute;left:6px;top:2px;width:16px;height:16px;padding:0;margin:0;border:0;border-radius:50%;background:var(--cinza-claro);color:var(--preto);font-size:.7rem;font-weight:900;line-height:1;cursor:pointer}.sai-x:hover{background:var(--amarelo)}.sai-item.pronto{border-color:var(--azul)}.sai-item.erro{border-color:var(--vermelho-ua)}.sai-item.fila{border-color:var(--amarelo)}.sai-item code{font-family:var(--fonte-mono);font-size:.64rem;word-break:break-all}
 @media print{.colecao.vitrine .saidas{display:none!important}}
+/* 28/10 (ele, reunião Universo): PDF por vitrine · nome do cliente fixo no topo · limpar a vitrine com desfazer · pedido por porta. Paleta oficial. */
+.colecao.vitrine .saidas .sai.ativa{background:var(--amarelo);color:var(--preto);border-color:var(--amarelo)}.colecao.vitrine .saidas .sai:disabled{opacity:.4;cursor:not-allowed}
+.colecao.vitrine .saidas.pdfs .pdf-modo,.colecao.vitrine .saidas.pdfs .pdf-viz{display:contents}.colecao.vitrine .saidas .sai small{font-weight:600;opacity:.8}
+#vit-pdf-msg{flex-basis:100%;font-size:.68rem;min-height:1em}
+.vit-cli-fixo{position:sticky;top:0;z-index:40;display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;background:var(--preto);color:var(--off-white);padding:10px 16px;border-bottom:3px solid var(--amarelo);border-radius:0 0 10px 10px;margin:0 0 8px}
+.vit-cli-fixo b{font-size:1.7rem;font-weight:900;letter-spacing:.02em;line-height:1.1;color:var(--off-white)}.vit-cli-fixo span{font-size:.85rem;font-weight:700;color:var(--cinza-claro)}
+.vit-desfaz{position:fixed;left:0;right:0;bottom:0;z-index:65;display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;background:var(--amarelo);color:var(--preto);padding:10px 16px;font-weight:800;font-size:.95rem;box-shadow:0 -4px 16px rgba(0,0,0,.35)}
+.colecao.vitrine.com-faixa{padding-bottom:72px}.vit-desfaz.oculto{display:none}.vit-desfaz .vd-msg{font-weight:800}.vit-desfaz.erro{background:var(--preto);color:var(--amarelo);border-top:3px solid var(--amarelo)}
+.vit-desfaz button{width:auto;margin:0;padding:6px 16px;border-radius:999px;background:var(--preto);color:var(--off-white);font-size:.85rem}.vit-desfaz.erro button{background:var(--amarelo);color:var(--preto)}.vit-desfaz .vd-x{margin-left:auto;padding:6px 12px}
+.gq-grande .gq-nome{font-size:1.9rem;font-weight:900;letter-spacing:.02em;line-height:1.1}.gq-lotes{max-width:520px}.gq-lista{display:grid;gap:6px;margin:0 0 12px;font-size:.88rem;max-height:50vh;overflow:auto}
+.gq-lote{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--off-white);border-left:3px solid var(--azul)}.gq-lote.feito{border-left-color:var(--cinza-claro);color:var(--cinza-escuro)}.gq-lote em{font-style:normal;font-weight:700;font-size:.8rem}
+.gq-lote button.gq-sobe{flex:none;width:auto;margin:0;padding:6px 14px;font-size:.8rem}
+.vf-confere{flex-wrap:wrap}
+@media print{.vit-cli-fixo,.vit-desfaz,.saidas.pdfs{display:none!important}}
 .mthumb .gcl{position:absolute;top:2px;left:2px;z-index:2}
 /* a estrela da Vulcabras no alto da imagem, à ESQUERDA, no lugar do selo A/B/C (ele, 19/10 13:4x: "tira a clusterização A, B, C; a estrelinha substitui") */
 .estrela-v{position:absolute;top:2px;left:2px;z-index:2;font-style:normal;font-size:.95rem;line-height:1;color:var(--amarelo);text-shadow:0 0 2px var(--preto),0 0 1px var(--preto)}.vfoto .estrela-v{top:3px;left:4px;font-size:1.1rem}.vcard .vsem{display:inline-block;background:var(--amarelo);color:var(--preto);font-size:.56rem;font-weight:800;padding:1px 5px;border-radius:var(--raio-selo);margin-top:2px;text-transform:none}.vgrade{font-size:.6rem;color:var(--preto);font-weight:700;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -542,7 +556,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.20</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.21</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -623,7 +637,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 <script src="gestor_lib.js?v=6"></script>
 <script src="metas.js?v=55"></script>
 <script src="catalogo.js?v=2"></script>
-<script src="colecao.js?v=59"></script>
+<script src="colecao.js?v=60"></script>
 <script src="atas.js?v=3"></script>
 <script src="raiox.js?v=25"></script>
 <script src="cliente.js?v=17"></script>
