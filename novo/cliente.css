@@ -403,9 +403,33 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 @media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.25)}#fam td:last-child,#fam_h th:last-child{display:none}.anos{gap:6px}.anos .anop{min-width:60px;width:60px}}
 
 /* v37: cabeçalho da gaveta da cobertura cabe no celular (rótulos menores); a coluna TOTAL deixa de ser fixa (vem antes dos meses) */
-@media (max-width:991.98px){.cobp .hd2 span{font-size:8.5px;letter-spacing:0;white-space:nowrap;overflow:hidden}}
+/* PICASSO v40: saiu daqui a regra .cobp .hd2 span{font-size:8.5px…} — no celular o rótulo encurta (bloco v40 no fim) */
 @media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:static;box-shadow:none}#fam td:last-child,#fam_h th:last-child{display:table-cell}}
 
 /* v38 (GAMER): a matriz por família cabe no celular (célula compacta, nome curto); linha sem linhas na carteira */
 @media (max-width:575.98px){#fam td,#fam_h th{padding:5px 3px;font-size:11px;white-space:nowrap}#fam td:first-child{max-width:74px;white-space:normal;line-height:1.15}#fam td.num small{display:none}}
 #fam tr.sem-lin td{font-size:11px}
+
+/* ===== PICASSO v40 · DELTA de desenho sobre a v39 ===== */
+/* (a) rótulos do gráfico: quem colide é descartado no JS (semSobrepor); nada a fazer no CSS além da classe */
+#gx text.rot{pointer-events:none}
+/* (b) tabelas que rolam de lado: 1ª coluna fixa à esquerda; TOTAL (última) fixo à direita quando .tem-total; sombra só quando há conteúdo escondido */
+.rola{position:relative}
+.rola th:first-child,.rola td:first-child{position:sticky;left:0;z-index:2;background:#fff}
+.rola.tem-total th:last-child,.rola.tem-total td:last-child{position:sticky;right:0;z-index:2;background:#fff}
+.rola.tem-mais-esq th:first-child,.rola.tem-mais-esq td:first-child{box-shadow:inset -8px 0 6px -6px rgba(0,0,0,.22)}
+.rola.tem-total.tem-mais-dir th:last-child,.rola.tem-total.tem-mais-dir td:last-child{box-shadow:inset 8px 0 6px -6px rgba(0,0,0,.22)}
+.rola.tem-mais-dir:not(.tem-total){box-shadow:inset -12px 0 8px -8px rgba(0,0,0,.22)}
+/* (c) cabeçalho da gaveta da cobertura: rótulo cheio no PC; curto abaixo de 576 px, sempre ≥ 11 px */
+.cobp .hd2 .rl-c{display:none}
+.cobp .hd2 span{white-space:nowrap;overflow:hidden;text-overflow:clip}
+.cobp .hd2>span:first-child,.cobp .it.it5.hd2>span:first-child,.cobp .it.hd2>span:first-child{white-space:normal;overflow:visible;text-overflow:clip}
+@media (max-width:575.98px){.cobp .hd2{font-size:11px;letter-spacing:0}.cobp .hd2 .rl-l{display:none}.cobp .hd2 .rl-c{display:inline}.cobp .it.it5{grid-template-columns:minmax(0,1fr) 36px 42px 46px 42px;gap:4px}}
+/* (d) matriz por família no celular: 1ª coluna com 74 px literais */
+@media (max-width:575.98px){#fam td:first-child,#fam_h th:first-child{width:74px;min-width:74px;max-width:74px}}
+/* (e) família sem linha: o colspan com nowrap esticava a tabela no celular e tirava o último mês da tela */
+#fam tr.sem-lin td{white-space:normal}
+/* (f) mês com 0 linhas e resumo > 0: "0" com ponto de atenção discreto; o texto vai no title */
+#fam .zero-res{cursor:help;white-space:nowrap}#fam .zero-res .pt-av{display:inline-block;width:6px;height:6px;border-radius:50%;background:#FFFF1A;box-shadow:0 0 0 1px #000;margin-left:3px;vertical-align:5px}
+/* (g) unidade do TOTAL: piso de 11 px do Design System */
+#fam td.num small{font-size:11px}
