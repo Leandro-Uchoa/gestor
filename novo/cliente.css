@@ -73,7 +73,7 @@ h1,h2,h3,.card-title,.ns{font-family:Barlow,Arial,sans-serif!important}
 .rk{display:grid;grid-template-columns:230px 1fr 54px;gap:10px;align-items:center;padding:7px 0}
 .rk .nm{font-weight:700;font-size:13px;min-width:0}
 .rk .nm .cor{margin-left:0;margin-top:2px}
-.rk .nm .nmt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;white-space:normal;overflow-wrap:normal;word-break:normal;line-height:1.3}   /* v44: nome em até 2 linhas, nunca no meio da palavra */.rk .nm small{display:block;font-weight:500;color:var(--ce);font-size:11px}
+.rk .nm .nmt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.3}   /* v44: nome em até 2 linhas, nunca no meio da palavra */.rk .nm small{display:block;font-weight:500;color:var(--ce);font-size:11px}
 .rk .br{height:12px;background:#F1F1EC;border-radius:6px;overflow:hidden}.rk .br i{display:block;height:100%;border-radius:6px}
 .rk .pc{font:800 15px Barlow;text-align:right}
 .g-hi{color:var(--verde)}.g-lo{color:var(--verm)}
@@ -82,7 +82,7 @@ h1,h2,h3,.card-title,.ns{font-family:Barlow,Arial,sans-serif!important}
 .fxl .q{font:800 22px Barlow}.fxl small{color:var(--ce);font-size:11px;display:block}.fxl .t{font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}.fxl .t i{width:9px;height:9px;border-radius:3px;display:inline-block}
 .lista .row1{display:grid;grid-template-columns:1fr 62px 62px 74px;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #F1F1EC;font-size:13px}
 .lista .hd{border-top:0;font-size:11px;font-weight:700;color:var(--ce);text-transform:uppercase;letter-spacing:.04em;padding-top:12px}
-.lista .nm b{font-weight:700}.lista .nm small{display:block;color:var(--ce);font-size:11px}
+.lista .nm{min-width:0;overflow-wrap:anywhere}.lista .nm b{font-weight:700}.lista .nm small{display:block;color:var(--ce);font-size:11px}
 .ch{display:inline-block;min-width:44px;text-align:center;font-weight:800;border-radius:7px;padding:3px 6px;font-size:12px}
 .ch-r{color:var(--verm);background:#FDE3E5}.ch-a{background:var(--am)}.ch-n{background:#F1F1EC}
 .tag{font-size:11px;font-weight:800;border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:1px}
@@ -281,7 +281,7 @@ html,body{overflow-x:clip}
 .dec .ori{display:none;margin-top:6px;gap:6px}.dec .ori.ab{display:flex}.dec .ori input{flex:1;background:rgba(255,255,255,.92);border:0;border-radius:8px;padding:6px 8px;font-size:12px;color:#000}
 .dec .ori button{all:unset;cursor:pointer;background:#FFFF1A;color:#000;font-weight:800;font-size:11px;border-radius:8px;padding:0 10px}
 .dec .nota{font-size:11px;margin-top:4px;color:#FFFF1A}
-.dec .novo{display:flex;gap:6px;margin-top:10px}.dec .novo input{flex:1;background:rgba(255,255,255,.12);border:1px dashed rgba(255,255,255,.35);border-radius:10px;padding:8px 10px;color:#fff;font-size:12.5px}
+.dec .novo{display:flex;gap:6px;margin-top:10px}.dec .novo input{flex:1;min-width:0;background:rgba(255,255,255,.12);border:1px dashed rgba(255,255,255,.35);border-radius:10px;padding:8px 10px;color:#fff;font-size:12.5px}
 .dec .novo input::placeholder{color:rgba(255,255,255,.7)}.dec .novo button{all:unset;cursor:pointer;background:#fff;color:#000;font-weight:800;font-size:12px;border-radius:10px;padding:0 12px}
 @media (max-width:991.98px){.bento>.nort,.bento>.est,.bento>.car{grid-column:span 12}.bento>.cob{grid-column:span 12}}
 @media (min-width:992px) and (max-width:1279.98px){.bento>.nort,.bento>.est,.bento>.car{grid-column:span 4}.bento>.cob{grid-column:span 12}}
@@ -298,7 +298,7 @@ html,body{overflow-x:clip}
  .dec,.nort,.cob,.est,.car,.leitura{grid-column:span 12}.dec{grid-row:auto}
  .est,.cob{grid-column:span 6}.k .ns{font-size:28px}.nort .ns{font-size:50px}
  .rk{grid-template-columns:110px 1fr 46px}.fxl{grid-template-columns:1fr 1fr}
- .lista .row1{grid-template-columns:1fr 50px 52px 64px;font-size:12px}
+ .lista .row1{grid-template-columns:minmax(0,1fr) 50px 52px 64px;font-size:12px}
  .rleg .p{display:none}
 }
 @media print{.rail{display:none}.main{margin:0}.hero{background:#F6F5F0!important;color:#000}.vd{background:#fff!important;border:1px solid #E6E7E8!important;backdrop-filter:none!important;box-shadow:none!important}.hero .marcadagua,.esm{display:none}.leitura b{color:#000}}
@@ -352,10 +352,10 @@ html,body,.main{overflow-x:clip;max-width:100vw}
 .bento>.rcel{display:none}
 @media (max-width:768px){.bento>.rcel{display:grid;order:0;grid-column:span 12;grid-template-columns:1.25fr 1fr;gap:0;padding:0;overflow:hidden}
  .rcel a{all:unset;cursor:pointer;display:flex;flex-direction:column;justify-content:center;min-height:52px;padding:8px 12px;min-width:0}.rcel a+a{border-left:1px solid rgba(255,255,255,.16)}
- .rcel .l1{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden}
+ .rcel .l1{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;white-space:nowrap}   /* v46: se não couber, "pares" desce inteiro para a linha de baixo — nada cortado */
  .rcel .t{font:800 11px Inter;letter-spacing:.02em;text-transform:uppercase;opacity:.8}.rcel b{font:800 20px Barlow;line-height:1.1}
  .rcel .u{font-size:11px;opacity:.85;flex:none}
- .rcel small{display:block;font-size:11px;opacity:.8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rcel .pl{font:800 11px Inter;border-radius:6px;padding:1px 6px;background:#E6E7E8;color:#000}}
+ .rcel small{display:block;font-size:11px;opacity:.8;margin-top:2px;white-space:normal}.rcel .pl{font:800 11px Inter;border-radius:6px;padding:1px 6px;background:#E6E7E8;color:#000}}
 /* para a faixa caber na 1ª tela do celular: botões do topo numa linha só (rolam de lado) e busca mais baixa */
 @media (max-width:991.98px){.topo .bts{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;gap:6px}.topo .bts::-webkit-scrollbar{display:none}
  .topo .bts a{flex:0 0 auto!important;padding:7px 11px}.topo .mini-bt{padding:4px 10px}.topo .busca{padding:7px 12px}
@@ -403,7 +403,7 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 @media (max-width:768px){.cobpct .xf small,.cobpct .fx3 small{font-size:11px}.exc{font-size:11px}.mtb .c .mtd{font-size:11px}}
 /* v36 (GAMER 28/10, celular): pílulas dos anos com largura fixa, sem quebra; gaveta da cobertura com um cabeçalho só e colunas que cabem; matriz com o total sempre à vista */
 .anos{flex-wrap:nowrap}.anos .anop{flex:0 0 auto;min-width:64px;width:64px;padding-left:0;padding-right:0;text-align:center}
-@media (max-width:991.98px){.cobp .lst .hd2+.hd2{display:none}.cobp .it.it5{grid-template-columns:minmax(0,1fr) 42px 52px 54px 50px;gap:6px}.cobp .it.it5>span:first-child{min-width:0;overflow:hidden}.cobp .it.it5>span:first-child b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:normal;word-break:normal;line-height:1.3}}
+@media (max-width:991.98px){.cobp .lst .hd2+.hd2{display:none}.cobp .it.it5{grid-template-columns:minmax(0,1fr) 42px 52px 54px 50px;gap:6px}.cobp .it.it5>span:first-child{min-width:0;overflow:hidden}.cobp .it.it5>span:first-child b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:normal;line-height:1.3}}
 @media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.25)}#fam td:last-child,#fam_h th:last-child{display:none}.anos{gap:6px}.anos .anop{min-width:60px;width:60px}}
 
 /* v37: cabeçalho da gaveta da cobertura cabe no celular (rótulos menores); a coluna TOTAL deixa de ser fixa (vem antes dos meses) */
@@ -430,7 +430,7 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 .cobp .hd2{letter-spacing:.02em}
 @media (max-width:575.98px){.cobp .hd2{letter-spacing:0}.cobp .it.it5{grid-template-columns:repeat(4,minmax(0,1fr));gap:2px 4px}.cobp .it.it5>span:first-child{grid-column:1/-1}   /* v44: o nome ganha a largura toda; os 4 números embaixo, sob o cabeçalho */
  /* (3) raio-x (4 colunas) cabe em 360: 1ª coluna flexível, as outras proporcionais */
- .cobp .it:not(.it5){grid-template-columns:minmax(0,1fr) 44px 46px;gap:2px 4px}.cobp .it:not(.it5)>span:last-child{grid-column:1/-1;text-align:left}   /* v44: a leitura desce para a linha de baixo; o nome fica com o espaço */.cobp .it:not(.it5)>span:first-child{min-width:0;overflow:hidden}.cobp .it:not(.it5)>span:first-child b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:normal;word-break:normal;line-height:1.3}.cobp .it:not(.it5) .num:last-child{overflow-wrap:anywhere}}
+ .cobp .it:not(.it5){grid-template-columns:minmax(0,1fr) 44px 46px;gap:2px 4px}.cobp .it:not(.it5)>span:last-child{grid-column:1/-1;text-align:left}   /* v44: a leitura desce para a linha de baixo; o nome fica com o espaço */.cobp .it:not(.it5)>span:first-child{min-width:0;overflow:hidden}.cobp .it:not(.it5)>span:first-child b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:normal;line-height:1.3}.cobp .it:not(.it5) .num:last-child{overflow-wrap:anywhere}}
 /* (d) matriz por família no celular: 1ª coluna com 74 px literais */
 @media (max-width:575.98px){#fam td:first-child,#fam_h th:first-child{width:74px;min-width:74px;max-width:74px}}
 /* (e) família sem linha: o colspan com nowrap esticava a tabela no celular e tirava o último mês da tela */
