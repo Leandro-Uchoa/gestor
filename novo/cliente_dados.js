@@ -157,7 +157,7 @@ window.Dados = (() => {
     const aba = BRUTO.drillAba && BRUTO.drillAba.tipo !== "tenis" ? BRUTO.drillAba : null, itensDrill = aba ? aba.itens : (drill || []), famAba = aba ? aba.fam : "OLY FOOTWEAR";
     const marcasCart = MARCA_CART[famAba] || ["OLY"];
     const CL = new Map(), CR = new Map();                                             // carteira do cliente por ref|cor e por ref (AG sem cor soma as cores)
-    for (const l of (cartLin || [])) { if (!marcasCart.includes(l.marca)) continue; const k = l.referencia + "|" + (l.cor || ""), v = +l.valor_total || (+l.cart * +(l.preco_unit || 0)) || 0;
+    for (const l of (cartLin || [])) { if (!marcasCart.includes(l.marca)) continue; const k = l.referencia + "|" + (l.cor || ""), v = (+l.preco_unit > 0 ? +l.cart * +l.preco_unit : +l.valor_total) || 0;   // pares × preço unitário, como as linhas (o valor_total envelhece)
       const a = CL.get(k) || { cart: 0, valor: 0, p1: null }; a.cart += +l.cart || 0; a.valor += v; if (l.prev_fat && (!a.p1 || l.prev_fat < a.p1)) a.p1 = l.prev_fat; CL.set(k, a);
       const b = CR.get(l.referencia) || { cart: 0, valor: 0, p1: null }; b.cart += +l.cart || 0; b.valor += v; if (l.prev_fat && (!b.p1 || l.prev_fat < b.p1)) b.p1 = l.prev_fat; CR.set(l.referencia, b); }
     const DI = new Map(), DR = new Map();                                             // disponível para aporte (volume e data; nunca a origem)
