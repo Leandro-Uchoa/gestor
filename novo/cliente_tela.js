@@ -1,156 +1,302 @@
-/* Gestor · aba Cliente — JS de TELA da casca (PICASSO, 27/10/2026). Forma aprovada pelo Léo no piloto cliente_v19.
+/* Gestor · aba Cliente — JS de TELA da casca de PARIDADE com o piloto cliente_v19 (aprovado pelo Léo). PICASSO, 27/10/2026, noite.
    ZERO dado aqui dentro. O TI chama  desenhar(DADOS)  depois do login e a cada troca de cliente.
+   Todo campo é opcional: o que não vier aparece como "—" ou o bloco some (nunca número inventado).
 
-   CONTRATO (nomes do TI) — o que cada bloco lê, o tipo e o que aparece quando vem vazio:
-   ┌ cliente      { nome:str, codigo:str, lojas_ativas:int, recorte:str, cidade?:str } → topo (cidade · lojas; recorte só se faltar cidade). Vazio: "—".
-   ├ decidir      [ { id, texto:str, urgente:bool, criado_em:'AAAA-MM-DD', bloco:str } ]
-   │                                                                             → "O que decidir hoje". Vazio: "nada pendente no TOPICS".
-   ├ topics       (igual a decidir; usado só se decidir vier ausente)
-   ├ sem_bloco_topics? bool → o bloco do TOPICS some (cliente sem bloco ou não encontrado)
-   ├ prioridade?  str ou {titulo, detalhe} → 1ª coluna da manchete (vence a leitura de estoque)
-   ├ agenda       [ { data:'AAAA-MM-DD', titulo:str, onde:str } ]                → calendário + linha do tempo. Vazio: "sem eventos".
-   ├ carteira     { meses:[ { mes:'AAAA-MM', fat:num, cart:num, base_em:'AAAA-MM-DD…' } ], a_faturar:num }
-   │                                                                             → cartão Carteira (a_faturar em pares; um chip por mês com cart). Vazio: "—".
-   ├ giro         { recorte:str, serie:[ { mes:'AAAA-MM', v:num, e:num, parcial:bool } ], estoque:num, estoque_mes:'AAAA-MM',
-   │                cobertura:num, cobertura_base:str }                          → cartão Cobertura (régua da casa: <4 ruptura · 4–5 forçar · ≥5 no teto),
-   │                                                                               venda média = média dos meses NÃO parciais da serie (3 últimos). Vazio: "—".
-   ├ anos         { lista:[2024,2025,2026], sellin:{'2024':[12 núm|null]}, sellout:{…}, meta:{…}, estoque:{…},
-   │                sellin_carteira?:{…} (parte do sell-in do mês que ainda é carteira → ponto vazado) }
-   │                                                                             → gráfico (já filtrado pelo filtro ativo). null = sem dado (vazio, nunca 0).
-   ├ filtro       { marca:['OLY'|'UA'], tipo:'tenis'|'meias'|'chinelo'|'acess'|'conf', genero:[...], categoria:[...] }
-   │                genero (tênis): 'MASCULINO','FEMININO','INFANTIL','UNISSEX' · genero (meias): 'MASCULINO','FEMININO'
-   │                categoria (tênis): 'CONF_MASC','CONF_FEM','CORRIDA/TREINO','CORRE','CLASSICOS','INFANTIL'
-   ├ etiquetas    { sellin:str, sellout:str, meta:str, estoque?:str }            → legenda dos blocos e nota de fonte.
-   ├ fontes?      { sellout_ate:'AAAA-MM', sellin_ate:'AAAA-MM-DD', meta_lida_em:'AAAA-MM-DD…' }
-   │                                                                             → a data de cada fonte na manchete (Conselho 0045). Vazio: nome da fonte.
-   └ giro.segmentos? [ { nome:str, cobertura:num } ]                            → "falta: … · sobra: …" no cartão de cobertura (<4 falta, ≥7 sobra). Vazio: some.
-   MANCHETE da 1ª dobra (sem campo próprio, sai de decidir + anos + giro): prioridade (1º urgente ou "Sem urgência hoje") ·
-     evidência (últimos 3 meses FECHADOS: sell-out × sell-in × meta + estoque, "abastecendo acima do que vende" se sell-in > 115% do sell-out)
-     · decisão pendente (cobertura; "sem base para estimar" se < 3 meses fechados com venda — nunca semáforo tranquilizador).
+   CONTRATO — campos que já existiam (o TI já entrega):
+   ┌ cliente      { nome, codigo, lojas_ativas, cidade?, recorte?, marcas?:['OLY','UA'] }          → topo (nome · cidade · lojas · selos)
+   ├ decidir      [ { id, texto, urgente, criado_em:'AAAA-MM-DD', bloco } ]  (ou topics)          → TOPICS largo, tratável
+   ├ sem_bloco_topics? bool · prioridade? str|{titulo,detalhe} · fontes? · etiquetas?             → manchete (Conselho 0045) e legendas
+   ├ agenda       [ { data:'AAAA-MM-DD', titulo, onde, tipo?:'reuniao'|'analise'|'trade'|'marco', link? } ]
+   ├ carteira     { a_faturar, meses:[ { mes:'AAAA-MM', cart, base_em } ], outras? }
+   ├ giro         { recorte, rotulo?, serie:[ { mes, v, e, parcial } ], estoque, estoque_mes, cobertura, cobertura_base, segmentos? }
+   ├ anos         { lista, sellin, sellout, meta, estoque, sellin_carteira? }  (já filtrado pelo filtro ativo)
+   └ filtro       { marca, tipo, genero, categoria }
+
+   CAMPOS NOVOS (paridade com o v19) — lista completa e a receita de cada um em porte\CAMPOS_NOVOS_PARIDADE.md:
+   ┌ hoje?        'AAAA-MM-DD' (dia de referência; sem ele, a data do navegador)
+   ├ atas         [ { data, titulo } ]                                   → botão Atas: "N recentes · última dd/mm"
+   ├ trade        { titulo, periodo, inicio:'AAAA-MM-DD', fim, investimento:R$, meta_pares } | null → faixa do trade (some se null)
+   ├ carteira.valor  R$ total · carteira.meses[].valor R$ · carteira.meses[].estados { confirmada, aporte, atencao, cancelar } (nº de linhas)
+   ├ carteira.familias [ { nome, meses:{'AAAA-MM':pares}, valor:R$ } ]  → "Carteira por família" (chinelo separado do tênis)
+   ├ cobertura    { faixas?:{ ruptura:{pares,pct}, forcar:{…}, teto:{…} }, itens:[ITEM], base?:str,
+   │                ponta?:{ pares, pct, itens:[ { modelo, cor, ref, venda, estoque, situacao, leitura, sem_faturar_desde } ], base?:str } }
+   │                ITEM = { modelo, cor, ref, venda, estoque, cobertura, giro, carteira, fora_linha }
+   ├ produtos     { base?:str, top:[P], aporte:[P], baixo:[P], tabela:[P], faixas:{ alto|medio|baixo|novo:{ modelos, pares, valor } },
+   │                novos?:{ modelos, pares }, fora_sem_dispo?:[str] }
+   │                P = { modelo, cor, cor_nome, ref, venda, estoque, giro(%), cobertura, carteira, valor, primeiro_fat, disponivel:{pares,data}|null, fora_linha }
+   ├ metas        { base?:str, atual:'AAAA-MM', meses:{ 'AAAA-MM':{ <família>:[meta, potencial, pct, gap] } },
+   │                trimestres?:{ 'AAAA-Tn':{ nome, meses:[…] } } }   famílias: 'TT CALCADOS (soma das faixas)', MEOLY, CHOLY, ACOLY, CFOLY,
+   │                'TT FTW_UA', UA_ME, UA_CH, UA_AC, UA_CF (tênis em pares; o resto em R$)
+   └ participacao { 'AAAA-MM'|'AAAA-Tn':{ tenis, meias, chinelo, acess, conf, ua } }  (R$, faturado + carteira do mês)
 
    EVENTOS (a casca chama, o TI atende; se não existir, nada quebra):
-     window.onFiltro(filtro)                 → recalcular DADOS.anos e chamar desenhar(DADOS) de novo
-     window.onBro(contexto)                  → abrir o painel IA existente (se ausente, abre a gaveta local do Bro)
-     window.onTopico(acao, id, texto)        → acao: 'feito' | 'orientar' | 'abrir' | 'novo'  (grava no topics_item)
-     window.onTratar(ref, cor)               → reservado (lista de produtos da régua, fase 2)
-   Fora desta casca (decisão do BOSS): "Sugerir pedido" e qualquer nome de outro cliente.
+     window.onFiltro(filtro)            → recalcular DADOS.anos e chamar desenhar(DADOS) de novo
+     window.onBro(contexto)             → abrir o painel IA existente (sem ele, abre a gaveta local do Bro)
+     window.onTopico(acao, id, texto)   → 'feito' | 'orientar' | 'abrir' | 'novo'
+     window.onTratar(ref, cor)          → "tratar" do giro baixo: abrir as linhas na carteira detalhada
+     window.onAporte(ref, cor)          → selo verde "aporte": abrir o pedido de repasse no CMS PASS
+     window.onAcao(nome, ctx)           → 'busca' · 'atas' · 'raiox' · 'pdf' · 'ag' · 'sugerir_pedido' · 'agenda' · 'giro_aba'
+   Sem onAcao, os botões usam os endereços do v19 (#aba=atas&cliente=…, #aba=raiox…, #aba=cg…, #cms-pass/repasse…).
+   "Sugerir pedido": o botão está na tela como no v19; a lógica espera o "pode seguir" do Léo (sem onAcao, avisa e não faz nada).
+   Nenhum texto desta casca cita outro cliente nem a origem de um repasse.
 */
 (function(){
 const MS2=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'],MSX=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-const CORANO=['#ADAEB3','#787B86','#2E3EFC'];                       // ano mais antigo → cinza claro; corrente → azul
+const CORANO=['#ADAEB3','#787B86','#2E3EFC'];
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('pt-BR');
 const dec=n=>n==null||isNaN(n)?'—':(+n).toFixed(1).replace('.',',');
-const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const chama=(nome,...a)=>{try{if(typeof window[nome]==='function')return window[nome](...a)}catch(e){console.error(nome,e)}};
-let D={},CAM={so:1,si:1,mt:1,es:1},ANS={},FIL=null,AB=false;
+const mil=n=>n==null||isNaN(n)?'—':n>=1e6?'R$ '+(n/1e6).toFixed(2).replace('.',',')+' mi':'R$ '+fmt(n/1000)+' mil';
+const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const chama=(nome,...a)=>{try{if(typeof window[nome]==='function'){window[nome](...a);return true}}catch(e){console.error(nome,e)}return false};
+const dm=s=>s&&s!=='None'?String(s).slice(8,10)+'/'+String(s).slice(5,7):'—';
+const mesN=m=>m?MS2[+String(m).slice(5,7)-1]+'/'+String(m).slice(2,4):'—';
+let D={},CAM={so:1,si:1,mt:1,es:1},ANS={},FIL=null,AB=false,MM=null,COBF=null,CM=null,SD=null;
+const hoje=()=>D.hoje||new Date().toISOString().slice(0,10);
+const cod=()=>encodeURIComponent((D.cliente||{}).codigo||'');
+const nome=()=>(D.cliente||{}).nome||'cliente';
 
 // ---------------- topo ----------------
 function topo(){const c=D.cliente||{};$('c_nome').textContent=c.nome||'—';document.title='Gestor · '+(c.nome||'Cliente');
  $('c_sub').textContent=[c.cidade||null,c.lojas_ativas!=null?c.lojas_ativas+' lojas ativas':null,c.cidade?null:(c.recorte||null)].filter(Boolean).join(' · ')||'—';
- $('brctx').textContent=(c.nome||'—')+' · aba Cliente'}
+ const mk=c.marcas||[];$('c_selos').innerHTML=(mk.includes('OLY')?'<span class="selo" style="background:#2E3EFC">Olympikus</span>':'')+(mk.includes('UA')?'<span class="selo" style="background:#fff;color:#000">Under Armour</span>':'');
+ $('brctx').textContent=(c.nome||'—')+' · aba Cliente';
+ $('b_atas').href='#aba=atas&cliente='+cod();$('b_raiox').href='#aba=raiox&cliente='+cod();$('b_ag').href='#aba=ag&cliente='+cod();
+ const A=(D.atas||[]).slice().sort((a,b)=>a.data<b.data?1:-1);$('atmini').textContent=A.length?`${A.length} recentes · última ${dm(A[0].data)}`:'sem ata';
+ $('mt_tit').textContent='Metas do '+(c.nome||'cliente')}
 // ---------------- TOPICS ----------------
 const escRe=x=>String(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const limpa=(t,b)=>{let x=String(t||'');if(b)x=x.replace(new RegExp('^\\s*'+escRe(b)+'\\s*[-–—:·]\\s*','i'),'');return x};
 const ehCli=b=>{const n=((D.cliente||{}).nome||'').toUpperCase().replace(/\s+/g,''),bb=String(b||'').toUpperCase().replace(/\s+/g,'');return !bb||bb===n||n.startsWith(bb)||bb.startsWith(n)};
 function decidir(){const L=D.decidir||D.topics||[];$('c_ntp').textContent=L.length+' no TOPICS';
- // cliente sem bloco no TOPICS (ou não encontrado): o bloco some em vez de dizer "nada pendente"
  document.querySelector('.bento>.dec').style.display=D.sem_bloco_topics?'none':'';
- // sem urgente, o bloco não se chama "o que decidir hoje" (GAMER: não pode competir com a prioridade da manchete)
  $('c_dec_tit').innerHTML=L.some(t=>t.urgente)?'<i class="ti ti-bolt"></i> O que decidir hoje':'<i class="ti ti-checklist"></i> TOPICS · sem urgente';
- $('tpl').innerHTML=L.length?L.map(t=>`<div class="it" id="tp_${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(limpa(t.texto,t.bloco))}</b><small>${esc([ehCli(t.bloco)?null:t.bloco,t.criado_em?t.criado_em.slice(8,10)+'/'+t.criado_em.slice(5,7):null].filter(Boolean).join(' · '))}</small><div class="nota" id="tpn_${esc(t.id)}"></div>
+ $('tpnovo').placeholder='+ novo item para o '+nome()+' no TOPICS…';
+ $('tpl').innerHTML=L.length?L.map(t=>`<div class="it" id="tp_${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(limpa(t.texto,t.bloco))}</b><small>${esc([ehCli(t.bloco)?null:t.bloco,t.criado_em?dm(t.criado_em):null].filter(Boolean).join(' · '))}</small><div class="nota" id="tpn_${esc(t.id)}"></div>
   <div class="acts"><button class="ok" onclick="CLI.topico('feito','${esc(t.id)}')">✓ feito</button><button onclick="CLI.ori('${esc(t.id)}')">✎ orientar</button><button onclick="CLI.topico('abrir','${esc(t.id)}')">abrir no TOPICS</button></div>
   <div class="ori" id="tpo_${esc(t.id)}"><input id="tpi_${esc(t.id)}" placeholder="escreva a orientação…" onkeydown="if(event.key==='Enter')CLI.salva('${esc(t.id)}')"><button onclick="CLI.salva('${esc(t.id)}')">salvar</button></div></div></div>`).join('')
-  :'<div class="it" style="border:0"><div style="opacity:.8">nada pendente no TOPICS</div></div>'}
-// ---------------- agenda ----------------
-let CM=null,SD=null;
+  :'<div class="it" style="border:0"><div style="opacity:.8">nada pendente no TOPICS</div></div>';
+ $('c_tp_lido').textContent='TOPICS · lido em '+dm(hoje())}
+// ---------------- agenda (tipos: reunião, análise, trade, marco) ----------------
+const TPN={reun:'reunião',anal:'análise',trade:'trade',marco:'marco'};
+const tipoAg=e=>{const t=String(e.tipo||'').toLowerCase();if(t.startsWith('reun'))return 'reun';if(t.startsWith('anal'))return 'anal';if(t==='trade')return 'trade';if(t==='marco')return 'marco';
+ const x=(e.titulo||'')+' '+(Array.isArray(e.onde)?e.onde.join(' '):e.onde||'');return /trade|cashback|guelta|m[íi]dia/i.test(x)?'trade':/inaugura|marco|abre a loja/i.test(x)?'marco':/raio|an[áa]lise|proposta|estudo/i.test(x)?'anal':'reun'};
 const tituloAg=t=>{const n=((D.cliente||{}).nome||'').toUpperCase();let x=String(t||'').replace(/^\s*(ATA|PAUTA)\s*[—–-]\s*/i,'');if(n)x=x.replace(new RegExp('\\s*'+escRe(n)+'\\s*[·—–:-]?\\s*','gi'),' ').trim();x=x.replace(/^REUNI[ÃA]O\b/i,'Reunião');x=x.charAt(0).toUpperCase()+x.slice(1);return x||String(t||'')};
 const ondeAg=o=>{if(Array.isArray(o))o=o.join(',');return String(o||'').split(',').map(s=>s.trim()).filter(s=>s&&!ehCli(s)).join(' · ')};
-function agenda(){const EV=(D.agenda||[]).filter(e=>e&&e.data).sort((a,b)=>a.data<b.data?1:-1),hoje=new Date().toISOString().slice(0,10);
- if(!CM){const b=(EV.find(e=>e.data<=hoje)||EV[0]||{data:hoje}).data;CM=[+b.slice(0,4),+b.slice(5,7)-1]}
+function agenda(){const EV=(D.agenda||[]).filter(e=>e&&e.data).map((e,i)=>Object.assign({},e,{_t:tipoAg(e),_i:i})).sort((a,b)=>a.data<b.data?1:-1),HJ=hoje();
+ if(!CM){const b=(EV.find(e=>e.data<=HJ)||EV[0]||{data:HJ}).data;CM=[+b.slice(0,4),+b.slice(5,7)-1]}
  const [y,m]=CM,f=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate(),kk=d=>`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
  let h=`<div class="hd"><button onclick="CLI.mes(-1)">‹</button><b>${MSX[m]} ${y}</b><button onclick="CLI.mes(1)">›</button></div><div class="gr">`+['D','S','T','Q','Q','S','S'].map(x=>`<div class="dw">${x}</div>`).join('');
  for(let i=0;i<f;i++)h+='<div class="d vz"></div>';
- for(let d=1;d<=n;d++){const e=EV.filter(x=>x.data.slice(0,10)===kk(d));h+=`<div class="d ${e.length?'ev':''} ${kk(d)===hoje?'hj':''} ${kk(d)===SD?'sel':''}" ${e.length?`onclick="CLI.dia('${kk(d)}')"`:''}>${d}${e.length?'<span class="pts"><i class="tp-reun"></i></span>':''}</div>`}
- $('cal').innerHTML=h+'</div>';
+ for(let d=1;d<=n;d++){const e=EV.filter(x=>x.data.slice(0,10)===kk(d));h+=`<div class="d ${e.length?'ev':''} ${kk(d)===HJ?'hj':''} ${kk(d)===SD?'sel':''}" ${e.length?`onclick="CLI.dia('${kk(d)}')"`:''}>${d}${e.length?`<span class="pts">${e.map(x=>`<i class="tp-${x._t}"></i>`).join('')}</span>`:''}</div>`}
+ h+=`</div><div class="leg small text-secondary mt-3">${Object.entries(TPN).map(([t,nn])=>`<span class="me-2"><i class="tp-${t}"></i>${nn}</span>`).join('')}</div>`;
+ $('cal').innerHTML=h;
  const L=SD?EV.filter(x=>x.data.slice(0,10)===SD):EV;
- $('evl').innerHTML=(SD?`<div class="d-flex mb-1"><b>${SD.slice(8,10)}/${SD.slice(5,7)}</b><a href="#" class="ms-auto small" onclick="CLI.dia(null);return false">ver tudo</a></div>`:'<div class="d-flex mb-1"><b>Linha do tempo</b><span class="ms-auto hora">da mais nova</span></div>')+
-  (L.length?L.map(x=>`<div class="e ${x.data>hoje?'fut':''}"><div class="dt">${x.data.slice(8,10)}<small>${MSX[+x.data.slice(5,7)-1].slice(0,3)}/${x.data.slice(2,4)}</small></div><div><b>${esc(tituloAg(x.titulo))}</b><small class="d2">${esc(ondeAg(x.onde))}</small></div><span></span></div>`).join(''):'<div class="hora" style="color:#fff;opacity:.8">sem eventos</div>')}
-// ---------------- carteira ----------------
-function carteira(){const c=D.carteira||{},M=c.meses||[];$('c_cart').textContent=fmt(c.a_faturar);$('c_cart_u').textContent=' pares de tênis a faturar';
- // as outras famílias ficam AO LADO, nunca somadas ao tênis (chinelo nunca no total)
- let ou=$('c_cart_out');if(!ou){ou=document.createElement('div');ou.id='c_cart_out';ou.className='hora mt-2';ou.style.cssText='color:#fff;opacity:.85;font-size:11.5px';$('c_cart_base').before(ou)}
- ou.textContent=c.outras?'fora do tênis: '+c.outras:'';
- const MC=M.filter(x=>(x.cart||0)>0),tot=MC.reduce((a,x)=>a+(x.cart||0),0)||1;
- $('c_mes3').innerHTML=MC.length?MC.map(x=>`<div style="flex:${Math.max(1,x.cart||0)/tot*10}">${MS2[+String(x.mes).slice(5,7)-1]||'—'}<b>${fmt(x.cart)}</b></div>`).join(''):'';
- const be=(M.find(x=>x.base_em)||{}).base_em;$('c_cart_base').textContent=be?'carteira lida em '+String(be).slice(8,10)+'/'+String(be).slice(5,7)+(String(be).length>10?' '+String(be).slice(11,16):''):''}
+ const bt=x=>x._t==='reun'?'ver ata':x._t==='anal'?'abrir':null;
+ $('evl').innerHTML=(SD?`<div class="d-flex mb-1"><b>${dm(SD)}</b><a href="#" class="ms-auto small" onclick="CLI.dia(null);return false">ver tudo</a></div>`:'<div class="d-flex mb-1"><b>Linha do tempo</b><span class="ms-auto hora">da mais nova · cinza = vem aí</span></div>')+
+  (L.length?L.map(x=>`<div class="e ${x.data>HJ?'fut':''}"><div class="dt">${x.data.slice(8,10)}<small>${MSX[+x.data.slice(5,7)-1].slice(0,3)}/${x.data.slice(2,4)}</small></div><div><span class="tp tp-${x._t}">${TPN[x._t]}</span><b>${esc(tituloAg(x.titulo))}</b><small class="d2">${esc(ondeAg(x.onde))}</small></div>${bt(x)?`<a class="trt" href="${esc(x.link||'#')}" onclick="return CLI.ag(${x._i})">${bt(x)}</a>`:'<span></span>'}</div>`).join(''):'<div class="hora" style="color:#fff;opacity:.8">sem eventos</div>')}
+// ---------------- faixa do trade ----------------
+function trade(){const t=D.trade;$('trd').hidden=!t;if(!t)return;
+ $('trt').textContent=t.titulo||'—';$('trm').textContent=t.periodo||(t.inicio&&t.fim?dm(t.inicio)+' a '+dm(t.fim):'');
+ const ini=t.inicio?new Date(t.inicio):null,fim=t.fim?new Date(t.fim):null,hj=new Date(hoje());
+ $('trp').style.width=ini&&fim?Math.max(2,Math.min(100,(hj-ini)/(fim-ini)*100))+'%':'0';
+ $('trv').textContent=t.investimento!=null?'R$ '+fmt(t.investimento/1000)+' mil':'—';$('trmeta').textContent=fmt(t.meta_pares);
+ $('trf').textContent=fim?Math.max(0,Math.round((fim-hj)/864e5))+' dias':'—'}
+// ---------------- cartões: sell-out, estoque, carteira ----------------
+function spark(id,a){const el=$(id);if(!a||a.length<2){el.innerHTML='';return}const mn=Math.min(...a),mx=Math.max(...a),X=i=>i*300/(a.length-1),Y=v=>40-(v-mn)/((mx-mn)||1)*34;
+ const p=a.map((v,i)=>`${X(i)},${Y(v)}`).join(' ');
+ el.innerHTML=`<polyline points="0,46 ${p} 300,46" fill="rgba(255,255,255,.12)" stroke="none"/><polyline points="${p}" fill="none" stroke="#fff" stroke-width="2.2" vector-effect="non-scaling-stroke"/><circle cx="${X(a.length-1)}" cy="${Y(a[a.length-1])}" r="4" fill="#FFFF1A" stroke="#000" stroke-width="1"/>`}
+function cartoes(){const g=D.giro||{},rot=g.rotulo||'tênis OLY',S=(g.serie||[]).filter(x=>x&&!x.parcial&&x.v!=null);
+ $('so_lb').textContent='Sell-out '+rot+' / mês';$('es_lb').textContent='Estoque '+rot;
+ // sell-out: média dos 2 últimos meses fechados (como no v19) · delta contra a média do ano · traço = os meses do ano
+ const y=S.length?String(S[S.length-1].mes).slice(0,4):null,Sa=S.filter(x=>String(x.mes).slice(0,4)===y),u2=S.slice(-2);
+ const med=u2.length?u2.reduce((a,x)=>a+x.v,0)/u2.length:null,ma=Sa.length?Sa.reduce((a,x)=>a+x.v,0)/Sa.length:null,d=med&&ma?Math.round((med/ma-1)*100):null;
+ $('so_ns').textContent=fmt(med);
+ $('so_delta').innerHTML=d==null?'':`<i class="ti ti-arrow-${d>=0?'up':'down'}-right"></i>${d>=0?'+':''}${d}% vs média do ano`;
+ $('so_base').textContent=u2.length?`média ${MS2[+u2[0].mes.slice(5,7)-1]}${u2.length>1?'–'+mesN(u2[1].mes):'/'+u2[0].mes.slice(2,4)} · ${Sa.length>1?MS2[+Sa[0].mes.slice(5,7)-1]+'–'+MS2[+Sa[Sa.length-1].mes.slice(5,7)-1]+' no traço':''}`:'';
+ spark('sp1',Sa.map(x=>x.v));
+ $('es_ns').textContent=fmt(g.estoque);spark('sp2',Sa.filter(x=>x.e!=null).map(x=>x.e));
+ // carteira aberta: pares · R$ · um chip por mês com carteira
+ const c=D.carteira||{},M=(c.meses||[]).filter(x=>(x.cart||0)>0),tot=M.reduce((a,x)=>a+x.cart,0)||1;
+ $('c_cart').textContent=fmt(c.a_faturar);$('c_cart_u').textContent='pares'+(c.valor!=null?' · '+mil(c.valor):'');
+ $('c_mes3').innerHTML=M.map(x=>`<div style="flex:${Math.max(1,x.cart)/tot*10}">${MS2[+String(x.mes).slice(5,7)-1]}<b>${fmt(x.cart)}</b></div>`).join('')}
 // ---------------- base da cobertura (Conselho 0045): sem venda ou com base curta não há semáforo ----------------
-// "sem base" quando: cobertura nula, venda média nula/zero ou menos de 3 meses fechados com venda. Ausência de sell-out não é venda zero.
 function baseCob(){const g=D.giro||{},S=(g.serie||[]).filter(x=>x&&!x.parcial&&x.v!=null&&x.v>0),u3=S.slice(-3);
  const vm=u3.length?u3.reduce((a,x)=>a+x.v,0)/u3.length:null;return {ok:g.cobertura!=null&&u3.length>=3&&vm>0,vm,n:u3.length}}
-// leitura de estoque do cliente (régua da casa): teto → rever a próxima entrada; forçar → forçar a barra; ruptura → antecipar
+const faixaCob=c=>c==null?null:c<4?'ruptura':c<5?'forçar a barra':'no teto';
 function leituraEstoque(){const g=D.giro||{},b=baseCob(),c=g.cobertura;if(!b.ok)return null;
- const hoje=new Date().toISOString().slice(0,7),M=((D.carteira||{}).meses||[]).filter(x=>(x.cart||0)>0&&String(x.mes).slice(0,7)>hoje),prox=M[0];
- const mn=m=>MSX[+String(m).slice(5,7)-1];
+ const hm=hoje().slice(0,7),M=((D.carteira||{}).meses||[]).filter(x=>(x.cart||0)>0&&String(x.mes).slice(0,7)>hm),prox=M[0],mn=m=>MSX[+String(m).slice(5,7)-1];
  if(c>=5&&prox)return {t:`Rever a entrada de ${mn(prox.mes)}: ${fmt(prox.cart)} pares de tênis com ${dec(c)} meses de cobertura`,s:'acima do teto de 5 meses · leitura da régua de cobertura'};
  if(c<4)return {t:`Antecipar: cobertura de ${dec(c)} meses, abaixo de 4`,s:'ruptura · leitura da régua de cobertura'};
  if(c<5)return {t:`Forçar a barra: cobertura de ${dec(c)} meses`,s:'abaixo do teto de 5 meses · leitura da régua de cobertura'};
  return null}
-// ---------------- manchete da 1ª dobra: prioridade · evidência · decisão pendente ----------------
+// ---------------- manchete da 1ª dobra (Conselho 0045): prioridade · evidência · decisão pendente ----------------
 function manchete(){const L=(D.decidir||D.topics||[]),urg=L.filter(t=>t.urgente),A=D.anos||{},AN=(A.lista||[]).map(String),y=AN[AN.length-1],g=D.giro||{},b=baseCob(),c=g.cobertura;
- // prioridade (GAMER/NÚCLEO): 1º DADOS.prioridade (leitura do NÚCLEO, R1–R5) · 2º a leitura de ESTOQUE do próprio cliente
- // (não pode contradizer a evidência) · 3º o urgente do TOPICS · senão "Sem urgência hoje"
  const PR=D.prioridade?(typeof D.prioridade==='string'?{titulo:D.prioridade}:D.prioridade):null,leit=leituraEstoque();
  const pri=PR?`<div class="h">${esc(PR.titulo)}</div><div class="s">${esc(PR.detalhe||'leitura do NÚCLEO')}</div>`
   :leit?`<div class="h">${esc(leit.t)}</div><div class="s">${esc(leit.s)}</div>`
   :urg[0]?`<div class="h">${esc(limpa(urg[0].texto,urg[0].bloco))}</div><div class="s">${urg.length>1?`+ ${urg.length-1} urgente${urg.length>2?'s':''} no TOPICS`:'único urgente no TOPICS'}</div>`
   :`<div class="h">Sem urgência hoje</div><div class="s">${L.length?L.length+(L.length===1?' item':' itens')+' em aberto no TOPICS, nenhum marcado como urgente':'nada pendente no TOPICS'}</div>`;
- // evidência: "vendendo ao consumidor ou só abastecendo estoque?" — últimos 3 meses FECHADOS de sell-out × sell-in × meta + estoque, com a data de cada fonte
  const so=(A.sellout||{})[y]||[],si=(A.sellin||{})[y]||[],mt=(A.meta||{})[y]||[];let ult=-1;for(let i=11;i>=0;i--)if(so[i]!=null){ult=i;break}
  const m3=ult>=0?[ult-2,ult-1,ult].filter(i=>i>=0):[],sm=a=>m3.length&&m3.every(i=>a[i]!=null)?m3.reduce((t,i)=>t+a[i],0):null;
  const S=sm(so),I=sm(si),M=sm(mt),per=m3.length?`${MS2[m3[0]]}–${MS2[ult]}/${String(y).slice(2)}`:'—';
  let ler='';if(S!=null&&I!=null){const r=I/S;ler=r>1.15?`<span class="tag al">abastecendo acima do que vende (sell-in ${Math.round((r-1)*100)}% acima)</span>`:r<0.85?`<span class="tag rd">vendendo acima do que compra (sell-in ${Math.round((1-r)*100)}% abaixo)</span>`:`<span class="tag ok">compra no ritmo em que vende</span>`}
  else ler=`<span class="tag ok">${S==null?'sem sell-out fechado no período':'sell-in do período ainda em carga'}</span>`;
- const F=D.fontes||{},dt=v=>v?String(v).slice(8,10)?String(v).slice(8,10)+'/'+String(v).slice(5,7):MS2[+String(v).slice(5,7)-1]+'/'+String(v).slice(2,4):'—';
- const ev=`<div class="ev"><div><small>sell-out ${per}</small><b>${fmt(S)}</b><small>${F.sellout_ate?'até '+dt(F.sellout_ate):'AG'}</small></div><div><small>sell-in ${per}</small><b>${fmt(I)}</b><small>${F.sellin_ate?'até '+dt(F.sellin_ate):'EBM'}</small></div><div><small>meta ${per}</small><b>${fmt(M)}</b><small>${F.meta_lida_em?'lida '+dt(F.meta_lida_em):'rateio'}</small></div><div><small>estoque</small><b>${fmt(g.estoque)}</b><small>${g.estoque_mes?MS2[+g.estoque_mes.slice(5,7)-1]+'/'+g.estoque_mes.slice(2,4):'—'}</small></div></div>${ler}`;
- // decisão pendente: a cobertura (só com base) + quantos itens esperam decisão
+ const F=D.fontes||{},dt=v=>v?String(v).slice(8,10)?dm(v):mesN(v):'—';
+ const ev=`<div class="ev"><div><small>sell-out ${per}</small><b>${fmt(S)}</b><small>${F.sellout_ate?'até '+dt(F.sellout_ate):'AG'}</small></div><div><small>sell-in ${per}</small><b>${fmt(I)}</b><small>${F.sellin_ate?'até '+dt(F.sellin_ate):'EBM'}</small></div><div><small>meta ${per}</small><b>${fmt(M)}</b><small>${F.meta_lida_em?'lida '+dt(F.meta_lida_em):'rateio'}</small></div><div><small>estoque</small><b>${fmt(g.estoque)}</b><small>${g.estoque_mes?mesN(g.estoque_mes):'—'}</small></div></div>${ler}`;
  const dc=!b.ok?`<div class="h">Cobertura sem base para estimar</div><div class="s">${b.n<3?'menos de 3 meses fechados com venda':'venda média nula'} — não dá para dizer se falta ou sobra</div>`
   :c<4?`<div class="h">Ruptura: ${dec(c)} meses</div><div class="s">antecipar já · abaixo de 4 meses</div>`:c<5?`<div class="h">Forçar a barra: ${dec(c)} meses</div><div class="s">abaixo do teto de 5 meses</div>`:`<div class="h">No teto: ${dec(c)} meses</div><div class="s">não antecipar · ${L.length} ${L.length===1?'decisão':'decisões'} no TOPICS</div>`;
- // estado vazio (cliente não encontrado / nada lido): só a prioridade, sem colunas de traço
  if(!D.giro&&!D.anos){$('manch').style.gridTemplateColumns='1fr';$('manch').innerHTML=`<div><div class="t">Prioridade</div>${pri}</div>`;return}
  $('manch').style.gridTemplateColumns='';
  $('manch').innerHTML=`<div><div class="t">Prioridade</div>${pri}</div><div><div class="t">Evidência · vendendo ao consumidor ou só abastecendo?</div>${ev}</div><div><div class="t">Decisão pendente</div>${dc}</div>`}
-// ---------------- cobertura ----------------
-function cobertura(){const g=D.giro||{},B=baseCob(),c=B.ok?g.cobertura:null;$('c_recorte').textContent=g.recorte||'—';$('c_cob').textContent=B.ok?dec(c):'—';
- const p=!B.ok?'sem base para estimar':c<4?'ruptura':c<5?'forçar a barra':'no teto';$('c_cob_pill').textContent=p;
- $('c_cob_pill').style.background=c==null?'#E6E7E8':c<4?'#FDE3E5':c<5?'#FFFF1A':'#E6E7E8';$('c_cob_pill').style.color=c!=null&&c<4?'#E3001B':'#000';
- // onde falta / onde sobra por segmento (giro.segmentos opcional: [{nome, cobertura}]); sem o campo, some
- const SG=(g.segmentos||[]).filter(s=>s&&s.cobertura!=null),fal=SG.filter(s=>s.cobertura<4).sort((a,b)=>a.cobertura-b.cobertura),sob=SG.filter(s=>s.cobertura>=7).sort((a,b)=>b.cobertura-a.cobertura);
- $('c_segs').innerHTML=SG.length?(fal.length?`<span class="f">falta: ${fal.slice(0,3).map(s=>esc(s.nome)+' '+dec(s.cobertura)).join(' · ')}</span>`:'')+(sob.length?`<span class="s">sobra: ${sob.slice(0,3).map(s=>esc(s.nome)+' '+dec(s.cobertura)).join(' · ')}</span>`:'')+(!fal.length&&!sob.length?'<span class="s">segmentos dentro da régua</span>':''):'';
- // posição na régua de 3 faixas iguais: 0–4 | 4–5 | 5–7 (acima de 7 encosta no fim)
+// ---------------- cobertura: régua clicável, % do estoque por faixa, ponta de estoque, leitura ----------------
+const P=()=>D.produtos||{},CO=()=>D.cobertura||{};
+const bxT=()=>(P().baixo||[]).reduce((s,r)=>s+(r.carteira||0),0),bxV=()=>(P().baixo||[]).reduce((s,r)=>s+(r.valor||0),0);
+const fxPares=()=>Object.values(P().faixas||{}).reduce((s,f)=>s+((f&&f.pares)||0),0);
+function cobertura(){const g=D.giro||{},B=baseCob(),c=B.ok?g.cobertura:null,fx=faixaCob(c);
+ $('c_cob').textContent=B.ok?dec(c):'—';$('c_cob_pill').textContent=fx||'sem base para estimar';
+ $('c_cob_pill').style.background=c==null?'#E6E7E8':c<4?'#FDE3E5':c<5?'#FFFF1A':'';$('c_cob_pill').style.color=c!=null&&c<4?'#E3001B':c!=null&&c<5?'#000':'';
  const pos=c==null?-99:c<4?c/4*33.3:c<5?33.3+(c-4)*33.3:Math.min(99,66.7+(c-5)/2*33.3);$('c_cob_mk').style.left=c==null?'-99px':pos+'%';
- $('c_est').textContent=fmt(g.estoque);$('c_est_mes').textContent=g.estoque_mes?MS2[+g.estoque_mes.slice(5,7)-1]+'/'+g.estoque_mes.slice(2,4):'';
- const S=(g.serie||[]).filter(x=>x&&!x.parcial&&x.v!=null),u3=S.slice(-3);$('c_vm').textContent=u3.length?fmt(u3.reduce((a,x)=>a+x.v,0)/u3.length):'—';
- $('c_cob_base').textContent=g.cobertura_base||'';
- const a=S.map(x=>x.v);if(a.length>1){const mn=Math.min(...a),mx=Math.max(...a)||1,X=i=>i*300/(a.length-1),Y=v=>40-(v-mn)/((mx-mn)||1)*34,pp=a.map((v,i)=>`${X(i)},${Y(v)}`).join(' ');
-  $('c_spark').innerHTML=`<polyline points="0,46 ${pp} 300,46" fill="rgba(255,255,255,.12)"/><polyline points="${pp}" fill="none" stroke="#fff" stroke-width="2.2" vector-effect="non-scaling-stroke"/><circle cx="300" cy="${Y(a[a.length-1])}" r="4" fill="#FFFF1A" stroke="#000"/>`}else $('c_spark').innerHTML=''}
+ // % do estoque por faixa (faixas do TI; sem elas, soma os itens)
+ const IT=CO().itens||[],FX=CO().faixas||(IT.length?(()=>{const s=k=>IT.filter(r=>k==='rup'?r.cobertura<4:k==='for'?r.cobertura>=4&&r.cobertura<5:r.cobertura>=5).reduce((a,r)=>a+(r.estoque||0),0),t=IT.reduce((a,r)=>a+(r.estoque||0),0)||1;
+  return {ruptura:{pares:s('rup'),pct:s('rup')/t*100},forcar:{pares:s('for'),pct:s('for')/t*100},teto:{pares:s('teto'),pct:s('teto')/t*100}}})():null);
+ $('c_cobpct').innerHTML=FX?[['rup','ruptura','#ff6b78'],['for','forcar','#FFFF1A'],['teto','teto','']].map(([k,n,cr])=>{const x=FX[n]||{};return `<span onclick="CLI.cobp('${k}')"${cr?` style="color:${cr}"`:''}>${x.pct!=null?Math.round(x.pct)+'%':'—'}<small>do estoque · ${fmt(x.pares)} pares</small></span>`}).join(''):'';
+ const PO=CO().ponta;$('c_ponta').hidden=!PO;
+ if(PO){const n=PO.modelos!=null?PO.modelos:(PO.itens||[]).length;$('c_ponta').innerHTML=`<span style="font-size:18px">⌛</span><span><b>${fmt(PO.pares)} pares</b> <small>· ${PO.pct!=null?Math.round(PO.pct)+'% do estoque de tênis':''}</small><br><small>ponta de estoque: ${fmt(n)} modelos-cor parados (sem faturar há 6+ meses, sem carteira) · toque para ver</small></span>`}
+ // onde falta / onde sobra por segmento (opcional)
+ const SG=(g.segmentos||[]).filter(s=>s&&s.cobertura!=null),fal=SG.filter(s=>s.cobertura<4).sort((a,b)=>a.cobertura-b.cobertura),sob=SG.filter(s=>s.cobertura>=7).sort((a,b)=>b.cobertura-a.cobertura);
+ $('c_segs').innerHTML=SG.length?(fal.length?`<span class="f">falta: ${fal.slice(0,3).map(s=>esc(s.nome)+' '+dec(s.cobertura)).join(' · ')}</span>`:'')+(sob.length?`<span class="s">sobra: ${sob.slice(0,3).map(s=>esc(s.nome)+' '+dec(s.cobertura)).join(' · ')}</span>`:''):'';
+ // leitura automática (sinal, não veredito) — a mesma frase do v19, com o número do cliente
+ const rup=(P().aporte||[]).filter(r=>r.cobertura<4),m1=rup.slice().sort((a,b)=>b.venda-a.venda)[0],ct=fxPares(),bT=bxT(),bb=(P().baixo||[]).length;
+ const fr=[];if(B.ok)fr.push(`Cobertura geral <b>${fx}</b> (${dec(c)})`);
+ if(rup.length)fr.push(`${B.ok?'mas ':''}<b>${rup.length} modelos-cor</b> estão abaixo de 4 meses${m1?` — o ${esc(m1.modelo)} ${esc(String(m1.cor_nome||m1.cor||'').toLowerCase())} vende ${fmt(m1.venda)}/mês com ${dec(m1.cobertura)} de cobertura`:''}`);
+ let txt=fr.length?fr.join(', ')+'.':'';
+ if(bb)txt+=` ${txt?'Do outro lado, ':''}<b>${fmt(bT)} pares</b>${ct?` (${Math.round(bT/ct*100)}% da carteira de tênis, ${mil(bxV())})`:''} estão em ${bb} modelos-cor de giro até 20%.`;
+ const L=txt?txt+' <span style="opacity:.8">Leitura automática: sinal para olhar, não veredito — conferir estoque em peças, entrada recente e trânsito.</span>':'';
+ $('cobleit').innerHTML=$('leit').innerHTML=L}
+function pontaLista(el){const PO=CO().ponta||{},IT=PO.itens||[],t=IT.reduce((a,r)=>a+(r.estoque||0),0);
+ el.innerHTML=`<div class="ct"><span style="font-size:16px">⌛</span><b>Ponta de estoque</b><span style="font-size:12px;opacity:.85">${IT.length} modelos-cor · ${fmt(t)} pares · sem faturar há 6+ meses, sem carteira futura, cobertura ≥ 9 meses ou venda ≤ 10/mês</span>
+  <div class="tabs ms-3"><button onclick="CLI.cobp('rup',1)">Ruptura</button><button onclick="CLI.cobp('for',1)">Forçar a barra</button><button onclick="CLI.cobp('teto',1)">No teto</button><button class="on">Ponta</button></div><button class="x" onclick="CLI.cobp('ponta')" title="fechar">×</button></div>
+  <div class="lst">${[0,1].map(()=>`<div class="it hd2"><span>modelo · cor</span><span class="num">estoque</span><span class="num">venda/mês</span><span class="num">leitura</span></div>`).join('')}
+  ${IT.length?IT.map(r=>`<div class="it"><span><b>${esc(r.modelo)}</b> ${esc(r.cor)}${/fora/i.test(r.situacao||'')?' <span class="fl">fora de linha</span>':''}<small>${esc(r.ref)}${r.sem_faturar_desde?' · sem faturar desde '+esc(r.sem_faturar_desde):''}</small></span><span class="num fw-bold">${fmt(r.estoque)}</span><span class="num">${dec(r.venda)}</span><span class="num" style="font-size:11px">${esc(r.leitura||'—')}</span></div>`).join(''):'<div class="it">sem ponta de estoque lida</div>'}</div>
+  <div style="font-size:11px;opacity:.75;margin-top:6px">${esc(PO.base||'raio-x do NÚCLEO (ponta de estoque)')}</div>`;
+ el.style.display='block'}
+function cobp(f,troca){const el=$('cobp');if(!troca&&COBF===f&&el.style.display!=='none'){el.style.display='none';COBF=null;return}COBF=f;
+ if(f==='ponta')return pontaLista(el);
+ const G={rup:['Ruptura','abaixo de 4 meses · antecipar já','#E3001B',r=>r.cobertura<4],for:['Forçar a barra','de 4 a 5 meses · abaixo do teto','#FFFF1A',r=>r.cobertura>=4&&r.cobertura<5],teto:['No teto','5 meses ou mais · não antecipar','#ADAEB3',r=>r.cobertura>=5]};
+ const [n,d,c,fn]=G[f],L=(CO().itens||[]).filter(r=>r&&r.cobertura!=null).filter(fn).sort((a,b)=>(b.venda||0)-(a.venda||0)),nf=L.filter(r=>r.fora_linha).length;
+ el.innerHTML=`<div class="ct"><span style="width:14px;height:14px;border-radius:4px;background:${c};display:inline-block"></span><b>${n}</b><span style="font-size:12px;opacity:.85">${d} · ${L.length} modelos-cor${nf?' ('+nf+' fora de linha)':''} · ${fmt(L.reduce((a,r)=>a+(r.estoque||0),0))} pares em estoque</span>
+  <div class="tabs ms-3">${Object.entries(G).map(([k,g])=>`<button class="${k===f?'on':''}" onclick="CLI.cobp('${k}',1)">${g[0]}</button>`).join('')}${CO().ponta?'<button onclick="CLI.cobp(\'ponta\',1)">Ponta</button>':''}</div><button class="x" onclick="CLI.cobp('${f}')" title="fechar">×</button></div>
+  <div class="lst">${[0,1].map(()=>`<div class="it hd2"><span>modelo · cor</span><span class="num">cob.</span><span class="num">venda/mês</span><span class="num">carteira</span></div>`).join('')}
+  ${L.length?L.map(r=>`<div class="it"><span><b>${esc(r.modelo)}</b> ${esc(r.cor)}${r.fora_linha?' <span class="fl">fora de linha</span>':''}<small>${esc(r.ref)}${r.giro!=null?' · giro '+r.giro+'%':''} · estoque ${fmt(r.estoque)}</small></span><span class="cb" style="background:${f==='for'?'#FFFF1A':f==='rup'?'#FDE3E5':'rgba(255,255,255,.15)'};color:${f==='rup'?'#E3001B':f==='for'?'#000':'#fff'}">${dec(r.cobertura)}</span><span class="num">${fmt(r.venda)}</span><span class="num">${r.carteira?fmt(r.carteira):'—'}</span></div>`).join(''):'<div class="it">nenhum modelo-cor nesta faixa</div>'}</div>
+  <div style="font-size:11px;opacity:.75;margin-top:6px">${esc(CO().base||'régua de 23/09 (teto 5) · leitura é sinal, não veredito')}</div>`;
+ el.style.display='block'}
+// ---------------- metas do cliente + participação por família ----------------
+const MTK=[['TT CALCADOS (soma das faixas)','Tênis','pares'],['MEOLY','Meias','R$'],['CHOLY','Chinelos','R$'],['ACOLY','Acessórios','R$'],['CFOLY','Confecção','R$']],MTU=[['TT FTW_UA','Tênis','pares'],['UA_ME','Meias','R$'],['UA_CH','Chinelos','R$'],['UA_AC','Acessórios','R$'],['UA_CF','Confecção','R$']];
+function metas(){const X=D.metas||{},MT=X.meses||{},TR=X.trimestres||{},ks=Object.keys(MT).sort();
+ if(!MM||!(MT[MM]||TR[MM]))MM=X.atual&&MT[X.atual]?X.atual:ks[0]||null;
+ $('mt_base').textContent=X.base||'meta do preposto dividida pela participação do cliente · potencial = faturado + carteira do mês · regra do NÚCLEO';
+ $('mtm').innerHTML=ks.map(m=>`<span class="${m===MM?'on':''}" style="cursor:pointer" onclick="CLI.mm('${m}')">${mesN(m)}</span>`).join('')+Object.entries(TR).map(([k,t])=>`<span class="${MM===k?'on':''}" style="cursor:pointer;border-left:1px solid #E6E7E8;margin-left:4px" onclick="CLI.mm('${k}')">${esc(t.nome||k)}</span>`).join('');
+ $('mt15').innerHTML=participacao(MM);
+ const zero=n=>`<div class="c zero"><div class="t">${n}</div><div class="p">0</div><small>sem meta para o Léo</small><small>quadro guardado para a equipe</small></div>`,anda=n=>`<div class="c zero"><div class="t">${n}</div><div class="p">—</div><small>rateio em andamento (NÚCLEO)</small></div>`;
+ if(!MM){$('mtb').innerHTML=MTK.map(([,n])=>n==='Confecção'?zero(n):anda(n)).join('');$('mtu').innerHTML=MTU.map(([,n])=>n==='Confecção'?zero(n):anda(n)).join('');return}
+ if(TR[MM]){const ms=(TR[MM].meses||[]).filter(m=>MT[m]);
+  const ct=([k,n])=>{if(n==='Confecção')return zero(n);const xs=ms.map(m=>MT[m][k]);if(!xs.some(x=>x&&x[0]))return anda(n);
+   return `<div class="c"><div class="t">${n} · cada mês com a sua meta</div><div class="tri">${ms.map((m,i)=>{const x=xs[i];return `<div><small>${MS2[+m.slice(5,7)-1]}</small><b class="${x&&x[2]>=100?'g-hi':''}">${x&&x[0]?fmt(x[2])+'%':'—'}</b></div>`}).join('')}</div></div>`};
+  $('mtb').innerHTML=MTK.map(ct).join('');$('mtu').innerHTML=MTU.map(ct).join('');return}
+ const card=([k,n,u])=>{const x=MT[MM][k];if(n==='Confecção')return zero(n);if(!x||!x[0])return anda(n);
+  const [mt,pt,pc,gp]=x,f=v=>u==='R$'?mil(v):fmt(v)+' pares',mx=Math.max(mt,pt)||1;
+  return `<div class="c"><div class="t">${n}</div><div class="p ${pc>=100?'g-hi':''}">${fmt(pc)}%</div><small>${f(pt)} de ${f(mt)}</small><small class="${gp<0?'g-lo':'g-hi'} fw-bold">${gp<0?'faltam '+f(-gp):f(gp)+' acima'}</small><div class="b"><i style="width:${pt/mx*100}%"></i><em style="left:${mt/mx*100}%"></em></div></div>`};
+ $('mtb').innerHTML=MTK.map(card).join('');$('mtu').innerHTML=MTU.map(card).join('')}
+function participacao(p){const x=(D.participacao||{})[p];if(!x)return '';const TR=(D.metas||{}).trimestres||{},hm=hoje().slice(0,7);
+ const nm=TR[p]?(TR[p].nome||p):mesN(p),et=TR[p]?((TR[p].meses||[]).some(m=>m>=hm)?'potencial':'faturado'):(p>=hm?'potencial':'faturado');
+ const F=[['Tênis Olympikus','tenis','#2E3EFC'],['Meias','meias','#FFFF1A'],['Chinelo','chinelo','#FF8A00'],['Acessório','acess','#7B2EFC'],['Confecção','conf','#00B0F0'],['Under Armour','ua','#E3001B']],tot=F.reduce((a,f)=>a+(x[f[1]]||0),0);
+ return `<div class="b15"><div class="d-flex align-items-baseline flex-wrap gap-2"><b style="font:800 16px Barlow">Participação por família · ${esc(nm)}</b><span class="selo" style="background:${et==='potencial'?'#2E3EFC':'#000'};color:#fff">${et}</span><span class="hora ms-auto">quanto cada família contribui no total do ${esc(nome())}, em R$ · faturado + carteira do mês</span></div>
+ <div class="d-flex align-items-end gap-3 mt-2 flex-wrap"><span class="pc">${mil(tot)}</span><span class="mb-1 hora">no total · fora o tênis Olympikus: ${tot?Math.round((tot-(x.tenis||0))/tot*100):0}%</span></div>
+ <div class="bar">${F.map(([n,k,c])=>x[k]>0?`<i style="width:${x[k]/tot*100}%;background:${c}" title="${n}: ${mil(x[k])}"></i>`:'').join('')}</div>
+ <div class="lg">${F.map(([n,k,c])=>`<span><i style="background:${c}"></i>${n} ${mil(x[k]||0)} · <b>${tot?Math.round((x[k]||0)/tot*100):0}%</b></span>`).join('')}</div></div>`}
+// ---------------- giro do cliente ----------------
+const cobCh=c=>c==null?'<span class="ch ch-n">—</span>':c<4?`<span class="ch ch-r">${dec(c)}</span>`:c<5?`<span class="ch ch-a">${dec(c)}</span>`:`<span class="ch ch-n">${dec(c)}</span>`;
+const gCl=g=>g>=30?'g-hi':g<=20?'g-lo':'';
+const cn=r=>esc(r.cor_nome||r.cor||'');
+function giro(){const X=P(),T=X.top||[],A=X.aporte||[],BX=X.baixo||[],TB=X.tabela||[],FX=X.faixas||{};
+ $('gr_abas').innerHTML=[['tenis','Tênis OLY'],['meias','Meias'],['chinelo','Chinelos'],['acess','Acessórios'],['ua','UA']].map(([k,n],i)=>`<span class="${i?'':'on'}" onclick="CLI.acao('giro_aba',{tipo:'${k}'})">${n}</span>`).join('');
+ $('gr_base').textContent=X.base||'giro = venda ÷ (venda + estoque), igual à AG';
+ $('top_sub').textContent=X.top_base||'modelo + cor com venda ≥ 40 pares/mês · verde ≥30% · vermelho ≤20%';
+ $('top').innerHTML=T.length?T.map(r=>`<div class="rk"><div class="nm">${esc(r.modelo)} <span class="cor">${cn(r)}</span><small>${esc(r.ref)} · cob ${dec(r.cobertura)}${r.carteira?' · cart. '+fmt(r.carteira):''}</small></div><div class="br"><i style="width:${Math.min(100,(r.giro||0)/60*100)}%;background:${r.giro>=30?'#00B050':r.giro<=20?'#E3001B':'#2E3EFC'}"></i></div><div class="pc ${gCl(r.giro)}">${r.giro!=null?r.giro+'%':'—'}</div></div>`).join(''):'<div class="text-secondary small">sem giro lido para este cliente</div>';
+ const F=[['alto','giro ≥30%','#00B050'],['medio','giro 20–30%','#2E3EFC'],['baixo','giro ≤20%','#E3001B'],['novo','novo, sem giro','#ADAEB3']],tp=fxPares();
+ $('fx_sub').textContent=tp?`onde estão os ${fmt(tp)} pares que ainda vão chegar · modelo + cor`:'modelo + cor';
+ $('fx').innerHTML=tp?F.map(([k,,c])=>(FX[k]||{}).pares?`<i style="flex:${FX[k].pares};background:${c}"></i>`:'').join(''):'';
+ $('fxl').innerHTML=F.map(([k,t,c])=>{const f=FX[k]||{};return `<div><div class="t"><i style="background:${c}"></i>${t}</div><div class="q">${fmt(f.pares)}</div><small>pares · ${fmt(f.modelos)} modelos · ${mil(f.valor)}</small></div>`}).join('');
+ const L=(h,rows)=>`<div class="row1 hd"><div>Modelo</div><div class="num">Giro</div><div class="num">Cob.</div><div class="num">${h}</div></div>`+rows;
+ const apo=r=>r.disponivel&&r.disponivel.pares?`<a class="ap ap-v" href="#cms-pass/repasse?ref=${encodeURIComponent(r.ref)}&cor=${encodeURIComponent(r.cor)}" onclick="return CLI.aporte('${esc(r.ref)}','${esc(r.cor)}')" title="Pedir aporte no CMS PASS"><i class="ti ti-arrow-right"></i>aporte</a><div class="rp">disponível para aporte: ${fmt(r.disponivel.pares)} pares · ${dm(r.disponivel.data)}</div>`
+  :`<span class="ap ap-r" title="Sem disponível para aporte e sem dispo lida — puxar a dispo sob demanda">aporte S/dispo</span><div class="rp x">sem disponível no momento</div>`;
+ $('pre').innerHTML=A.length?L('Carteira',A.slice(0,10).map(r=>`<div class="row1"><div class="nm"><b>${esc(r.modelo)}</b><span class="cor">${cn(r)}</span>${r.fora_linha?'<span class="fl">fora de linha</span>':''}${apo(r)}<small>${esc(r.ref)} · vende ${fmt(r.venda)}/mês · ${r.cobertura<4?'ruptura':'forçar'}</small></div><div class="num fw-bold ${gCl(r.giro)}">${r.giro!=null?r.giro+'%':'—'}</div><div class="num">${cobCh(r.cobertura)}</div><div class="num">${r.carteira?fmt(r.carteira):'<span class="text-secondary">—</span>'}</div></div>`).join(''))+(A.length>10?`<a class="mais" href="#" onclick="return false">+ ${A.length-10} modelos-cor</a>`:''):'<div class="text-secondary small mt-2">nenhum modelo-cor abaixo de 5 meses de cobertura</div>';
+ if((X.fora_sem_dispo||[]).length)$('pre').innerHTML+=`<div class="hora mt-2">Fora da lista por estar fora de linha, sem disponível: ${X.fora_sem_dispo.map(esc).join(', ')}.</div>`;
+ $('tot').innerHTML=`<div><b>${BX.length?fmt(bxT()):'—'}</b><small>pares em carteira</small></div><div><b>${BX.length?mil(bxV()):'—'}</b><small>a faturar</small></div><div><b>${BX.length||'—'}</b><small>modelos-cor</small></div>`;
+ $('bx').innerHTML=BX.length?L('Carteira',BX.slice(0,10).map(r=>`<div class="row1"><div class="nm"><b>${esc(r.modelo)}</b><span class="cor">${cn(r)}</span>${r.fora_linha?'<span class="fl">fora de linha</span>':''}<small>${esc(r.ref)} · 1º fat. ${dm(r.primeiro_fat)}</small></div><div class="num fw-bold g-lo">${r.giro!=null?r.giro+'%':'—'}</div><div class="num">${cobCh(r.cobertura)}</div><div class="num"><b>${fmt(r.carteira)}</b> <a class="trt" href="#aba=cg&cliente=${cod()}&ref=${encodeURIComponent(r.ref)}&cor=${encodeURIComponent(r.cor)}" onclick="return CLI.tratar('${esc(r.ref)}','${esc(r.cor)}')" title="Abrir as linhas na carteira detalhada para postergar, transferir ou cancelar">tratar</a><small class="d-block text-secondary" style="font-size:10.5px">${mil(r.valor)}</small></div></div>`).join(''))+(BX.length>10?`<a class="mais" href="#" onclick="return false">+ ${BX.length-10} modelos-cor</a>`:''):'<div class="text-secondary small mt-2">nenhum modelo-cor de giro baixo com carteira</div>';
+ const NV=X.novos||(FX.novo?{modelos:FX.novo.modelos,pares:FX.novo.pares}:null);$('novo').textContent=NV&&NV.modelos?`Fora da conta: ${fmt(NV.modelos)} modelos-cor novos, ainda sem giro (${fmt(NV.pares)} pares) — conferir, não alertar.`:'';
+ $('tab_tit').textContent=TB.length?`Ver tabela completa (${TB.length} modelos-cor que mais vendem)`:'Ver tabela completa';
+ $('tab').innerHTML=TB.map(r=>`<tr><td><b>${esc(r.modelo)}</b> <span class="cor">${cn(r)}</span>${r.fora_linha?'<span class="fl">fora de linha</span>':''}<div class="text-secondary small">${esc(r.ref)}</div></td><td class="num">${fmt(r.venda)}</td><td class="num">${fmt(r.estoque)}</td><td class="num fw-bold ${gCl(r.giro)}">${r.giro!=null?r.giro+'%':'—'}</td><td class="num">${cobCh(r.cobertura)}</td><td class="num">${r.carteira?fmt(r.carteira):'—'}</td></tr>`).join('')}
+// ---------------- carteira: por mês e estado · por família ----------------
+function carteiraSec(){const c=D.carteira||{},M=(c.meses||[]).filter(x=>(x.cart||0)>0),be=((c.meses||[]).find(x=>x.base_em)||{}).base_em;
+ $('ct_base').textContent=(be?'carteira '+dm(be)+(String(be).length>10?' '+String(be).slice(11,16):'')+' · ':'')+'estado pela cor da AG';
+ $('cart').innerHTML=M.length?M.map(x=>{const e=x.estados||{},t=(e.confirmada||0)+(e.aporte||0)+(e.atencao||0)+(e.cancelar||0);
+  return `<div class="mb-3"><div class="d-flex mb-1"><b class="text-capitalize">${MS2[+String(x.mes).slice(5,7)-1]}</b><span class="ms-auto num">${fmt(x.cart)} pares${x.valor!=null?' · R$ '+fmt(x.valor/1000)+' mil':''}</span></div><div class="est-b">${t?[['confirmada','e-conf'],['aporte','e-ap'],['atencao','e-at'],['cancelar','e-can']].map(([k,cl])=>e[k]?`<span class="${cl}" style="width:${e[k]/t*100}%"></span>`:'').join(''):''}</div></div>`}).join(''):'<div class="text-secondary small">sem carteira aberta</div>';
+ const FM=c.familias||[],ms=[...new Set(FM.flatMap(f=>Object.keys(f.meses||{})))].sort();
+ $('fam_h').innerHTML=`<tr><th>Família</th>${ms.map(m=>`<th class="num">${MS2[+m.slice(5,7)-1]}</th>`).join('')}<th class="num">pares</th><th class="num">R$</th></tr>`;
+ $('fam').innerHTML=FM.length?FM.map(f=>{const t=ms.reduce((a,m)=>a+((f.meses||{})[m]||0),0);return `<tr><td>${esc(f.nome)}</td>${ms.map(m=>`<td class="num">${fmt((f.meses||{})[m]||0)}</td>`).join('')}<td class="num fw-bold">${fmt(t)}</td><td class="num">${f.valor!=null?fmt(f.valor/1000)+' mil':'—'}</td></tr>`}).join(''):`<tr><td colspan="${ms.length+3}" class="text-secondary">sem carteira por família</td></tr>`}
 // ---------------- filtro (3 blocos) ----------------
 const TIPOS=[['tenis','Tênis (footwear)'],['meias','Meias'],['chinelo','Chinelo'],['acess','Acessório'],['conf','Confecção']];
 const GT=[['MASCULINO','Masculino'],['FEMININO','Feminino'],['INFANTIL','Infantil'],['UNISSEX','Unissex']],GM=[['MASCULINO','Masculino (39/44)'],['FEMININO','Feminino (33/38)']];
 const CATS=[['CONF_MASC','Conforto masculino'],['CONF_FEM','Conforto feminino'],['CORRIDA/TREINO','Corrida / treino'],['CORRE','Corre'],['CLASSICOS','Clássicos'],['INFANTIL','Infantil']];
+const unid=f=>f.tipo==='meias'?'packs':f.tipo==='acess'?'peças':'pares';
 function titulo(f){const mk=(f.marca||[]).map(x=>x==='UA'?'Under Armour':'Olympikus').join(' + ')||'—',tp=((TIPOS.find(x=>x[0]===f.tipo)||[,''])[1]).replace(' (footwear)','');
  const det=(f.categoria||[]).length?f.categoria.map(c=>(CATS.find(x=>x[0]===c)||[,c])[1]).join(' + '):(f.genero||[]).length?f.genero.map(g=>((f.tipo==='meias'?GM:GT).find(x=>x[0]===g)||[,g])[1]).join(' + '):'';
- return `${mk} · ${tp}${det?' · '+det:''} · ${f.tipo==='meias'?'packs':f.tipo==='acess'?'peças':'pares'}`}
+ return `${mk} · ${tp}${det?' · '+det:''} · ${unid(f)}`}
 function painel(){const f=FIL,ck=(a,v)=>(a||[]).includes(v)?'checked':'',ehT=f.tipo==='tenis',ehM=f.tipo==='meias';
- const b1=`<div class="fb"><h4>1 · Marca</h4>${[['OLY','Olympikus'],['UA','Under Armour']].map(([k,n])=>`<label><input type="checkbox" ${ck(f.marca,k)} onchange="CLI.liga('marca','${k}',this.checked)">${n}</label>`).join('')}</div>`;
+ const b1=`<div class="fb"><h4>1 · Marca</h4>${[['OLY','Olympikus'],['UA','Under Armour']].map(([k,n])=>`<label><input type="checkbox" ${ck(f.marca,k)} onchange="CLI.liga('marca','${k}',this.checked)">${n}</label>`).join('')}<small>Under Armour: só tênis tem histórico de sell-out hoje.</small></div>`;
  const b2=`<div class="fb"><h4>2 · Tipo</h4>${TIPOS.map(([k,n])=>`<label><input type="radio" name="tp" ${f.tipo===k?'checked':''} onchange="CLI.tipo('${k}')">${n}</label>`).join('')}<small>Um tipo por vez: chinelo nunca se soma ao tênis.</small></div>`;
  const b3=ehM?`<div class="fb"><h4>3 · Dentro das meias</h4><div class="sub">Gênero</div>${GM.map(([k,n])=>`<label><input type="checkbox" ${ck(f.genero,k)} onchange="CLI.liga('genero','${k}',this.checked)">${n}</label>`).join('')}<small>Marque os dois para somar.</small></div>`
   :`<div class="fb" style="${ehT?'':'opacity:.45;pointer-events:none'}"><h4>3 · Dentro do tênis</h4><div class="sub">Gênero</div>${GT.map(([k,n])=>`<label><input type="checkbox" ${ck(f.genero,k)} onchange="CLI.liga('genero','${k}',this.checked)">${n}</label>`).join('')}
-   <div class="sub">Categoria</div>${CATS.map(([k,n])=>`<label><input type="checkbox" ${ck(f.categoria,k)} onchange="CLI.liga('categoria','${k}',this.checked)">${n}</label>`).join('')}<small>Marque quantos quiser: soma. Gênero e categoria não se somam entre si — marcar um lado limpa o outro.</small></div>`;
+   <div class="sub">Categoria</div>${CATS.map(([k,n])=>`<label><input type="checkbox" ${ck(f.categoria,k)} onchange="CLI.liga('categoria','${k}',this.checked)">${n}</label>`).join('')}<small>Marque quantos quiser: o gráfico soma. Gênero e categoria não se somam entre si — marcar um lado limpa o outro.</small></div>`;
  $('menu').innerHTML=b1+b2+b3+`<div class="fbar"><button onclick="CLI.limpa()">limpar</button><span class="hora">${esc(titulo(f))}</span><button class="ok" onclick="CLI.fecha()">ver no gráfico</button></div>`}
 function mudouFiltro(){$('htit').textContent=titulo(FIL);painel();chama('onFiltro',JSON.parse(JSON.stringify(FIL)))}
+const ehPadrao=()=>FIL&&FIL.tipo==='tenis'&&(FIL.marca||[]).join()==='OLY'&&!(FIL.genero||[]).length&&!(FIL.categoria||[]).length;
+// ---------------- leitura do NÚCLEO acima do gráfico (sinal, não veredito) ----------------
+function leituraGraf(){const A=D.anos||{},AN=(A.lista||[]).map(String),y=AN[AN.length-1],yp=String(+y-1),ser=(c,a)=>((A[c]||{})[a])||[];
+ if(!y){$('leitx').textContent='';return}
+ const so=ser('sellout',y),ult=so.map((v,i)=>v!=null?i:-1).filter(i=>i>=0).pop();
+ if(ult==null){$('leitx').textContent='Sem sell-out neste recorte.';return}
+ const m3=[ult-2,ult-1,ult].filter(i=>i>=0),med=m3.reduce((a,i)=>a+(so[i]||0),0)/m3.length,fr=[],g=D.giro||{},COB=ehPadrao()&&baseCob().ok?g.cobertura:null;
+ if(COB!=null){const fx=faixaCob(COB);fr.push(`Cobertura de ${dec(COB)} meses, ${fx==='no teto'?'no teto (5)':fx}.${COB>=5&&ult>=8&&ult<=10?' Em set–nov cobertura alta é o colchão do dezembro, não alarme.':''}`)}
+ // regra 2 (NÚCLEO, revista 27/10): olha primeiro o atingimento do mês corrente
+ const mi=+hoje().slice(5,7)-1,mo=hoje().slice(0,4)===y?ser('meta',y)[mi]:null,po=hoje().slice(0,4)===y?ser('sellin',y)[mi]:null;
+ if(mo){const pc=(po||0)/mo*100;
+  if(pc>=100&&mo>med)fr.push(`A meta de ${MS2[mi]} (${fmt(mo)}) já está batida no sell-in (${fmt(po)}, ${Math.round(pc)}%), mas ele gira ${fmt(med)}/mês: o que entra acima disso vira estoque. Segurar o próximo pedido e acelerar o sell-out (trade).`);
+  else if(pc<100&&mo>med*1.3&&COB!=null&&COB>=5)fr.push(`A meta de ${MS2[mi]} pede ${fmt(mo)} e ele gira ${fmt(med)}/mês: só cabe com ação de sell-out (trade), não com mais pedido.`);
+  else if(pc<100&&COB!=null&&COB<4)fr.push('Gira acima da meta e está curto: cabe mais pedido.');
+  else fr.push(`Meta de ${MS2[mi]}: ${fmt(po)} de ${fmt(mo)} no sell-in (${Math.round(pc)}%); ele gira ${fmt(med)}/mês.`)}
+ const sp=ser('sellout',yp),a26=m3.reduce((a,i)=>a+(so[i]||0),0),a25=m3.reduce((a,i)=>a+(sp[i]||0),0);
+ if(a25&&m3.every(i=>sp[i]!=null)){const d=Math.round((a26/a25-1)*100);fr.push(`Sell-out de ${MS2[m3[0]]}–${MS2[ult]} ${d>=0?'+':''}${d}% contra ${yp}.`)}
+ const d25=sp[11],md25=sp.slice(0,11).filter(v=>v!=null),mm=md25.length?md25.reduce((a,v)=>a+v,0)/md25.length:0;if(d25&&mm&&ult>=8&&ult<=10)fr.push(`Dezembro vende ${(d25/mm).toFixed(1).replace('.',',')}× a média dele: o sell-in tem de entrar até novembro.`);
+ if(!fr.length)fr.push(`Neste recorte só há ${MS2[m3[0]]}–${MS2[ult]}/${y.slice(2)}: sem ano anterior para comparar e sem meta própria. Venda média de ${fmt(med)}/mês nos últimos 3 meses.`);
+ $('leitx').innerHTML='<b>Leitura:</b> '+fr.slice(0,3).join(' ')}
+// ---------------- "ver números": ano a ano ----------------
+function numeros(){const A=D.anos||{},AN=(A.lista||[]).map(String),y=AN[AN.length-1],ser=(c,a)=>((A[c]||{})[a])||[];if(!y){$('tx').innerHTML='';return}
+ const so=ser('sellout',y),ate=(so.map((v,i)=>v!=null?i:-1).filter(i=>i>=0).pop()??8)+1,per=`jan–${MS2[ate-1]}`;
+ const sm=(c,a,n)=>ser(c,a).slice(0,n).reduce((t,v)=>t+(v||0),0),nm=(c,a,n)=>ser(c,a).slice(0,n).filter(v=>v!=null).length,tem=(c,a)=>ser(c,a).some(v=>v!=null),cheio=(c,a,n)=>nm(c,a,n)===n;
+ const cel=(c,a)=>!tem(c,a)?'<span class="text-secondary">falta carregar</span>':cheio(c,a,ate)?fmt(sm(c,a,ate)):fmt(sm(c,a,ate))+' <small class="text-secondary">só '+nm(c,a,ate)+' meses</small>';
+ const mt=ser('meta',y),mi=mt.map((v,i)=>v!=null?i:-1).filter(i=>i>=0),mtT=mi.reduce((a,i)=>a+mt[i],0),siQ=mi.reduce((a,i)=>a+(ser('sellin',y)[i]||0),0),u=unid(FIL||{});
+ $('tx').innerHTML=`<thead><tr><th></th>${AN.map(a=>`<th class="num">${a} · ${per}</th>`).join('')}<th class="num">${y} · ano</th></tr></thead><tbody>
+  <tr><td>Sell-out</td>${AN.map(a=>`<td class="num">${cel('sellout',a)}</td>`).join('')}<td class="num text-secondary">${MS2[ate-1]}/${y.slice(2)} é o último mês</td></tr>
+  <tr><td>Sell-in</td>${AN.map(a=>`<td class="num">${cel('sellin',a)}</td>`).join('')}<td class="num">${tem('sellin',y)?fmt(sm('sellin',y,12))+' <small class="text-secondary">com carteira</small>':'—'}</td></tr>
+  <tr><td>Sell-in ÷ sell-out</td>${AN.map(a=>`<td class="num">${cheio('sellin',a,ate)&&cheio('sellout',a,ate)?(sm('sellin',a,ate)/Math.max(1,sm('sellout',a,ate))).toFixed(2).replace('.',','):'—'}</td>`).join('')}<td></td></tr>
+  <tr><td>Meta do ${esc(nome())}${mi.length?` (${MS2[mi[0]]}–${MS2[mi[mi.length-1]]})`:''}</td>${AN.map(()=>'<td class="num">—</td>').join('')}<td class="num">${mtT?fmt(mtT)+' · sell-in '+fmt(siQ)+' ('+Math.round(siQ/mtT*100)+'%)':'<span class="text-secondary">'+(['meias','chinelo','acess'].includes((FIL||{}).tipo)?'meta em R$: ver Metas':'sem meta neste recorte')+'</span>'}</td></tr></tbody>`;
+ void u}
 // ---------------- gráfico ----------------
-function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String),k=(y,i)=>{const s=A[y];return null};
+let animou=false;
+function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String);
  AN.forEach(y=>{if(ANS[y]==null)ANS[y]=1});const cor=y=>CORANO[Math.max(0,CORANO.length-AN.length+AN.indexOf(y))]||'#2E3EFC';
  const ser=(c,y)=>((A[c]||{})[y])||[],val=(c,y,i)=>{const v=ser(c,y)[i];return v==null?null:+v};
  const svg=$('gx'),W=Math.max(260,Math.round(svg.getBoundingClientRect().width)||1100),HH=280,P=30,CEL=W<600;svg.setAttribute('viewBox',`0 0 ${W} ${HH}`);
@@ -160,7 +306,6 @@ function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String),k=(y,i)=>{con
  MS2.forEach((m,i)=>g+=`<text x="${X(i)}" y="${HH-8}" text-anchor="middle" font-size="12" font-weight="600" fill="#787B86" font-family="Inter">${CEL?m[0].toUpperCase():m}</text>`);
  const on=AN.filter(y=>ANS[y]);
  if(CAM.es){const ev=[];AN.forEach(y=>MS2.forEach((_,i)=>{const v=val('estoque',y,i);if(v!=null)ev.push(v)}));const emx=Math.max(1,...ev)*1.15,YE=v=>HH-P-(HH-2*P)*v/emx;
-  // eixo próprio do estoque (GAMER): 3 marcas na borda direita, em azul claro, com o rótulo "estoque"
   if(ev.length){g+=`<text x="${W-4}" y="${P-10}" text-anchor="end" font-size="9.5" font-weight="700" fill="#2E3EFC" opacity=".7" font-family="Inter">estoque</text>`;
    [0,.5,1].forEach(f=>{const v=emx/1.15*f;g+=`<text x="${W-4}" y="${YE(v)+4}" text-anchor="end" font-size="10" fill="#2E3EFC" opacity=".7" font-family="Inter">${v?(v/1000).toFixed(v>=10000?0:1).replace('.',',')+'k':'0'}</text>`})}
   on.forEach(y=>{const pts=MS2.map((_,i)=>{const v=val('estoque',y,i);return v==null?null:[X(i),YE(v),v]}).filter(Boolean);if(!pts.length)return;
@@ -172,39 +317,55 @@ function grafico(){const A=D.anos||{},AN=(A.lista||[]).map(String),k=(y,i)=>{con
   if(CAM.mt){g+=linha('meta',y,'stroke-dasharray="10 6"',2.2);MS2.forEach((_,i)=>{const v=val('meta',y,i);if(v==null)return;const bat=(val('sellin',y,i)||0)>=v;g+=`<rect x="${X(i)-4}" y="${Y(v)-4}" width="8" height="8" fill="${bat?c:'#fff'}" stroke="${c}" stroke-width="2" transform="rotate(45 ${X(i)} ${Y(v)})"/>`})}
   if(CAM.so)g+=linha('sellout',y,'',3.2);
   if(CAM.si){g+=linha('sellin',y,'stroke-dasharray="2 4" stroke-linecap="round"',3);MS2.forEach((_,i)=>{const v=val('sellin',y,i);if(v==null)return;const ca=(val('sellin_carteira',y,i)||0)>0;g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="4.5" fill="${ca?'#fff':c}" stroke="${c}" stroke-width="2"><title>${ca?'inclui carteira ainda não faturada':'faturado'}</title></circle>`})}});
- // botão do ano no começo da linha (posição fixa: escala por todos os anos)
  const yJ={};AN.forEach(y=>{const v=[val('sellout',y,0),val('sellin',y,0),val('meta',y,0)].find(x=>x!=null);yJ[y]=v!=null?Y(v):HH/2});
  const ord=AN.slice().sort((a,b)=>yJ[a]-yJ[b]);let last=-99;ord.forEach(y=>{if(yJ[y]-last<24)yJ[y]=last+24;last=yJ[y]});
  AN.forEach(y=>{const o=ANS[y],c=cor(y),yy=Math.min(HH-P-10,Math.max(P,yJ[y]));g+=`<g class="chip" style="cursor:pointer" onclick="CLI.ano('${y}')" ondblclick="CLI.so('${y}')"><title>toque: ${o?'esconder':'mostrar'} ${y} · dois toques: só ${y}</title><rect x="${P-30}" y="${yy-22}" width="62" height="44" fill="transparent"/><rect x="${P-26}" y="${yy-11}" width="54" height="22" rx="11" fill="${o?c:'#fff'}" stroke="${c}" stroke-width="2"/><text x="${P+1}" y="${yy+4}" text-anchor="middle" font-size="12" font-weight="800" fill="${o?'#fff':c}" font-family="Barlow">${o?'':'+ '}${y}</text></g>`});
  svg.innerHTML=g;$('vazio').style.display=(on.length&&(CAM.so||CAM.si||CAM.mt||CAM.es))?'none':'flex';
- // dica ao passar o mouse/dedo
+ if(!animou&&on.length){animou=true;[...svg.querySelectorAll('polyline')].forEach((p,i)=>{const Lg=p.getTotalLength?p.getTotalLength():0;if(!Lg||p.getAttribute('stroke-dasharray'))return;p.style.setProperty('--len',Lg);p.classList.add('anim');p.style.animationDelay=(i*0.35)+'s'})}
  svg.onmousemove=svg.ontouchmove=ev=>{const r=svg.getBoundingClientRect(),cx=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)/r.width*W,i=Math.max(0,Math.min(11,Math.round((cx-P-40)/((W-2*P-80)/11))));
   let h=`<b>${MS2[i]}</b>`;on.slice().reverse().forEach(y=>{const p=String(+y-1),f=(c,n)=>{const v=val(c,y,i);if(v==null)return '';const a=val(c,p,i),d=a?Math.round((v/a-1)*100):null;return `<div>${n} ${y.slice(2)}: <b>${fmt(v)}</b>${d!=null?` <span class="${d>=0?'up':'dn'}">${d>=0?'▲':'▼'}${Math.abs(d)}%</span>`:''}</div>`};
    h+=(CAM.so?f('sellout','sell-out'):'')+(CAM.si?f('sellin','sell-in'):'')+(CAM.mt?f('meta','meta'):'')+(CAM.es?f('estoque','estoque'):'')});
-  const tp=$('tip');tp.innerHTML=h;tp.style.display='block';tp.style.left=Math.min(r.width-210,Math.max(0,X(i)/W*r.width+12))+'px'};
- svg.onmouseleave=()=>{$('tip').style.display='none'};
- // os 4 bloquinhos
- const E=D.etiquetas||{},ult=c=>{for(let j=AN.length-1;j>=0;j--){const s=ser(c,AN[j]);if(s.some(v=>v!=null))return AN[j]}return null};
+  const tp=$('tip');tp.innerHTML=h;tp.style.display='block';tp.style.left=Math.min(r.width-210,Math.max(0,X(i)/W*r.width+12))+'px';
+  let rg=$('regua');if(!rg){rg=document.createElementNS('http://www.w3.org/2000/svg','line');rg.id='regua';rg.setAttribute('stroke','#000');rg.setAttribute('stroke-width','1');rg.setAttribute('stroke-dasharray','3 3');svg.appendChild(rg)}
+  rg.setAttribute('x1',X(i));rg.setAttribute('x2',X(i));rg.setAttribute('y1',P);rg.setAttribute('y2',HH-P)};
+ svg.onmouseleave=()=>{$('tip').style.display='none';const rg=$('regua');if(rg)rg.remove()};
+ // os 4 bloquinhos, com o PERÍODO na legenda ("jan–set/26: 45.629")
+ const E=D.etiquetas||{},ult=c=>{for(let j=AN.length-1;j>=0;j--){if(ser(c,AN[j]).some(v=>v!=null))return AN[j]}return null};
  const tot=(c,y)=>ser(c,y).reduce((a,v)=>a+(v||0),0),lastm=(c,y)=>{const s=ser(c,y);for(let i=11;i>=0;i--)if(s[i]!=null)return [i,s[i]];return null};
  const am=(st,cr)=>`<svg width="40" height="14"><line x1="2" x2="38" y1="7" y2="7" stroke="${cr}" stroke-width="3" ${st}/></svg>`;
- const B=[['so','sellout','Sell-out',E.sellout||'venda na loja',am('','#000')],['si','sellin','Sell-in',E.sellin||'faturado ao cliente',am('stroke-dasharray="2 4" stroke-linecap="round"','#000')],['mt','meta','Metas',E.meta||'meta rateada por cliente',am('stroke-dasharray="10 6"','#000')],['es','estoque','Estoque',E.estoque||'área clara · escala própria',`<svg width="40" height="14"><rect x="2" y="3" width="36" height="9" rx="2" fill="#2E3EFC" opacity=".18"/></svg>`]];
- // legenda com PERÍODO (GAMER): "jan–set/26: 45.629", nunca só o ano
+ const B=[['so','sellout','Sell-out',E.sellout||'venda do cliente na loja',am('','#000')],['si','sellin','Sell-in',E.sellin||'o que a Vulcabras faturou · vazado = carteira',am('stroke-dasharray="2 4" stroke-linecap="round"','#000')],['mt','meta','Metas',E.meta||'sua meta dividida pelo cliente · losango',am('stroke-dasharray="10 6"','#000')],['es','estoque','Estoque',E.estoque||'área clara · escala própria · valor escrito',`<svg width="40" height="14"><rect x="2" y="3" width="36" height="9" rx="2" fill="#2E3EFC" opacity=".18"/></svg>`]];
  const faixa=(c,y)=>{const s=ser(c,y),ix=s.map((v,i)=>v!=null?i:-1).filter(i=>i>=0);return ix.length?`${MS2[ix[0]]}${ix.length>1?'–'+MS2[ix[ix.length-1]]:''}/${y.slice(2)}`:y};
- $('blk').innerHTML=B.map(([c,s,n,d,sv])=>{const y=ult(s),lm=y&&lastm(s,y);const txt=!y?'sem dado neste recorte':s==='estoque'?`${MS2[lm[0]]}/${y.slice(2)}: ${fmt(lm[1])}`:`${faixa(s,y)}: ${fmt(tot(s,y))}`;
+ const u=unid(FIL||{});
+ $('blk').innerHTML=B.map(([c,s,n,d,sv])=>{const y=ult(s),lm=y&&lastm(s,y);const txt=!y?'sem dado neste recorte':s==='estoque'?`${MS2[lm[0]]}/${y.slice(2)}: ${fmt(lm[1])} ${u}`:`${faixa(s,y)}: ${fmt(tot(s,y))} ${u}`;
   return `<button class="${CAM[c]?'':'off'}" onclick="CLI.cam('${c}')">${sv}<span><b>${n}</b><small>${esc(d)}</small><small>${txt}</small></span><span class="sw"></span></button>`}).join('');
- $('nx').textContent=[E.sellout,E.sellin,E.meta,E.estoque].filter(Boolean).join(' · ')}
+ $('nx').textContent=[E.sellout,E.sellin,E.meta,E.estoque].filter(Boolean).join(' · ');
+ leituraGraf();numeros()}
 // ---------------- Bro ----------------
-window.abrirBro=function(){const ctx={cliente:(D.cliente||{}).codigo||null,nome:(D.cliente||{}).nome||null,aba:'cliente'};
- if(typeof window.onBro==='function'){chama('onBro',ctx);return}$('bro').classList.toggle('ab')};
-addEventListener('keydown',e=>{if(e.key==='Escape'){$('bro').classList.remove('ab');CLI.fecha()}});
-// ---------------- API pública ----------------
+function broSug(){const r=((P().aporte||[]).filter(x=>x.cobertura<4).sort((a,b)=>(b.venda||0)-(a.venda||0))[0]),n=nome();
+ const S=[`o que antecipar no ${n}?`,r?`por que o ${r.modelo} está em ruptura?`:null,'resume a meta do mês'].filter(Boolean);
+ $('brsug').innerHTML=S.map(t=>`<button onclick="CLI.brq(this.textContent)">${esc(t)}</button>`).join('');
+ if(!$('brmsg').children.length)$('brmsg').innerHTML=`<div class="m b">Fala, Léo. Estou vendo a mesma tela que você. Pergunta o que quiser deste cliente: aporte, giro, carteira, metas, participação por família.</div>`}
+window.abrirBro=function(){const sec=[...document.querySelectorAll('.sec h2')].filter(h=>h.getBoundingClientRect().top<innerHeight*.6).pop();
+ const ctx={cliente:(D.cliente||{}).codigo||null,nome:(D.cliente||{}).nome||null,aba:'cliente',secao:sec?sec.textContent:'topo'};
+ if(chama('onBro',ctx))return;$('brctx').textContent=(ctx.nome||'—')+' · aba Cliente · '+ctx.secao;const el=$('bro');el.classList.toggle('ab');if(el.classList.contains('ab'))setTimeout(()=>$('brin').focus(),260)};
+addEventListener('keydown',e=>{if(e.key==='Escape'){$('bro').classList.remove('ab');CLI.fecha()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();CLI.acao('busca')}});
+document.addEventListener('click',e=>{const el=$('bro');if(el.classList.contains('ab')&&!el.contains(e.target)&&!e.target.closest('.bro-fab,.bro-m'))el.classList.remove('ab')});
+// ---------------- API pública (handlers dos botões) ----------------
 window.CLI={
  topico:(acao,id,texto)=>{if(acao==='feito'){const el=$('tp_'+id);if(el)el.classList.toggle('feito')}chama('onTopico',acao,id,texto)},
  ori:id=>{const o=$('tpo_'+id);o.classList.toggle('ab');if(o.classList.contains('ab'))$('tpi_'+id).focus()},
  salva:id=>{const v=$('tpi_'+id).value.trim();if(!v)return;$('tpn_'+id).textContent='↳ '+v;$('tpi_'+id).value='';$('tpo_'+id).classList.remove('ab');chama('onTopico','orientar',id,v)},
  mes:d=>{CM=[CM[0]+(CM[1]+d>11?1:CM[1]+d<0?-1:0),(CM[1]+d+12)%12];agenda()},dia:d=>{SD=d;agenda()},
+ ag:i=>{const e=(D.agenda||[])[i];if(chama('onAcao','agenda',e))return false;return !!(e&&e.link)},
  ano:y=>{clearTimeout(CLI._t);CLI._t=setTimeout(()=>{ANS[y]=ANS[y]?0:1;grafico()},220)},so:y=>{clearTimeout(CLI._t);Object.keys(ANS).forEach(a=>ANS[a]=a===y?1:0);grafico()},
  cam:c=>{CAM[c]=CAM[c]?0:1;grafico()},
+ mm:m=>{MM=m;metas()},
+ cobp:(f,troca)=>cobp(f,troca),
+ tratar:(ref,cor)=>!chama('onTratar',ref,cor),
+ aporte:(ref,cor)=>!chama('onAporte',ref,cor),
+ acao:(n,x)=>{const ctx=Object.assign({cliente:(D.cliente||{}).codigo||null},x||{});if(chama('onAcao',n,ctx))return;
+  if(n==='pdf')window.print();else if(n==='sugerir_pedido')alert('Sugerir pedido: a lógica espera o "pode seguir" do Léo.')},
+ brq:t=>{if(!t||!t.trim())return;const m=$('brmsg');m.insertAdjacentHTML('beforeend',`<div class="m u">${esc(t)}</div><div class="m b">No Gestor, eu respondo isso com o dado do banco e a regra da casa.</div>`);m.scrollTop=m.scrollHeight},
  liga:(campo,v,on)=>{const a=new Set(FIL[campo]||[]);on?a.add(v):a.delete(v);FIL[campo]=[...a];if(on&&campo==='genero'&&FIL.tipo==='tenis')FIL.categoria=[];if(on&&campo==='categoria')FIL.genero=[];if(!FIL.marca.length)FIL.marca=['OLY'];mudouFiltro()},
  tipo:t=>{FIL.tipo=t;FIL.genero=[];FIL.categoria=[];mudouFiltro()},
  limpa:()=>{FIL={marca:['OLY'],tipo:'tenis',genero:[],categoria:[]};mudouFiltro()},
@@ -214,11 +375,13 @@ window.abreFiltro=function(){AB=!AB;$('menu').classList.toggle('ab',AB);if(AB)pa
 window.tpNovo=function(){const i=$('tpnovo'),v=i.value.trim();if(!v)return;i.value='';chama('onTopico','novo',null,v);
  $('tpl').insertAdjacentHTML('beforeend',`<div class="it"><span class="pt u"></span><div style="flex:1"><b>${esc(v)}</b><small>novo · enviado ao TOPICS</small></div></div>`)};
 // ---------------- desenhar(DADOS) ----------------
-window.desenhar=function(dados){D=dados||{};FIL=JSON.parse(JSON.stringify(D.filtro||{marca:['OLY'],tipo:'tenis',genero:[],categoria:[]}));
- FIL.marca=FIL.marca||['OLY'];FIL.genero=FIL.genero||[];FIL.categoria=FIL.categoria||[];
- topo();manchete();decidir();agenda();carteira();cobertura();$('htit').textContent=titulo(FIL);if(AB)painel();grafico()};
+window.desenhar=function(dados){const troca=((dados||{}).cliente||{}).codigo!==((D||{}).cliente||{}).codigo;D=dados||{};
+ if(troca){CM=null;SD=null;MM=null;COBF=null;$('cobp').style.display='none';$('brmsg').innerHTML=''}
+ FIL=JSON.parse(JSON.stringify(D.filtro||{marca:['OLY'],tipo:'tenis',genero:[],categoria:[]}));FIL.marca=FIL.marca||['OLY'];FIL.genero=FIL.genero||[];FIL.categoria=FIL.categoria||[];
+ const passo=(n,f)=>{try{f()}catch(e){console.error('desenhar · '+n,e)}};
+ passo('topo',topo);passo('manchete',manchete);passo('decidir',decidir);passo('agenda',agenda);passo('trade',trade);passo('cartoes',cartoes);passo('cobertura',cobertura);
+ passo('metas',metas);passo('giro',giro);passo('carteira',carteiraSec);passo('filtro',()=>{$('htit').textContent=titulo(FIL);if(AB)painel()});passo('grafico',grafico);passo('bro',broSug)};
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(grafico,150)});
 if(new URLSearchParams(location.search).get('modo')==='cliente')document.body.classList.add('cliente');
-// sem DADOS ainda: desenha a casca vazia ("—")
 desenhar(window.DADOS||{});
 })();

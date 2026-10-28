@@ -86,25 +86,22 @@
       dec.style.display = ""; const tpl = $("tpl"); if (tpl) tpl.innerHTML = '<div class="it" style="border:0"><div style="opacity:.8">sem bloco no TOPICS para este cliente</div></div>';
       const nv = dec.querySelector(".novo"); if (nv) nv.style.display = "none"; const n = $("c_ntp"); if (n) n.textContent = "sem bloco";
     } else if (dec && !Dados.MODO_CLIENTE) { const nv = dec.querySelector(".novo"); if (nv) nv.style.display = ""; }
+    // cliente que não pontua no 25745 (Casa Pio): o bloco de metas diz de quem é a meta, nunca "rateio em andamento" nem número inventado (BOSS, 27/10)
+    if (DADOS.sem_meta) { const nota = '<div class="hora" style="padding:8px 0">meta do vendedor responsável, não do Léo · sem número nesta tela; o gráfico compara sell-in e sell-out com o mesmo mês do ano anterior</div>';
+      for (const id of ["mtb", "mtu"]) { const el = $(id); if (el) el.innerHTML = id === "mtb" ? nota : ""; } }
     trade();
   }
+  // a faixa do trade é da casca (DADOS.trade, formato do v19); o TI só acrescenta, embaixo dela, o ritmo da ação (TRADE, 27/10):
+  // meta · média/dia necessária · ritmo-base (3 meses antes) · vendido: apuração no dia seguinte ao fim
   function trade() {
-    document.querySelectorAll(".bento>.ti-trd").forEach(el => el.remove());
-    const bento = document.querySelector(".bento"), A = ((DADOS || {}).trade || {}).acoes || [];
-    if (!bento) return;
-    const manch = bento.querySelector(".manch");
-    for (const a of A.slice().reverse()) {
-      const div = document.createElement("div"); div.className = "vd trd ti-trd";
-      const ritmo = a.ritmo_base != null ? `${fmt(a.ritmo_base)} pares/dia` : "sem giro no banco", bate = a.ritmo_base != null && a.dias ? (a.ritmo_base * a.dias >= (a.meta_pares || 0)) : null;
-      div.innerHTML = `<div class="ic">✦</div>
-        <div><b>${esc(a.mecanica)}</b><small>ação de trade em andamento · período ${a.periodo_ini ? dtBR(a.periodo_ini) + " a " + dtBR(a.periodo_fim) : esc(a.periodo)}${a.restam != null ? " · faltam " + a.restam + " dias" : ""}</small>
-          ${a.produtos && a.produtos.length ? `<small>${a.produtos.map(p => esc(p.modelo) + " (est. " + fmt(p.est) + " · " + fmt(p.vm) + "/mês)").join(" · ")}${a.mes_giro ? " · giro de " + dtBR(a.mes_giro).slice(3) + "/" + String(a.mes_giro).slice(2, 4) : ""}</small>` : ""}</div>
-        <div><span class="v">${fmt(a.meta_pares)}</span><small>meta · pares</small></div>
-        <div><span class="v">${fmt(a.precisa_dia)}</span><small>média/dia necessária</small></div>
-        <div><span class="v">${esc(ritmo)}</span><small>ritmo-base (3 meses antes)${bate === false ? " · abaixo da meta" : ""}</small></div>
-        <div><span class="v">—</span><small>vendido · apuração em ${dtBR(a.apuracao)}</small></div>`;
-      if (manch && manch.nextSibling) bento.insertBefore(div, manch.nextSibling); else bento.appendChild(div);
-    }
+    document.querySelectorAll(".ti-ritmo").forEach(el => el.remove());
+    const t = (DADOS || {}).trade, trd = $("trd"); if (!t || !trd || trd.hidden) return;
+    const dias = t.inicio && t.fim ? Math.round((new Date(t.fim) - new Date(t.inicio)) / 864e5) + 1 : null, precisa = t.meta_pares && dias ? Math.ceil(t.meta_pares / dias) : null;
+    const ap = t.fim ? new Date(new Date(t.fim).getTime() + 864e5).toISOString().slice(0, 10) : null, bate = t.ritmo_base != null && dias ? t.ritmo_base * dias >= (t.meta_pares || 0) : null;
+    const div = document.createElement("div"); div.className = "ti-ritmo"; div.style.cssText = "grid-column:span 12;font-size:12px;opacity:.9;margin:-6px 0 2px 4px";
+    div.textContent = [precisa != null ? `média/dia necessária ${fmt(precisa)} pares` : null, t.ritmo_base != null ? `ritmo-base ${fmt(t.ritmo_base)} pares/dia (3 meses antes${bate === false ? " · abaixo da meta" : ""})` : "ritmo-base: sem giro no banco",
+                      (t.produtos || []).length ? t.produtos.map(p => `${p.modelo} est. ${fmt(p.est)} · ${fmt(p.vm)}/mês`).join(" · ") : null, ap ? `vendido: apuração em ${dtBR(ap)}` : null].filter(Boolean).join("  ·  ");
+    trd.insertAdjacentElement("afterend", div);
   }
 
   // ---------- eventos da casca
@@ -113,6 +110,17 @@
   window.onTratar = (ref, cor) => window.open(`../#aba=cg&cliente=${encodeURIComponent(CLIENTE)}&ref=${encodeURIComponent(ref)}${cor ? "&cor=" + encodeURIComponent(cor) : ""}`, "_blank");
   // o Bro: a gaveta local da casca ainda não fala com a gestor-ia (o porte liga); até lá, abre o painel IA que existe no Gestor
   window.onBro = () => { if (Dados.MODO_CLIENTE) return; window.open(`../#aba=cliente&cliente=${encodeURIComponent(CLIENTE)}`, "_blank"); };
+  // botões do v19: atas, raio-x, AG e PDF vão ao Gestor completo; as abas do Giro rodam o drill da família; "sugerir pedido" espera o "pode seguir" do Léo
+  window.onAcao = (nome, ctx) => {
+    const c = encodeURIComponent(CLIENTE || "");
+    if (nome === "atas") { if (Dados.MODO_CLIENTE) return true; window.open(`../#aba=atas&cliente=${c}`, "_blank"); return true; }
+    if (nome === "raiox") { window.open(`../#aba=raiox&cliente=${c}`, "_blank"); return true; }
+    if (nome === "ag" || nome === "pdf") { window.open(`../#aba=raiox&cliente=${c}&saida=${nome}`, "_blank"); return true; }
+    if (nome === "giro_aba") { Dados.giroAba((ctx || {}).tipo || "tenis").then(d => { DADOS = d; window.desenhar(DADOS); depois(); }).catch(e => console.error(e)); return true; }
+    if (nome === "agenda") { const e = ctx || {}; if (e.link) { window.open(e.link, "_blank"); return true; } return false; }
+    if (nome === "sugerir_pedido") { alert("Sugerir pedido: aguarda o \"pode seguir\" do Léo"); return true; }
+    return false;                                                        // busca etc.: a casca segue com o endereço do v19
+  };
   // TOPICS tratável: grava no topics_item pelo mesmo caminho da aba TOPICS (política do banco: só quem está em topics_leitor).
   // Linha vinda da v_decidir_cliente (id "dec:…") não é item do TOPICS: "orientar" e "feito" viram um item novo no bloco do cliente, com a linha como nota.
   window.onTopico = async (acao, id, texto) => {

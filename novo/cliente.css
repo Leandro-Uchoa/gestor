@@ -284,14 +284,6 @@ html,body{overflow-x:clip}
 }
 @media print{.rail{display:none}.main{margin:0}.hero{background:#F6F5F0!important;color:#000}.vd{background:#fff!important;border:1px solid #E6E7E8!important;backdrop-filter:none!important;box-shadow:none!important}.hero .marcadagua,.esm{display:none}.leitura b{color:#000}}
 
-/* ===== casca (escopo de hoje): TOPICS → agenda → carteira + cobertura lado a lado ===== */
-.bento>.dec{order:1;grid-column:span 12}.bento>.agv{order:2;grid-column:span 12}
-.bento>.car{order:3;grid-column:span 4;padding:16px 18px;display:block}.bento>.cob{order:4;grid-column:span 8}
-.bento>.car .ns{font-size:34px}.bento>.car .mes3 div{padding:6px 8px}.bento>.car .mes3 b{font-size:14px}
-@media (max-width:991.98px){.bento>.car,.bento>.cob{grid-column:span 12}}
-
-.bento>.cob .lb:after{content:none}
-
 /* Tabler 1.6.1 pinta h1 com a cor de título: no topo de vidro o nome é branco */
 .hero h1,.hero h2,.hero h3,.hero .topo h1{color:#fff!important}
 /* modo de apresentação ao cliente: o que é interno não aparece */
@@ -311,13 +303,6 @@ body.cliente .bento>.dec,body.cliente .bento>.agv,body.cliente .bro,body.cliente
 
 /* modo cliente: a prioridade vem do TOPICS (interno) e some; a evidência e a cobertura ficam */
 body.cliente .manch{grid-template-columns:1.4fr .9fr}body.cliente .manch>div:first-child{display:none}body.cliente .manch>div:nth-child(2){border-left:0}
-
-/* GAMER: no celular os NÚMEROS vêm na 1ª tela — manchete, carteira e cobertura logo depois do nome; TOPICS e agenda abaixo */
-@media (max-width:991.98px){.bento>.manch{order:0}.bento>.car{order:1}.bento>.cob{order:2}.bento>.dec{order:3}.bento>.agv{order:4}}
-
-/* GAMER (DEPOIS 3): no PC a agenda vai DEPOIS de carteira e cobertura; no celular a cobertura vem antes da carteira */
-.bento>.manch{order:0}.bento>.dec{order:1}.bento>.car{order:2}.bento>.cob{order:3}.bento>.agv{order:4}
-@media (max-width:991.98px){.bento>.manch{order:0}.bento>.cob{order:1}.bento>.car{order:2}.bento>.dec{order:3}.bento>.agv{order:4}.manch .h{font-size:15px}.manch>div{padding:10px 14px}}
 html,body,.main{overflow-x:clip;max-width:100vw}
 #slot_seletor{align-self:flex-start}
 
@@ -339,3 +324,9 @@ html,body,.main{overflow-x:clip;max-width:100vw}
  .main{padding-bottom:100px!important}
  .manch .tag{display:inline-block;width:auto;max-width:100%;box-sizing:border-box;white-space:normal;line-height:1.35}
 }
+
+/* ===== PARIDADE v19 (27/10 noite): a ordem do topo é a do v19 aprovado — manchete do Conselho acima de tudo ===== */
+.bento>.manch{order:0}.bento>.dec{order:1}.bento>.agv{order:2}.bento>.trd{order:3}.bento>.nort{order:4}.bento>.est{order:5}.bento>.car{order:6}.bento>.cob{order:7}.bento>.cobp{order:8}
+.bento>.trd[hidden],.ponta[hidden],.cobpct:empty{display:none!important}
+.busca{cursor:pointer}.manch .tag{height:auto!important;min-height:0!important}
+@media (max-width:991.98px){.bento>.trd{grid-template-columns:repeat(3,1fr);gap:8px 12px}.bento>.trd>.ic{display:none}.bento>.trd>div:nth-child(2){grid-column:1 / -1}.bento>.trd small{display:block!important;margin-left:0!important}}
