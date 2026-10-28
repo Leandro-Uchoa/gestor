@@ -120,7 +120,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
    = texto cinza-escuro e nome em itálico, nada mais. FILTROS por coluna como o autofiltro do Excel: ▾ no rótulo, painel branco, em memória. */
 .cg td.fixa.gen,.cg th.fixa.gen{left:var(--l3)}.cg td.fixa.pdv,.cg th.fixa.pdv{left:var(--l4);text-align:right}.cg td.fixa.el,.cg th.fixa.el{left:var(--l5)}
 .cg td.fixa.cor,.cg th.fixa.cor{border-right:0}.cg td.fixa.el,.cg th.fixa.el{border-right:2px solid #000}.cg thead tr.meses th.fixa.pdv{text-align:center}
-.cg td.fixa.el label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-weight:600;font-size:12px}.cg td.fixa.el input{width:14px;height:14px;margin:0;accent-color:#1f497d}.cg td.fixa.el{padding-right:48px}
+.cg td.fixa.el label{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-weight:600;font-size:12px}.cg td.fixa.el input{width:14px;height:14px;margin:0;accent-color:#1f497d}.cg td.fixa.el{padding-right:42px}.cg td.fixa.el select{font:inherit;font-size:11px;width:82px;font-weight:600;padding:1px 2px;margin:0;color:inherit;background:transparent;border:1px solid var(--bd);border-radius:4px;cursor:pointer}.cg td.fixa.el select.sem{color:var(--cinza-escuro);font-weight:400}.cg td.fixa.el select:disabled{opacity:.5}.cg td.fixa.el select option{color:#000;background:#fff}
 .cg tr.fora td,.cg tr.fora td.fixa,.cg tr.fora td.fixa.ref,.cg tr.fora td.fixa.nome,.cg tr.fora td.fixa.cor,.cg tr.fora td.vd,.cg tr.fora td.est,.cg tr.fora td.cob,.cg tr.fora td.cob.cob-r,.cg tr.fora td.zero,.cg tr.fora td.stot,.cg tr.fora td.ct-fat,.cg tr.fora td.ct-conf,.cg tr.fora td.ct-sug,.cg tr.fora td.ct-aten,.cg tr.fora td .mu,.cg tr.fora td.obs input,.cg tr.fora td.fixa.el label{color:#787b86}.cg tr.fora td.fixa.nome{font-style:italic}
 .cg button.fl{width:16px;height:16px;padding:0;margin:0 0 0 4px;border:1px solid #adaeb3;border-radius:2px;background:#fff;color:#000;font-size:9px;line-height:1;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center}.cg button.fl.on{border-color:#1f497d}.cg button.fl svg{fill:#1f497d;width:10px;height:10px}
 .cg thead tr.rotulos th.fixa{text-align:left}.cg thead tr.rotulos th.fixa.pdv{text-align:right}
@@ -542,7 +542,7 @@ td.est{background:rgba(173,174,179,.28);color:var(--off-white);font-weight:700}
 </style>
 </head>
 <body>
-<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.19</span></h1>
+<h1>Gestor <span class="mu" style="font-weight:600" id="subtitulo">· quantos pares?</span> <span class="mu" style="font-weight:400;font-size:.75rem">v6.20</span></h1>
 
 <div id="tela-login" class="card oculto">
   <label>e-mail</label><input id="email" type="email" autocomplete="username" inputmode="email">
@@ -1001,15 +1001,19 @@ async function consultar(){
   const t0 = performance.now();
   // UMA chamada (12/10, "está mais lento que o BI"): a função cg_consulta devolve já por referência+cor, meses dentro — antes eram
   // dezenas de páginas de 1.000 linhas e cada página refazia a soma inteira no banco
-  const r = await sb.rpc("cg_consulta", { p_clientes: TODOS_CLI ? null : [...CLIENTE_SEL], p_de: de + "-01", p_ate: ate + "-01", p_pracas: PRACA_SEL.size ? [...PRACA_SEL] : null });
+  // 28/10 (TELAS, ordem do TI): a cg_consulta devolve `el` = true também quando NÃO há registro em produto_situacao (coalesce da 0060) — a tela
+  // não distingue "sim" de "sem registro". Lê-se o registro à parte (mesma tabela, RLS do usuário, páginas de 1.000) e o `el` da linha vira três estados.
+  const [r, REG] = await Promise.all([sb.rpc("cg_consulta", { p_clientes: TODOS_CLI ? null : [...CLIENTE_SEL], p_de: de + "-01", p_ate: ate + "-01", p_pracas: PRACA_SEL.size ? [...PRACA_SEL] : null }), lerSituacao()]);
   if (n !== CONSULTA_N) return;                                   // outro toque veio depois: este resultado já envelheceu
   if (r.error) { msg("msg-pergunta", "O banco recusou: " + esc(r.error.message), "erro"); return; }
   msg("msg-pergunta", "");
   const dados = r.data || { linhas: [] };
   // a linha-mãe é a REFERÊNCIA (soma de todas as cores e de todos os clientes filtrados); as filhas são as cores
   const maes = new Map();
-  // 20/10 (0060): gênero, PDV e a marca do cadastro vêm por linha; `el` (em linha) é dele — sem registro, true
-  const mae = x => { let a = maes.get(x.referencia); if (!a) { a = { referencia: x.referencia, descricao: x.descricao || "", fam: familiaDe(x.marca), sub: x.faixa || "", meses: {}, cores: new Map(), venda: 0, cart: 0, fat: 0, ge: x.ge || "", pdv: x.pdv != null ? Number(x.pdv) : null, pm: x.pm || "", el: x.el !== false }; maes.set(x.referencia, a); }
+  // 20/10 (0060): gênero, PDV e a marca do cadastro vêm por linha; `el` (em linha) é dele. 28/10: TRÊS estados — true (sim) · false (fora) · null (sem registro,
+  // nunca "sim": produto sem a palavra dele não é "em linha" — a trava da ação de preço depende disso). O false da RPC vale sempre; o true da RPC é ambíguo, o registro desempata.
+  const elDe = x => x.el === false ? false : (REG.mapa.has(x.referencia) ? REG.mapa.get(x.referencia) : null);
+  const mae = x => { let a = maes.get(x.referencia); if (!a) { a = { referencia: x.referencia, descricao: x.descricao || "", fam: familiaDe(x.marca), sub: x.faixa || "", meses: {}, cores: new Map(), venda: 0, cart: 0, fat: 0, ge: x.ge || "", pdv: x.pdv != null ? Number(x.pdv) : null, pm: x.pm || "", el: elDe(x) }; maes.set(x.referencia, a); }
     if (!a.descricao && x.descricao) a.descricao = x.descricao; if (!a.fam) a.fam = familiaDe(x.marca); if (!a.sub && x.faixa) a.sub = x.faixa; if (!a.ge && x.ge) a.ge = x.ge; if (a.pdv == null && x.pdv != null) a.pdv = Number(x.pdv); if (!a.pm && x.pm) a.pm = x.pm; if (x.el === false) a.el = false; return a; };
   const soma = (alvo, m, campo, v) => { if (v == null) return; const c = alvo.meses[m] || (alvo.meses[m] = {}); c[campo] = (c[campo] || 0) + v; alvo[campo] = (alvo[campo] || 0) + v; };
   const CAMPOS = { f: "fat", c: "cart", v: "venda", e: "estoque" };
@@ -1020,6 +1024,7 @@ async function consultar(){
   for (const x of dados.linhas) { const a = mae(x), f = { referencia: x.referencia, cor: x.cor || "", meses: {}, venda: 0, cart: 0, fat: 0 }; a.cores.set(f.cor, f);
     for (const [m, c] of Object.entries(x.meses || {})) { for (const [k, campo] of Object.entries(CAMPOS)) { soma(a, m, campo, c[k]); soma(f, m, campo, c[k]); } estado(a, m, c.ce); estado(f, m, c.ce); } }
   const bases = new Set(); if (dados.base_venda) bases.add("base " + dmy(dados.base_venda)); if (dados.base_giro) bases.add("AG " + dmy(dados.base_giro));
+  if (REG.erro) bases.add("em linha não lido: " + REG.erro);
   bases.add((Math.round(performance.now() - t0) / 1000).toFixed(1).replace(".", ",") + " s");
   let linhas = [...maes.values()];
   if (FAMILIA_SEL.size) linhas = linhas.filter(a => FAMILIA_SEL.has(a.fam));
@@ -1044,7 +1049,7 @@ const valorDe = (x, col, mae) => {
   const a = mae || x, [k, m] = col.split(":"), c = m ? (x.meses[m] || {}) : null;
   switch (k) {
     case "ref": return a.referencia; case "nome": return a.descricao; case "cor": return mae ? x.cor : corDaMae(x);
-    case "gen": return a.ge || ""; case "pdv": return a.pdv; case "el": return a.el === false ? "fora de linha" : "em linha";
+    case "gen": return a.ge || ""; case "pdv": return a.pdv; case "el": return a.el === false ? "fora de linha" : a.el === true ? "em linha" : "sem registro";
     case "obs": return OBS[a.referencia + "|" + (mae ? x.cor : "")] || "";
     case "v": return c.venda; case "e": return c.estoque; case "cob": return (c.estoque != null && c.venda) ? c.estoque / c.venda : null;
     case "c": return (c.fat != null || c.cart != null) ? (c.fat || 0) + (c.cart || 0) : null;
@@ -1121,7 +1126,7 @@ function desenharCG(linhas, pedidos, bases){
   html += `</tr></thead><tbody>`;
   for (const a of visiveis) {
     const aberto = ABERTOS.has(a.referencia), varias = a.cores.size > 1 || (a.cores.size === 1 && a.cores.keys().next().value !== ""), fora = a.el === false;
-    html += `<tr class="mae${fora ? " fora" : ""}" data-ref="${esc(a.referencia)}"><td class="fixa ref mu">${varias ? `<button type="button" class="mm" data-ref="${esc(a.referencia)}">${aberto ? "−" : "+"}</button>` : ""}${esc(a.referencia)}</td><td class="fixa nome">${esc(a.descricao)}</td><td class="fixa cor mu">${esc(corDaMae(a))}</td><td class="fixa gen">${esc(a.ge || "")}</td><td class="fixa pdv">${a.pdv != null ? reais(a.pdv) : `<span class="mu">—</span>`}</td><td class="fixa el"><label title="em linha? a palavra é sua, por referência (grava na hora)"><input type="checkbox" class="el" data-ref="${esc(a.referencia)}" data-marca="${esc(a.pm || "")}" ${fora ? "" : "checked"}> <span>${fora ? "fora" : "sim"}</span></label><span class="salvo">salvo ✓</span></td>${celulas(a, null)}</tr>`;
+    html += `<tr class="mae${fora ? " fora" : ""}" data-ref="${esc(a.referencia)}"><td class="fixa ref mu">${varias ? `<button type="button" class="mm" data-ref="${esc(a.referencia)}">${aberto ? "−" : "+"}</button>` : ""}${esc(a.referencia)}</td><td class="fixa nome">${esc(a.descricao)}</td><td class="fixa cor mu">${esc(corDaMae(a))}</td><td class="fixa gen">${esc(a.ge || "")}</td><td class="fixa pdv">${a.pdv != null ? reais(a.pdv) : `<span class="mu">—</span>`}</td><td class="fixa el"><label title="em linha? a palavra é sua, por referência — grava na hora"><select class="el${a.el == null ? " sem" : ""}" data-ref="${esc(a.referencia)}" data-marca="${esc(a.pm || "")}" data-ant="${a.el == null ? "" : a.el ? "sim" : "fora"}">${a.el == null ? `<option value="" selected>sem registro</option>` : ""}<option value="sim"${a.el === true ? " selected" : ""}>sim</option><option value="fora"${a.el === false ? " selected" : ""}>fora</option></select></label><span class="salvo">salvo ✓</span></td>${celulas(a, null)}</tr>`;
     if (aberto) for (const f of [...a.cores.values()].filter(f => !FILTROS.size || passaLinha(f, a, FILTROS)).sort((x, y) => (y.venda || 0) - (x.venda || 0))) html += `<tr class="filha${fora ? " fora" : ""}" data-ref="${esc(a.referencia)}" data-cor="${esc(f.cor)}"><td class="fixa ref"></td><td class="fixa nome mu"></td><td class="fixa cor">${esc(f.cor) || "<span class='mu'>sem cor</span>"}</td><td class="fixa gen mu"></td><td class="fixa pdv"></td><td class="fixa el mu">${fora ? "fora" : ""}</td>${celulas(f, a)}</tr>`;
   }
   html += `</tbody></table></div>`;
@@ -1134,7 +1139,7 @@ function desenharCG(linhas, pedidos, bases){
   { const bs = $("resultado").querySelector(".cg-sug"); if (bs) bs.onclick = () => window.irPara("cliente", { cliente: UM_CLIENTE, sugestao: true }); }
   for (const td of document.querySelectorAll("#resultado tbody td.ck")) td.onclick = () => { const tr = td.closest("tr"), a = linhas.find(x => x.referencia === tr.dataset.ref); abrirCarteiraMes(tr.dataset.ref, tr.dataset.cor != null ? tr.dataset.cor : null, td.dataset.cm, a ? a.descricao : tr.dataset.ref); };
   for (const inp of document.querySelectorAll("#resultado input.obs")) { inp.onblur = () => gravarObs(inp); inp.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); inp.blur(); } if (ev.key === "Escape") { inp.value = OBS[inp.dataset.k] || ""; inp.blur(); } }; }
-  for (const chk of document.querySelectorAll("#resultado input.el")) chk.onchange = () => gravarEmLinha(chk);
+  for (const sel of document.querySelectorAll("#resultado select.el")) sel.onchange = () => gravarEmLinha(sel);
   // as colunas travadas precisam saber a largura das vizinhas (ref → nome → cor → gênero → PDV → em linha)
   const t = $("resultado").querySelector("table"), w = cls => { const th = t.querySelector("thead th.fixa." + cls); return th ? th.getBoundingClientRect().width : 0; };
   let acc = 0; for (const [k, cls] of [["--l1", "ref"], ["--l2", "nome"], ["--l3", "cor"], ["--l4", "gen"], ["--l5", "pdv"]]) { acc += w(cls); t.style.setProperty(k, acc + "px"); }
@@ -1150,14 +1155,24 @@ async function gravarObs(inp){
   if (r.error) { inp.classList.add("erro"); msg("msg-pergunta", "O banco recusou a observação de " + esc(ref) + (cor ? " " + esc(cor) : "") + ": " + esc(r.error.message), "erro"); return; }
   inp.classList.remove("erro"); if (t) OBS[k] = t; else delete OBS[k]; piscaSalvo(inp.parentElement);
 }
-async function gravarEmLinha(chk){
-  const ref = chk.dataset.ref, el = chk.checked; chk.disabled = true;
-  const r = await sb.rpc("produto_situacao_grava", { p_escritorio: await escritorioId(), p_marca: chk.dataset.marca || "", p_referencia: ref, p_em_linha: el });
-  chk.disabled = false;
-  if (r.error) { chk.checked = !el; msg("msg-pergunta", "O banco recusou o em linha de " + esc(ref) + ": " + esc(r.error.message), "erro"); return; }
+// o registro de produto_situacao (referência → em_linha; várias marcas na mesma referência = bool_and, como a cg_consulta): a base do "sem registro"
+async function lerSituacao(){
+  const r = await tudo(sb.from("produto_situacao").select("referencia,em_linha").order("escritorio_id").order("marca").order("referencia"));
+  const mapa = new Map(); for (const x of r.data || []) mapa.set(x.referencia, mapa.has(x.referencia) ? mapa.get(x.referencia) && x.em_linha !== false : x.em_linha !== false);
+  return { mapa, erro: r.error ? r.error.message : "" };
+}
+// o seletor tem 3 valores: sem registro (só exibição — o gravador não apaga linha, então depois de escolher sim/fora a opção some) · sim · fora
+async function gravarEmLinha(sel){
+  const ref = sel.dataset.ref, ant = sel.dataset.ant || "", v = sel.value;
+  if (v !== "sim" && v !== "fora") return;                         // "sem registro" não grava nada
+  const el = v === "sim"; sel.disabled = true;
+  const r = await sb.rpc("produto_situacao_grava", { p_escritorio: await escritorioId(), p_marca: sel.dataset.marca || "", p_referencia: ref, p_em_linha: el });
+  sel.disabled = false;
+  if (r.error) { sel.value = ant; msg("msg-pergunta", "O banco recusou o em linha de " + esc(ref) + ": " + esc(r.error.message), "erro"); return; }
+  sel.dataset.ant = v; sel.classList.remove("sem"); const sr = sel.querySelector('option[value=""]'); if (sr) sr.remove();
   if (ULTIMO) { const a = ULTIMO.linhas.find(x => x.referencia === ref); if (a) a.el = el; }
   for (const tr of document.querySelectorAll("#resultado tbody tr")) if (tr.dataset.ref === ref) { tr.classList.toggle("fora", !el); const f = tr.querySelector("td.fixa.el.mu"); if (f) f.textContent = el ? "" : "fora"; }
-  chk.nextElementSibling.textContent = el ? "sim" : "fora"; piscaSalvo(chk.closest("td"));
+  piscaSalvo(sel.closest("td"));
 }
 // ---------- o QUADRO da carteira do mês (ele, 20/10 00:5x): mesmo padrão das perguntinhas da vitrine (luz + quadro); com vários clientes
 // na tela pergunta de qual; sem linha no mês, diz e oferece a aba Cliente. A tabela e o gravador são os da aba Cliente (Cliente.carteiraMini).
