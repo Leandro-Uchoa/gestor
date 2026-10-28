@@ -165,7 +165,7 @@ function atas(d){
 }
 
 // ---------- trade: as ações do cliente (trade_acao) e o que o TOPICS tem de trade sobre ele
-const TIPOS_TRADE = ["campanha", "material", "evento", "verba", "treinamento", "outro"], STATUS_TRADE = ["planejada", "em andamento", "feita", "cancelada", "não usada"];
+const TIPOS_TRADE = ["campanha", "material", "evento", "verba", "treinamento", "outro"], STATUS_TRADE = ["planejada", "em andamento", "feita", "não usada", "arquivada"];   // 28/10 (ele, via TRADE): cancelada virou ARQUIVAR (0103)
 const rs = n => n == null ? "—" : "R$ " + fmt(n);
 function trade(d){
   const t = d.trade || {}, acoes = t.acoes || [], tp = t.topics || [];
