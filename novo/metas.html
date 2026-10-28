@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestor · Metas por cliente</title>
+<!-- Gestor · aba Metas por cliente — CASCA (PICASSO, 27/10/2026). Forma do piloto metas_v2 aprovado pelo Léo. ZERO dado:
+     tudo vem de DADOS_METAS / desenharMetas(DADOS). Contrato no topo do <script>. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.6.1/dist/css/tabler.min.css" integrity="sha384-tT2UAGE9hxG/p5d0iGIvZ/s8El3nWWG3tfG02i8iOY5Pbf8cZZRVmcrrVs+JG5Vw" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+:root{--az:#2E3EFC;--azc:#AEB5FE;--am:#FFFF1A;--ce:#787B86;--cc:#ADAEB3;--cl:#E6E7E8;--ow:#F6F5F0;--verde:#00B050;--verm:#E3001B}
+body{background:var(--ow);font-family:Inter,Arial,sans-serif;color:#000}
+h1,h2,h3,.ns{font-family:Barlow,Arial,sans-serif}
+.hora{font-size:11px;color:var(--ce);font-weight:500}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rail{position:fixed;left:16px;top:16px;bottom:16px;width:64px;background:#000;border-radius:22px;z-index:20;display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;box-shadow:0 16px 40px rgba(0,0,0,.28)}
+.rail .marca{width:10px;height:26px;background:var(--am);border-radius:3px;margin-bottom:14px}
+.rail a{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:#ADAEB3;font-size:21px;text-decoration:none}
+.rail a:hover{background:#1c1c20;color:#fff}.rail a.on{background:var(--az);color:#fff}
+.main{margin-left:96px;padding:16px 16px 40px 0}
+.topo{background:#000;color:#fff;border-radius:26px;padding:22px 24px;box-shadow:0 24px 60px rgba(0,0,0,.18)}
+.topo .pre{font-size:11px;font-weight:700;letter-spacing:.08em;color:#ADAEB3}
+.topo h1{font-size:34px;font-weight:800;margin:2px 0 6px;line-height:1}
+.frase{font-size:12.5px;color:#E6E7E8}.frase i{color:var(--am);font-style:normal}
+.meses{display:flex;gap:4px;background:#1a1a1e;border-radius:999px;padding:4px}
+.meses button{border:0;background:none;color:#ADAEB3;font:700 13px Inter;padding:7px 14px;border-radius:999px}
+.meses button.on{background:#fff;color:#000}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.tg{font:700 11px Inter;border-radius:7px;padding:4px 9px;background:#1f1f24;color:#fff}.tg.pot{background:var(--az)}.tg.fat{background:#fff;color:#000}
+.geral{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;margin-top:18px;background:#111114;border:1px solid #26262B;border-radius:18px;padding:16px 18px}
+.geral .ns{font-size:56px;font-weight:800;line-height:.9}
+.bul{position:relative;height:22px;background:#2a2a30;border-radius:6px;overflow:visible}
+.bul .f{position:absolute;left:0;top:0;bottom:0;background:var(--az);border-radius:6px 0 0 6px}
+.bul .c{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--azc) 0 5px,#8f98fd 5px 10px)}
+.bul .m{position:absolute;top:-6px;bottom:-6px;width:3px;background:#fff;border-radius:2px}
+.bul .r{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed #ADAEB3}
+.bl{background:#F1F1EC}.bl .m{background:#000}.bl .r{border-color:#787B86}
+.legb{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;margin-top:8px;color:inherit;opacity:.85}.legb i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.sec{display:flex;align-items:center;gap:12px;margin:26px 0 12px;flex-wrap:wrap}.sec h2{font-size:24px;font-weight:800;margin:0}
+.pn{background:#fff;border-radius:20px;border:1px solid var(--cl);box-shadow:0 10px 30px rgba(0,0,0,.05);padding:18px 20px;height:100%}
+.cli h3{font-size:22px;font-weight:800;margin:0}
+.cli .pc{font:800 44px Barlow;line-height:1}
+.ok{color:var(--verde)}.no{color:#000}
+.gap{font:700 13px Inter}.gap.neg{color:var(--verm)}.gap.pos{color:var(--verde)}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.kp div{background:var(--ow);border-radius:14px;padding:10px 12px}.kp b{font:800 22px Barlow;display:block;line-height:1.1}.kp small{font-size:11px;color:var(--ce)}
+.kp .dest{background:#000;color:#fff}.kp .dest small{color:#ADAEB3}.kp .dest b{color:var(--am)}
+.fam{margin-top:14px;border-top:1px solid #F1F1EC;padding-top:10px}
+.fam .l{display:grid;grid-template-columns:86px 1fr 52px;gap:8px;align-items:center;font-size:12px;padding:4px 0}
+.fam .mini{height:8px;background:#F1F1EC;border-radius:4px;position:relative}.fam .mini i{position:absolute;left:0;top:0;bottom:0;background:var(--az);border-radius:4px}.fam .mini b{position:absolute;top:-3px;bottom:-3px;width:2px;background:#000}
+.mx{width:100%;border-collapse:separate;border-spacing:0}
+.mx th{font-size:11px;font-weight:700;color:var(--ce);text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid var(--cl);text-align:left}
+.mx td{padding:10px 12px;border-bottom:1px solid #F1F1EC;vertical-align:middle}
+.mx .fx{font-weight:700;font-size:13px}.mx .fx small{display:block;font-weight:500;color:var(--ce);font-size:10.5px}
+.cel{min-width:150px}.cel .p{font:800 18px Barlow}.cel .g{font-size:11px;font-weight:700;margin-left:6px}
+.cel .mb{height:6px;background:#F1F1EC;border-radius:3px;position:relative;margin-top:5px}.cel .mb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--az)}.cel .mb b{position:absolute;top:-3px;bottom:-3px;width:2px;background:#000}
+.mx tr.tot td{background:#F6F5F0;font-weight:700}
+.mx .leo{background:#FAFAF7}
+.abs{color:var(--ce);font-size:11px}
+.conf{display:flex;gap:10px;align-items:center;font-size:12px;background:#fff;border:1px solid var(--cl);border-radius:14px;padding:10px 14px;margin-top:12px}
+.conf .ti{color:var(--verde);font-size:20px}
+.t15{background:#fff;border:1px solid var(--cl);border-radius:20px;padding:16px 20px;margin-top:16px}
+.t15 h3{font:800 18px Barlow;margin:0}.t15 .pc{font:800 40px Barlow;line-height:1}
+.t15 .bar{position:relative;height:26px;background:#F1F1EC;border-radius:8px;overflow:visible;display:flex;margin-top:12px}
+.t15 .bar i{display:block;height:100%}.t15 .bar i:first-child{border-radius:8px 0 0 8px}
+.t15 .bar .alvo{position:absolute;top:-6px;bottom:-6px;width:3px;background:#000;border-radius:2px}
+.t15 .bar .alvo span{position:absolute;top:-18px;left:-14px;font:800 11px Inter;white-space:nowrap}
+.t15 .cl{display:grid;grid-template-columns:140px 1fr 70px 120px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid #F1F1EC;font-size:13px}
+.t15 .cl .mb{height:10px;background:#F1F1EC;border-radius:5px;overflow:hidden;display:flex}.t15 .cl .mb i{display:block;height:100%}
+.tri3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}.tri3 div{background:var(--ow);border-radius:12px;padding:8px 10px}
+.tri3 small{font-size:10.5px;color:var(--ce);display:block}.tri3 b{font:800 20px Barlow;display:block}
+.meses .tri{border-left:1px solid #333;margin-left:4px;padding-left:16px}
+@media (max-width:991.98px){.t15 .cl{grid-template-columns:100px 1fr 54px}.t15 .cl .fx{display:none}.tri3{grid-template-columns:1fr}
+
+ .rail{top:auto;left:50%;transform:translateX(-50%);bottom:14px;width:auto;height:62px;flex-direction:row;padding:0 10px;border-radius:999px;gap:4px}.rail .marca{display:none}
+ .main{margin-left:0;padding:10px 10px 96px}.geral{grid-template-columns:1fr}.geral .ns{font-size:46px}
+}
+@media print{.rail{display:none}.main{margin:0}.topo{background:#fff;color:#000;border:1px solid var(--cl)}.geral{background:#F6F5F0;border-color:var(--cl)}}
+
+.topo h1{color:#fff!important}
+</style></head>
+<body>
+<nav class="rail"><div class="marca"></div>
+ <a href="../" title="Início"><i class="ti ti-home"></i></a><a href="cliente.html" title="Clientes"><i class="ti ti-building-store"></i></a>
+ <a href="../#aba=cg" title="Análise de giro"><i class="ti ti-chart-bar"></i></a><a href="#" class="on" title="Metas"><i class="ti ti-target-arrow"></i></a>
+ <a href="../#aba=topics" title="TOPICS"><i class="ti ti-checklist"></i></a></nav>
+<div class="main">
+ <section class="topo">
+  <div class="d-flex flex-wrap gap-3 align-items-start">
+   <div><div class="pre" id="m_pre">METAS · PREPOSTO</div><h1>Metas por cliente</h1>
+    <div class="frase" id="m_aviso">—</div></div>
+   <div class="meses ms-auto" id="meses"></div>
+  </div>
+  <div class="tags" id="tags"></div>
+  <div class="geral" id="geral"></div>
+ </section>
+ <div id="part"></div>
+ <div class="sec"><h2>Tênis Olympikus por cliente</h2><span class="hora ms-auto" id="m_ordem">pares</span></div>
+ <div class="row g-3" id="clis"></div>
+ <div class="sec" id="secfx"><h2>Faixa por faixa</h2><span class="hora ms-auto">atingimento e gap de cada cliente · o total soma os clientes</span></div>
+ <div class="pn" id="mxp" style="padding:6px 8px;overflow-x:auto"><table class="mx" id="mx"></table></div>
+ <div class="conf" id="conf"></div>
+ <div class="text-center hora mt-3" id="rod">Gestor · Metas por cliente · forma aprovada em 27/10/2026</div>
+</div>
+<script>
+/* Gestor · aba Metas por cliente — JS de TELA da casca (PICASSO, 27/10/2026). Forma aprovada pelo Léo no piloto metas_v2.
+   ZERO dado aqui dentro. O TI chama  desenharMetas(DADOS)  depois do login.
+
+   CONTRATO — DADOS:
+   ┌ linhas        [ linha da v_meta_cliente ]  (todas as linhas dos períodos que a tela pode mostrar)
+   │   mes:'AAAA-MM-01' · chave:'CONF_MASC'|'CONF_FEM'|'CORRIDA/TREINO'|'CORRE'|'CLASSICOS'|'INFANTIL'|'MEOLY'|'CHOLY'|'ACOLY'|'TT FTW_UA'|'UA_ME'|'UA_CH'|'UA_AC'|'UA_CF'
+   │   unidade:'pares'|'R$' · cliente:código do banco (ex. 'LÉO (3 clientes)' para o total) · participacao 0–1 · participacao_regra:str
+   │   meta_preposto · meta_cliente · faturado · carteira · potencial · atingimento 0–1 (null sem meta) · gap (potencial − meta)
+   │   etiqueta:'potencial'|'faturado' · du_mes · du_passados · du_faltam · faturou_por_du · precisa_por_du · carteira_sobre_gap
+   │   base_em · meta_lida_em · aviso:str
+   │   → total de tênis Olympikus = SOMA das 6 faixas (não há linha TT CALCADOS). Vazio: "—" / "sem meta".
+   ├ clientes      [ { codigo, nome } ]  na ordem fixa da casa (vem do banco); o total é o código que começa com 'LÉO'
+   ├ controle?     [ linha da v_meta_cliente_controle: mes, chave, soma_tres, carta, diferenca, tolerancia, situacao:'ok'|'DIVERGE'|'sem carta', carta_lida_em ]
+   ├ participacao? [ { periodo:'AAAA-MM'|'AAAA-Tn', cliente:código, tenis_rs, meias_rs, chinelo_rs, acessorio_rs, confeccao_rs, ua_rs, etiqueta } ]
+   │   → "Participação por família": quanto cada família pesa no total, em R$ (sem alvo, sem "trava" — ordem do Léo 27/10). Vazio: some.
+   ├ periodos      [ 'AAAA-MM' | 'AAAA-Tn' ]  na ordem do seletor (ex. '2026-T3','2026-10','2026-11','2026-12','2026-T4')
+   ├ periodo_atual 'AAAA-MM'
+   └ preposto?     str (código do preposto)
+   Regras de tela: cada mês tem a sua meta, nada se soma no trimestre (no TRI os 3 meses vêm lado a lado). Cor: verde só quando
+   atingimento ≥ 100%; barra nunca amarela; "atingimento" e "gap", nunca "cobertura". "precisa faturar por dia útil" em destaque.
+*/
+(function(){
+const $=id=>document.getElementById(id),MS=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const fmt=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('pt-BR'),pc=x=>x==null||isNaN(x)?'—':Math.round(x*100)+'%';
+const R$=n=>n==null||isNaN(n)?'—':'R$ '+(Math.abs(n)>=1e6?(n/1e6).toFixed(2).replace('.',',')+' mi':fmt(n/1000)+' mil');
+const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const FX=[['CONF_MASC','Conforto masculino'],['CONF_FEM','Conforto feminino'],['CORRIDA/TREINO','Corrida / treino'],['CORRE','Corre'],['CLASSICOS','Clássicos'],['INFANTIL','Infantil']];
+const FAM=[['MEOLY','Meias','R$'],['CHOLY','Chinelos','R$'],['ACOLY','Acessórios','R$'],['TT FTW_UA','Tênis Under Armour','pares'],['UA_ME','Meias UA','R$'],['UA_CH','Chinelos UA','R$'],['UA_AC','Acessórios UA','R$']];
+let D={},IDX={},CLI=[],LEO=null,PER=null;
+const nomeP=p=>!p?'—':/T\d$/.test(p)?p.slice(-1)+'º TRI '+p.slice(2,4):MS[+p.slice(5,7)-1]+'/'+p.slice(2,4);
+const mesesDe=p=>{if(!/T\d$/.test(p))return [p];const t=+p.slice(-1),y=p.slice(0,4);return [0,1,2].map(i=>`${y}-${String((t-1)*3+i+1).padStart(2,'0')}`)};
+const L=(m,k,c)=>(IDX[c]||{})[m+'|'+k]||null;
+// total de tênis OLY do cliente no mês = soma das 6 faixas
+function tt(m,c){const xs=FX.map(([k])=>L(m,k,c)).filter(Boolean);if(!xs.length)return null;const s=f=>xs.reduce((a,x)=>a+(x[f]||0),0);
+ const meta=s('meta_cliente'),fat=s('faturado'),pot=s('potencial'),car=s('carteira'),x0=xs[0];
+ return {meta_cliente:meta||null,faturado:fat,potencial:pot,carteira:car,atingimento:meta?pot/meta:null,gap:pot-meta,etiqueta:x0.etiqueta,du_mes:x0.du_mes,du_passados:x0.du_passados,du_faltam:x0.du_faltam,
+  precisa_por_du:x0.du_faltam?Math.max(0,meta-fat)/x0.du_faltam:null,faturou_por_du:x0.du_passados?fat/x0.du_passados:null,carteira_sobre_gap:meta>fat?car/(meta-fat):null}}
+function bullet(fat,pot,meta,rit,cls){if(meta==null&&pot==null)return '<div class="hora">sem meta</div>';const mx=Math.max(meta||0,pot||0)*1.08||1,w=v=>Math.min(100,(v||0)/mx*100);
+ return `<div class="bul ${cls||''}"><span class="f" style="width:${w(fat)}%"></span><span class="c" style="left:${w(fat)}%;width:${Math.max(0,w(pot)-w(fat))}%"></span>${rit!=null?`<span class="r" style="left:${w(rit)}%" title="ritmo de hoje"></span>`:''}${meta?`<span class="m" style="left:calc(${w(meta)}% - 1px)" title="meta"></span>`:''}</div>`}
+const okc=x=>x!=null&&x>=1?'ok':'';
+// ---------------- topo ----------------
+function topo(){const ms=mesesDe(PER),m=ms[0],tri=ms.length>1;
+ $('m_pre').textContent='METAS'+(D.preposto?' · PREPOSTO '+D.preposto:'')+' · OLYMPIKUS E UNDER ARMOUR';
+ const av=(D.linhas||[]).find(x=>x.aviso);$('m_aviso').innerHTML=av?`<i>“${esc(av.aviso)}”</i>`:'—';
+ $('meses').innerHTML=(D.periodos||[]).map(p=>`<button class="${p===PER?'on':''} ${/T\d$/.test(p)?'tri':''}" onclick="MET.per('${p}')">${nomeP(p)}</button>`).join('');
+ if(tri){$('tags').innerHTML=`<span class="tg">${nomeP(PER)}: cada mês tem a sua meta, nada se soma</span>`;
+  $('geral').innerHTML=`<div><div class="pre" style="color:#ADAEB3">TÊNIS OLYMPIKUS · ${esc(LEO||'')}</div><div class="tri3" style="grid-template-columns:repeat(3,1fr)">${ms.map(mm=>{const t=LEO&&tt(mm,LEO);return `<div style="background:#1a1a1e"><small>${nomeP(mm)}</small><b style="color:${t&&t.atingimento>=1?'#4be38d':'#fff'}">${pc(t&&t.atingimento)}</b><small>${t?fmt(t.potencial)+' de '+fmt(t.meta_cliente):'sem meta'}</small></div>`}).join('')}</div></div>`;return}
+ const T=LEO&&tt(m,LEO),corr=T&&T.du_passados>0&&T.etiqueta==='potencial',rf=corr?T.du_passados/T.du_mes:null;
+ $('tags').innerHTML=T?`<span class="tg pot">${esc(T.etiqueta||'')}${T.etiqueta==='potencial'?' = faturado + carteira com previsão no mês':''}</span>`+(corr?`<span class="tg">${T.du_passados} de ${T.du_mes} dias úteis · faltam ${T.du_faltam}</span>`:'')+((D.linhas||[]).find(x=>x.base_em)?`<span class="tg">lido ${esc(String((D.linhas||[]).find(x=>x.base_em).base_em).slice(8,10)+'/'+String((D.linhas||[]).find(x=>x.base_em).base_em).slice(5,7))}</span>`:''):'<span class="tg">sem dado no período</span>';
+ $('geral').innerHTML=T?`<div><div class="pre" style="color:#ADAEB3">TÊNIS OLYMPIKUS · TOTAL</div><div class="ns" style="color:${T.atingimento>=1?'#00B050':'#fff'}">${pc(T.atingimento)}</div><div style="font-size:12px;color:#ADAEB3">${fmt(T.potencial)} de ${fmt(T.meta_cliente)} pares · <b style="color:${T.gap<0?'#ff6b78':'#4be38d'}">${T.gap<0?'faltam '+fmt(-T.gap):fmt(T.gap)+' acima'}</b></div></div>
+  <div>${bullet(T.faturado,T.potencial,T.meta_cliente,corr?T.meta_cliente*rf:null)}<div class="legb"><span><i style="background:#2E3EFC"></i>faturado ${fmt(T.faturado)}</span><span><i style="background:repeating-linear-gradient(135deg,#AEB5FE 0 3px,#8f98fd 3px 6px)"></i>carteira do mês ${fmt(T.carteira)}</span><span><i style="background:#fff;width:3px"></i>meta ${fmt(T.meta_cliente)}</span>${corr?`<span><i style="border-left:2px dashed #ADAEB3;width:2px;border-radius:0"></i>ritmo de hoje ${fmt(T.meta_cliente*rf)}</span>`:''}</div></div>`:'<div class="hora" style="color:#ADAEB3">—</div>'}
+// ---------------- participação por família (sem alvo) ----------------
+function participacao(){const P=(D.participacao||[]).filter(x=>x.periodo===PER);if(!P.length){$('part').innerHTML='';return}
+ const F=[['Tênis Olympikus','tenis_rs','#2E3EFC'],['Meias','meias_rs','#FFFF1A'],['Chinelo','chinelo_rs','#FF8A00'],['Acessório','acessorio_rs','#7B2EFC'],['Confecção','confeccao_rs','#00B0F0'],['Under Armour','ua_rs','#E3001B']];
+ const tot=x=>F.reduce((a,f)=>a+(x[f[1]]||0),0),Lx=P.find(x=>LEO&&x.cliente===LEO)||P[0],TL=tot(Lx)||1;
+ $('part').innerHTML=`<div class="t15"><div class="d-flex align-items-baseline flex-wrap gap-2"><h3>Participação por família · ${nomeP(PER)}</h3><span class="tg ${Lx.etiqueta==='potencial'?'pot':'fat'}" style="background:${Lx.etiqueta==='potencial'?'#2E3EFC':'#000'};color:#fff">${esc(Lx.etiqueta||'')}</span><span class="hora ms-auto">quanto cada família pesa no total, em R$</span></div>
+  <div class="d-flex align-items-end gap-3 mt-2"><span class="pc">${R$(tot(Lx))}</span><span class="hora mb-1">no total · fora o tênis Olympikus: ${Math.round((TL-(Lx.tenis_rs||0))/TL*100)}%</span></div>
+  <div class="bar">${F.map(([n,k,c])=>(Lx[k]||0)>0?`<i style="width:${Lx[k]/TL*100}%;background:${c}" title="${n}: ${R$(Lx[k])}"></i>`:'').join('')}</div>
+  <div class="legb" style="color:inherit;margin-bottom:6px">${F.map(([n,k,c])=>`<span><i style="background:${c}"></i>${n} ${R$(Lx[k]||0)} · ${Math.round((Lx[k]||0)/TL*100)}%</span>`).join('')}</div>
+  ${CLI.map(c=>{const x=P.find(p=>p.cliente===c.codigo);if(!x)return '';const t=tot(x)||1;return `<div class="cl"><b>${esc(c.nome)}</b><span class="mb">${F.map(([n,k,cc])=>(x[k]||0)>0?`<i style="width:${x[k]/t*100}%;background:${cc}"></i>`:'').join('')}</span><span class="num fw-bold">${Math.round(t/TL*100)}%</span><span class="num hora fx">${R$(t)}</span></div>`}).join('')}
+  <div class="hora mt-1">% = quanto cada cliente pesa no total · a barra de cada cliente mostra o mix dele</div></div>`}
+// ---------------- cartões por cliente ----------------
+function cartoes(){const ms=mesesDe(PER),tri=ms.length>1;
+ $('clis').innerHTML=CLI.map(c=>{if(tri)return `<div class="col-lg-4"><div class="pn cli"><h3>${esc(c.nome)}</h3><div class="hora">tênis Olympikus, mês a mês</div>
+   <div class="tri3">${ms.map(m=>{const t=tt(m,c.codigo);return t&&t.meta_cliente?`<div><small>${nomeP(m)}</small><b class="${okc(t.atingimento)}">${pc(t.atingimento)}</b><small>${fmt(t.potencial)} de ${fmt(t.meta_cliente)}</small></div>`:`<div><small>${nomeP(m)}</small><b style="color:#ADAEB3">—</b><small>sem meta</small></div>`}).join('')}</div>
+   <div class="fam">${FAM.map(([k,nm])=>{const xs=ms.map(m=>L(m,k,c.codigo));if(!xs.some(Boolean))return '';return `<div class="l" style="grid-template-columns:86px repeat(3,1fr)"><span>${nm}</span>${xs.map(x=>`<span class="num fw-bold ${okc(x&&x.atingimento)}">${x&&x.meta_cliente?pc(x.atingimento):'—'}</span>`).join('')}</div>`}).join('')}</div></div></div>`;
+  const m=ms[0],t=tt(m,c.codigo);if(!t)return `<div class="col-lg-4"><div class="pn cli"><h3>${esc(c.nome)}</h3><div class="hora mt-2">sem meta no período</div></div></div>`;
+  const corr=t.du_passados>0&&t.etiqueta==='potencial',rf=corr?t.du_passados/t.du_mes:null,T=LEO&&tt(m,LEO),falta=(t.meta_cliente||0)-(t.faturado||0);
+  return `<div class="col-lg-4"><div class="pn cli"><div class="d-flex align-items-baseline"><h3>${esc(c.nome)}</h3><span class="ms-auto hora">${T&&T.meta_cliente?Math.round(t.meta_cliente/T.meta_cliente*100)+'% da meta · ':''}meta ${fmt(t.meta_cliente)}</span></div>
+   <div class="d-flex align-items-end gap-2 mt-2"><span class="pc ${okc(t.atingimento)||'no'}">${pc(t.atingimento)}</span>${t.atingimento>=1?'<i class="ti ti-circle-check ok" style="font-size:26px"></i>':''}<span class="gap ${t.gap<0?'neg':'pos'} ms-auto mb-1">${t.gap<0?'faltam '+fmt(-t.gap)+' pares':fmt(t.gap)+' acima'}</span></div>
+   <div class="mt-3">${bullet(t.faturado,t.potencial,t.meta_cliente,corr?t.meta_cliente*rf:null,'bl')}</div>
+   <div class="kp">${falta<=0?`<div class="dest" style="grid-column:span 2"><b>meta batida no faturado</b><small>${fmt(t.faturado)} faturados de ${fmt(t.meta_cliente)}</small></div>`
+    :`<div class="dest"><b>${t.precisa_por_du!=null&&corr?fmt(t.precisa_por_du):'—'}</b><small>${corr?'precisa faturar por dia útil':'mês sem dia útil corrido'}</small></div><div><b>${t.carteira_sobre_gap!=null?Math.round(t.carteira_sobre_gap*100)+'%':'—'}</b><small>carteira sobre o gap</small></div>`}
+    <div><b>${corr?fmt(t.faturou_por_du):'—'}</b><small>faturou por dia útil</small></div><div><b>${fmt(t.carteira)}</b><small>carteira do mês</small></div></div>
+   <div class="fam">${FAM.map(([k,nm])=>{const x=L(m,k,c.codigo);if(!x)return '';if(!x.meta_cliente)return `<div class="l"><span>${nm}</span><span class="abs">sem meta</span><span></span></div>`;const mx=Math.max(x.meta_cliente,x.potencial||0)||1;
+    return `<div class="l"><span>${nm}</span><span class="mini"><i style="width:${Math.min(100,(x.potencial||0)/mx*100)}%"></i><b style="left:${Math.min(100,x.meta_cliente/mx*100)}%"></b></span><span class="num fw-bold ${okc(x.atingimento)}">${pc(x.atingimento)}</span></div>`}).join('')}</div></div></div>`}).join('')}
+// ---------------- matriz faixa × cliente ----------------
+function matriz(){const ms=mesesDe(PER),tri=ms.length>1;$('secfx').style.display=tri?'none':'';$('mxp').style.display=tri?'none':'';if(tri){$('mx').innerHTML='';return}
+ const m=ms[0],cel=(x,u)=>!x||!x.meta_cliente?'<td class="cel abs">sem meta</td>':`<td class="cel"><span class="p ${okc(x.atingimento)}">${pc(x.atingimento)}</span><span class="g ${x.gap<0?'gap neg':'gap pos'}">${x.gap<0?'−':'+'}${u==='R$'?R$(Math.abs(x.gap)):fmt(Math.abs(x.gap))}</span><div class="mb"><i style="width:${Math.min(100,(x.potencial||0)/Math.max(x.meta_cliente,x.potencial||0)*100)}%"></i><b style="left:${Math.min(100,x.meta_cliente/Math.max(x.meta_cliente,x.potencial||0)*100)}%"></b></div></td>`;
+ const quem=CLI.map(c=>c.codigo).concat(LEO?[LEO]:[]);
+ const row=(k,nm,u,tot)=>`<tr class="${tot?'tot':''}"><td class="fx">${nm}<small>${u}</small></td>${quem.map(c=>cel(k==='__TT'?tt(m,c):L(m,k,c),u)).join('')}</tr>`;
+ $('mx').innerHTML=`<thead><tr><th>Faixa / família</th>${CLI.map(c=>`<th>${esc(c.nome)}</th>`).join('')}${LEO?'<th>Total</th>':''}</tr></thead><tbody>`+FX.map(([k,n])=>row(k,n,'pares')).join('')+row('__TT','Total tênis Olympikus','pares',1)+FAM.filter(([k])=>quem.some(c=>L(m,k,c))).map(([k,n,u])=>row(k,n,u)).join('')+'</tbody>';
+ const C=(D.controle||[]).filter(x=>String(x.mes).slice(0,7)===m.slice(0,7));
+ $('conf').innerHTML=C.length?`<i class="ti ti-${C.every(x=>x.situacao==='ok'||x.situacao==='sem carta')?'circle-check':'alert-triangle'}"></i><span><b>Conferência com a Carta:</b> ${C.filter(x=>x.situacao==='ok').length} de ${C.length} faixas/famílias dentro da tolerância${C.some(x=>x.situacao==='DIVERGE')?' · diverge: '+C.filter(x=>x.situacao==='DIVERGE').map(x=>esc(x.chave)).join(', '):''}.</span>`:''}
+// ---------------- API ----------------
+window.MET={per:p=>{PER=p;desenhar()}};
+function desenhar(){topo();participacao();cartoes();matriz()}
+window.desenharMetas=function(dados){D=dados||{};IDX={};
+ (D.linhas||[]).forEach(x=>{const m=String(x.mes).slice(0,7);(IDX[x.cliente]=IDX[x.cliente]||{})[m+'|'+x.chave]=x});
+ CLI=(D.clientes||[]).filter(c=>!/^L[ÉE]O/i.test(c.codigo));LEO=Object.keys(IDX).find(c=>/^L[ÉE]O/i.test(c))||null;
+ PER=D.periodo_atual||(D.periodos||[])[0]||null;$('m_ordem').textContent='ordem fixa: '+(CLI.map(c=>c.nome).join(', ')||'—')+' · pares';desenhar()};
+window.desenharMetas(window.DADOS_METAS||{});
+})();
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+<script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
+<script src="metas_dados.js?v=1"></script>
+<script src="metas_glue.js?v=1"></script>
+</body></html>
