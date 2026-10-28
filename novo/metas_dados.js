@@ -33,9 +33,8 @@ window.DadosMetas = (() => {
     const L = linhas.filter(x => MES_OK.test(String(x.mes)));
     // clientes: os que têm linha na view, na ordem da casa (clientes_lista); o total 'LÉO (…)' por último
     const temMeta = new Set(L.map(x => x.cliente)), nomes = Object.fromEntries(lista.map(c => [c.cliente, c.nome || c.cliente]));
-    // ordem do piloto metas_v2 (e da cfg da v_meta_cliente, 0073): Sapataria Nova · Ban Ban · Polyélle; quem mais tiver meta entra depois, na ordem da casa
-    const ORDEM = ["SAPATARIA NOVA", "BANBAN CALCADOS", "POLYELLE"], pos = c => { const i = ORDEM.indexOf(c); return i < 0 ? 99 : i; };
-    const clientes = lista.filter(c => temMeta.has(c.cliente)).sort((x, y) => pos(x.cliente) - pos(y.cliente)).map(c => ({ codigo: c.cliente, nome: nomes[c.cliente] }));
+    // a ordem é a do clientes_lista (a ordem da casa, lida depois do login) — nenhum nome de cliente neste arquivo (BOSS, 28/10: repositório público)
+    const clientes = lista.filter(c => temMeta.has(c.cliente)).map(c => ({ codigo: c.cliente, nome: nomes[c.cliente] }));
     const leo = [...temMeta].find(c => /^L[ÉE]O/i.test(c)); if (leo) clientes.push({ codigo: leo, nome: leo });
     // participação por família: R$ (faturado + carteira) por cliente × mês; UA inteira numa cor; o total é a soma dos clientes com meta
     const FAM = m => /^OLY$/i.test(m) ? "tenis_rs" : /^MEOLY$/i.test(m) ? "meias_rs" : /^CHOLY$/i.test(m) ? "chinelo_rs" : /^ACOLY$/i.test(m) ? "acessorio_rs" : /^CFOLY$/i.test(m) ? "confeccao_rs" : /^UA/i.test(m) ? "ua_rs" : null;
