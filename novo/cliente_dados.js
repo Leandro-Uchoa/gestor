@@ -133,15 +133,17 @@ window.Dados = (() => {
       const m = String(l.prev_fat).slice(0, 7), f = famDe(l.marca), k = ((NOMEF[f] || {}).nome || f) + "|" + m;
       const uf = ufDe(l), nomeF = (NOMEF[f] || {}).nome || f;
       (LIN[k] = LIN[k] || []).push({ modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0,
-                                     valor: +l.valor_total || (+l.cart * +(l.preco_unit || 0)) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf });
+                                     valor: (+l.preco_unit > 0 ? +l.cart * +l.preco_unit : +l.valor_total) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf });   // GAMER 28/10: pares × preço unitário — o valor_total da DETALHADA envelhece quando a linha muda
     }
     for (const r of (BRUTO.cartUF || [])) { const m = String(r.mes).slice(0, 7), uf = PORTA_UF[String(r.porta || "").trim()] || (r.porta ? null : null); if (!uf || !(+r.pares_cart > 0)) continue;
       const f = famDe(r.marca), nomeF = (NOMEF[f] || {}).nome || f, u = (PU[m] = PU[m] || {}); (u[uf] = u[uf] || {})[nomeF] = ((u[uf] || {})[nomeF] || 0) + (+r.pares_cart || 0); }
     if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort().map(u => [u, PU[x.mes][u]]));
     for (const k of Object.keys(LIN)) LIN[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
     const linhasBase = (cartLin || []).reduce((m, l) => l.base_em && (!m || String(l.base_em) > m) ? String(l.base_em).slice(0, 10) : m, null);
+    const VRES = {};   // R$ do resumo (venda_mensal, carteira a faturar) por 'nome|mês' e 'nome|todos' — a tela compara com as linhas
+    for (const [m, fams] of Object.entries(MEF.matriz || {})) { if (m < hoje) continue; for (const [f, es] of Object.entries(fams)) { const v = Object.entries(es).filter(([e]) => e !== "FATURADA").reduce((s, [, c]) => s + (c.valor || 0), 0); const nomeF = (NOMEF[f] || {}).nome || f; VRES[nomeF + "|" + m] = v; VRES[nomeF + "|todos"] = (VRES[nomeF + "|todos"] || 0) + v; } }
     const LREF = {};   // carteira por referência (e por referência|cor): as linhas que o giro baixo abre
-    for (const l of (cartLin || [])) { if (!DATA_OK.test(String(l.prev_fat))) continue; const it = { modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0, valor: +l.valor_total || (+l.cart * +(l.preco_unit || 0)) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf: ufDe(l) };
+    for (const l of (cartLin || [])) { if (!DATA_OK.test(String(l.prev_fat))) continue; const it = { modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0, valor: (+l.preco_unit > 0 ? +l.cart * +l.preco_unit : +l.valor_total) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf: ufDe(l) };
       (LREF[l.referencia] = LREF[l.referencia] || []).push(it); if (l.cor) (LREF[l.referencia + "|" + l.cor] = LREF[l.referencia + "|" + l.cor] || []).push(it); }
     for (const k of Object.keys(LREF)) LREF[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
     // ---------- giro (já vem só tênis OLY do banco) + cobertura: último mês COM estoque ÷ média dos 3 meses fechados — "—" quando falta
@@ -317,7 +319,7 @@ window.Dados = (() => {
       hoje: hojeD,
       cliente: { nome: perfil.nome || cliente, codigo: cod, lojas_ativas: null, recorte, marcas },
       agenda, atas, decidir, prioridade: pri, trade,
-      carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), valor: cartValor, recorte: "tênis Olympikus", familias, linhas: LIN, linhas_base: linhasBase, linhas_ref: LREF,
+      carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), valor: cartValor, recorte: "tênis Olympikus", familias, linhas: LIN, linhas_base: linhasBase, linhas_ref: LREF, valor_resumo: VRES,
                   outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: baseMax, estado_lido_em: MEF.estado_lido_em || null, reserva: MEF.reserva || null },
       giro, cobertura, produtos, metas, participacao, anos, filtro,
       etiquetas: { sellin: "sell-in = faturado (EBM até jun/26 · DETALHADA por data de NF depois) · do mês corrente em diante soma a carteira a faturar (ponto vazado)", sellout: "sell-out pela AG do cliente",
