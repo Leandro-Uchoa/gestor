@@ -55,7 +55,7 @@
       LISTA = await Dados.clientes();
       const h = new URLSearchParams(location.hash.slice(1)), q = new URLSearchParams(location.search), pedido = h.get("cliente") || q.get("cliente");   // ?cliente= ou #cliente=
       CLIENTE = LISTA.some(c => c.cliente === pedido) ? pedido : null;   // BOSS (segurança): sem cliente válido na URL, a página pede para escolher — não abre num cliente por conta própria
-      if (Dados.MODO_CLIENTE) { for (const el of document.querySelectorAll(".bro-fab, .bro-m, #bro, .rail")) el.style.setProperty("display", "none", "important"); if (main) main.style.marginLeft = "16px"; }   // modo cliente: sem Bro, sem menu (escondidos, não removidos: a casca ainda escreve em #brctx)
+      if (Dados.MODO_CLIENTE) { for (const el of document.querySelectorAll(".bro-fab, .bro-m, #bro, .rail, .busca, .bts")) el.style.setProperty("display", "none", "important"); if (main) main.style.marginLeft = "16px"; }   // modo cliente: sem Bro, menu, busca e botões internos (Atas, Raio-X, PDF, AG, Sugerir pedido — BOSS 27/10); escondidos, não removidos: a casca escreve em #brctx
       barra(); navegacao();
       if (main) main.style.visibility = "";
       if (!CLIENTE) {   // GAMER: nome que não casa NUNCA vira página zerada que parece verdadeira — diz que não achou, na manchete também
@@ -69,7 +69,9 @@
   }
   let cargaAtual = 0;                                                   // Conselho (PR #1, 27/10): trocar de cliente no meio da carga não pode desenhar o cliente antigo por cima do novo
   async function abrir() {
-    const carga = ++cargaAtual, cliente = CLIENTE;
+    const carga = ++cargaAtual, cliente = CLIENTE, nomeSel = (LISTA.find(c => c.cliente === cliente) || {}).nome || cliente;
+    // GAMER: na troca, a página não pode ficar com o cliente ANTERIOR enquanto o seletor já mostra o novo — cobre com "carregando" até o dado chegar
+    if (DADOS) { try { window.desenhar({ cliente: { nome: nomeSel, codigo: "" }, prioridade: { titulo: "Carregando " + nomeSel + "…", detalhe: "lendo o banco" }, sem_bloco_topics: true }); } catch (e) { /* casca sem dado desenha "—" */ } document.querySelectorAll(".ti-ritmo").forEach(el => el.remove()); }
     try {
       const dados = await Dados.carregar(cliente);
       if (carga !== cargaAtual) return;                                 // chegou atrasado: o seletor já está em outro cliente
@@ -89,6 +91,7 @@
     // cliente que não pontua no 25745 (Casa Pio): o bloco de metas diz de quem é a meta, nunca "rateio em andamento" nem número inventado (BOSS, 27/10)
     if (DADOS.sem_meta) { const nota = '<div class="hora" style="padding:8px 0">meta do vendedor responsável, não do Léo · sem número nesta tela; o gráfico compara sell-in e sell-out com o mesmo mês do ano anterior</div>';
       for (const id of ["mtb", "mtu"]) { const el = $(id); if (el) el.innerHTML = id === "mtb" ? nota : ""; } }
+    const ntp = $("c_ntp"); if (ntp && !Dados.MODO_CLIENTE && !DADOS.sem_bloco_topics && DADOS.topics_pendentes != null) ntp.textContent = DADOS.topics_pendentes + " no TOPICS";   // v19: 4 itens na tela, o selo diz quantos há no bloco (GAMER)
     trade();
   }
   // a faixa do trade é da casca (DADOS.trade, formato do v19); o TI só acrescenta, embaixo dela, o ritmo da ação (TRADE, 27/10):

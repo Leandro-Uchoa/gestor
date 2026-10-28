@@ -19,7 +19,9 @@ window.Dados = (() => {
   const TIPO_CHAVE = { tenis: k => FAIXAS_TENIS.includes(k) || k === "TT FTW_UA", meias: k => k === "MEOLY" || k === "UA_ME", chinelo: k => k === "CHOLY" || k === "UA_CH", acessorio: k => k === "ACOLY" || k === "UA_AC", confeccao: k => k === "UA_CF" };
   const marcaDe = m => /^UA/i.test(m) ? "UA" : "OLY";
   const MES_OK = /^\d{4}-\d{2}/, DATA_OK = /^\d{4}-\d{2}-\d{2}/;                 // segurança (revisão 27/10): ano e data do banco só passam neste formato
-  const idOk = s => /^[\w.:-]{1,80}$/.test(String(s || ""));                       // id do TOPICS vai para dentro de onclick na casca: só caracteres seguros
+  const idOk = s => /^[\p{L}\p{N}_.:-]{1,80}$/u.test(String(s || ""));              // id do TOPICS vai para dentro de onclick na casca: só caracteres seguros (acento vale: "r1:tênis")
+  const FONTE_TELA = { "v_meta_cliente (potencial) × giro_mensal": "meta do mês × giro", "v_meta_cliente (potencial)": "meta do mês", "carteira_linha (AÇÃO da DETALHADA)": "ação marcada na DETALHADA", "carteira_linha": "carteira", "venda_mensal (carteira) × giro_mensal (AG)": "carteira × giro (AG)", "trade_acao": "ação de trade", "raio_x (AG por loja)": "raio-x (AG por loja)", "topics_item": "TOPICS" };   // GAMER: nome de tabela não vai à tela do Caio
+  const fonteTela = f => FONTE_TELA[String(f || "").trim()] || String(f || "").replace(/v_meta_cliente|venda_mensal|giro_mensal|carteira_linha|topics_item|trade_acao|raio_x/g, m => ({ v_meta_cliente: "meta", venda_mensal: "venda", giro_mensal: "giro", carteira_linha: "carteira", topics_item: "TOPICS", trade_acao: "trade", raio_x: "raio-x" }[m]));
   const FAM_GIRO = { tenis: "OLY FOOTWEAR", meias: "OLY MEIAS", chinelo: "OLY CHINELO", acess: "OLY ACESSÓRIOS", ua: "UA FOOTWEAR" };   // abas do Giro da casca
   const MARCA_CART = { "OLY FOOTWEAR": ["OLY"], "OLY MEIAS": ["MEOLY"], "OLY CHINELO": ["CHOLY"], "OLY ACESSÓRIOS": ["ACOLY"], "UA FOOTWEAR": ["UA_TN"] };
   let BRUTO = null;                                                                 // o que veio do banco para o cliente atual (o filtro recalcula em cima)
@@ -141,10 +143,10 @@ window.Dados = (() => {
     const limpa = s => { const b = bloco.trim(); let x = String(s || "").trim(); if (b && x.toUpperCase().startsWith(b.toUpperCase())) x = x.slice(b.length).replace(/^\s*[-–:·]\s*/, ""); return x; };
     const linhas = MODO_CLIENTE ? [] : (DEC || []).filter(l => idOk(l.id)).map(l => ({
       id: /^(r\d|trade:)/.test(l.id) ? "dec:" + l.id : l.id, texto: limpa(l.texto), urgente: !!l.urgente, criado_em: DATA_OK.test(String(l.base_em)) ? String(l.base_em).slice(0, 10) : null, bloco: "",
-      regra: l.regra, fonte: l.fonte, numero: l.numero, unidade: l.unidade, valor_rs: l.valor_rs, da_view: true }));
+      regra: l.regra, fonte: fonteTela(l.fonte), numero: l.numero, unidade: l.unidade, valor_rs: l.valor_rs, da_view: true }));
     const jaTem = new Set(linhas.map(l => l.id));
     const itens = (t.itens || []).filter(i => !i.feito_em && !i.feito && idOk(i.id) && !jaTem.has(i.id)).map(i => ({ id: i.id, texto: limpa(i.txt || i.texto), urgente: !!i.alerta, criado_em: i.criado_em || i.data || null, bloco: "", sub: i.sub || "", prazo: i.prazo || null, dono: i.dono || "" }));
-    const decidir = linhas.concat(itens);
+    const decidir = linhas.concat(itens).slice(0, 4), topics_pendentes = MODO_CLIENTE ? 0 : (t.pendentes != null ? +t.pendentes : itens.length + linhas.filter(l => !/^dec:/.test(l.id)).length);   // v19: 4 itens na tela + "N no TOPICS" (GAMER)
     const pri = linhas[0] ? { titulo: linhas[0].texto, detalhe: `${linhas[0].fonte}${dtBR(linhas[0].criado_em) ? " · base " + dtBR(linhas[0].criado_em) : ""}` }   // GAMER: o código da regra (R1…) não vai à tela do Caio
              : MODO_CLIENTE ? undefined : { titulo: "Sem decisão apontada pelas regras do NÚCLEO", detalhe: "nada na carteira marcada, meta do mês, trade, ruptura ou TOPICS" };
     // ---------- ação de trade em andamento: a faixa da casca (v19) + o ritmo (trade_acao_deck) para a agenda e o decidir
@@ -178,7 +180,7 @@ window.Dados = (() => {
       const ks = Object.keys(meses).sort(), q = Math.floor((+hoje.slice(5, 7) - 1) / 3) + 1, trimestres = {};
       if (ks.length) trimestres[hoje.slice(0, 4) + "-T" + q] = { nome: q + "º TRI", meses: ks.filter(m => m >= corte).slice(0, 3) };
       const lida = meta.length ? dtBR(meta[meta.length - 1].meta_lida_em) : null;
-      metas = { atual: meses[hoje] ? hoje : ks[0], meses, trimestres, base: `meta do preposto dividida pela participação do cliente (v_meta_cliente) · potencial = faturado + carteira do mês · regra do NÚCLEO${lida ? " · carta lida em " + lida : ""}` };
+      metas = { atual: meses[hoje] ? hoje : ks[0], meses, trimestres, base: `meta do preposto dividida pela participação do cliente · potencial = faturado + carteira do mês · regra do NÚCLEO${lida ? " · carta lida em " + lida : ""}` };
     }
     // participação por família é o MIX do cliente (R$, faturado + carteira do mês): vale para todos, com ou sem meta do Léo (Casa Pio incluída)
     if (!MODO_CLIENTE && (MEF.por_mes || []).length) {
@@ -209,7 +211,7 @@ window.Dados = (() => {
                    estoque: "estoque na AG (tênis Olympikus)" },
       fontes: { sellout_ate: (() => { const sz = ((rx || {}).sazonal || {})["TÊNIS"]; const ms = sz ? Object.keys(sz.mensal || {}).filter(m => MES_OK.test(m)).sort() : []; return ms.length ? ms[ms.length - 1] : null; })(),
                 sellin_ate: sellin.length ? String(sellin[sellin.length - 1].puxado_em).slice(0, 10) : null, meta_lida_em: meta.length ? String(meta[meta.length - 1].meta_lida_em).slice(0, 10) : null },
-      sem_bloco_topics: !bloco, topics: decidir, modo_cliente: MODO_CLIENTE, sem_meta: !temMeta,
+      sem_bloco_topics: !bloco, topics: decidir, topics_pendentes, modo_cliente: MODO_CLIENTE, sem_meta: !temMeta,
       atualizado: { carteira: baseMax, sellin: sellin.length ? sellin[sellin.length - 1].puxado_em : null }
     };
   }
