@@ -1,24 +1,99 @@
-/* Gestor · AÇÃO DE PREÇO — complemento ao cliente.css (casca da aba Cliente, layout aprovado). Só o que a tela de ação precisa; cores da paleta oficial. Piso 11 px. */
-.a-per span,.a-fam span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:700 12px Inter;padding:6px 12px;border-radius:999px;border:1px solid var(--cl);background:#fff;margin:0 6px 6px 0;min-height:32px}
-.a-per span,.a-fam span{color:#000}.a-per span.on,.a-fam span.on{background:#000;color:#fff;border-color:#000}
-.a-res>div{color:#000}
-.busca.a-bsc{cursor:text}.busca.a-bsc .a-busca{flex:1;min-width:0;border:0;background:transparent;padding:0;font:500 13px Inter;color:#fff;max-width:none;outline:0;border-radius:0}.busca.a-bsc .a-busca::placeholder{color:rgba(255,255,255,.72)}
-.lista.acl .fl{white-space:nowrap}
-.a-fam span small{font:600 11px Inter;opacity:.7}
-.a-busca{width:100%;max-width:520px;padding:9px 12px;border:1px solid var(--cl);border-radius:12px;font:500 13px Inter;background:#fff}
-.a-res{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 4px}.a-res>div{background:#fff;border:1px solid var(--cl);border-radius:16px;padding:12px 14px}
-.a-res small{display:block;font-size:11px;color:var(--ce)}.a-res b{font:800 26px Barlow;line-height:1.05;display:block;margin:2px 0}
-.a-aviso{background:#FFF8CC;border:1px solid #FFE680;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}
-.a-exc{font-size:12px;color:var(--ce);margin:2px 0 10px}
-.lista.acl .row1.ac{grid-template-columns:56px 1fr 74px 64px 110px}
-.lista.acl .row1.ac .ft{width:52px;height:52px;border-radius:10px;background:#F1F1EC;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.lista.acl .row1.ac .ft img{width:100%;height:100%;object-fit:cover}
-.lista.acl .row1.ac .ft.sem::after{content:"";width:28px;height:18px;border-radius:9px 9px 3px 3px;background:#D5D5CE;transform:skewX(-12deg)}
-.lista.acl .row1.ac .num small{display:block;font-size:11px;color:var(--ce);font-weight:500}
-.lista.acl .row1.ac .fl.seg{background:#FFFF1A;color:#000}
-.lista.acl .row1.ac.seg{background:#FFFDE8}
-.lista.acl .trt{display:inline-block;font-size:11px;font-weight:700;color:var(--az);margin-top:4px}
-.lista.acl .row1.hd.ac{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ce);border-top:0}
+/* modelo: GitHub Primer DataTable (MIT, primer.style/product/components/data-table) + Tabler 1.6.1 (MIT, tabler.io — .card-table,
+           subheader, lista de produto com imagem) — o MESMO modelo do giro limpo do Léo (gestor_giro_v1\juncao2.css,
+           especificação em gestor_giro_v1\REFERENCIAS_DESIGN_TOP.md). Lista com foto: padrão de produto em lista do Tabler / Polaris
+           (miniatura quadrada em fundo branco com contorno cinza fino, título em negrito, metadado cinza abaixo). Abas de visão com
+           contagem: Polaris IndexFilters / Linear (ativa = preto; contagem em pill neutro). Segmentado neutro: Primer SegmentedControl,
+           com o ativo preto (pedido do Léo, como no giro). Status = ponto + palavra (Primer/Polaris), nunca chip colorido.
+   Gestor · AÇÃO DE PREÇO — complemento ao cliente.css (casca da aba Cliente). PICASSO v4, 28/10/2026, sobre a v3 do TI.
+   Cor por exceção: preto e cinzas; azul #2E3EFC só no que se clica; amarelo #FFFF1A só no que pede ação ("segurar").
+   Piso de 11 px; toque ≥ 44 px no celular; nada estoura a 360 px. Travas: nada de preço/desconto/site; modo cliente = só lista + foto. */
+:root{--a-fg:#000;--a-tx:#1f1f23;--a-mfg:#787B86;--a-cc:#ADAEB3;--a-bd:#E6E7E8;--a-ow:#F6F5F0;--a-az:#2E3EFC;--a-am:#FFFF1A}
+
+/* ---------- topo: busca com Ctrl K ---------- */
+.busca.a-bsc{cursor:text}
+.busca.a-bsc .a-busca{flex:1;min-width:0;border:0;background:transparent;padding:0;font:500 13px Inter;color:#fff;max-width:none;outline:0;border-radius:0}
+.busca.a-bsc .a-busca::placeholder{color:rgba(255,255,255,.72)}
+.busca.a-bsc kbd{flex:none}
+.a-busca{width:100%;max-width:520px;padding:9px 12px;border:1px solid var(--a-bd);border-radius:12px;font:500 13px Inter;background:#fff}
+
+/* ---------- segmentado neutro (Primer SegmentedControl; ativo preto como no giro): período e família ---------- */
+.a-per,.a-fam{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;padding:3px;border-radius:8px;background:#fff;border:1px solid var(--a-bd);max-width:100%}
+.a-per{margin:12px 0 4px}
+.a-fam{margin:0 0 6px}
+.a-per span,.a-fam span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:32px;padding:0 12px;border-radius:6px;font:500 13px Inter;color:var(--a-mfg);white-space:nowrap;user-select:none}
+.a-per span:hover,.a-fam span:hover{color:var(--a-fg)}
+.a-per span.on,.a-fam span.on{background:#000;color:#fff}
+.a-per span:focus-visible,.a-fam span:focus-visible{outline:2px solid var(--a-az);outline-offset:1px}
+.a-fam span small{font:500 11px Inter;color:var(--a-cc);font-variant-numeric:tabular-nums}
+.a-fam span.on small{color:var(--a-cc)}
+
+/* ---------- abas das 3 listas com contagem (Polaris IndexFilters / Linear) ---------- */
+.a-res{margin:8px 0 4px}
+.a-abas{display:flex;flex-wrap:wrap;gap:2px;background:#fff;border:1px solid var(--a-bd);border-radius:8px;padding:0 6px}
+.a-aba{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;font:500 13px Inter;color:var(--a-tx);box-shadow:inset 0 -2px 0 transparent}
+.a-aba:hover{box-shadow:inset 0 -2px 0 var(--a-bd)}
+.a-aba:focus-visible{outline:2px solid var(--a-az);outline-offset:-2px}
+.a-aba b{font:600 12px Inter;color:var(--a-fg);background:var(--a-ow);border:1px solid var(--a-bd);border-radius:999px;padding:0 8px;line-height:18px;font-variant-numeric:tabular-nums}
+.a-tot{font-size:12px;color:rgba(255,255,255,.85);margin:6px 2px 0}.a-tot b{font-weight:600;color:#fff;font-variant-numeric:tabular-nums}
+
+/* ---------- avisos ---------- */
+.a-aviso{background:#fff;border:1px solid var(--a-bd);border-left:3px solid var(--a-am);border-radius:8px;padding:10px 14px;margin:10px 0;font-size:13px;color:var(--a-tx)}
+.a-aviso small{color:var(--a-mfg);font-size:12px}
+.a-exc{font-size:12px;color:var(--a-mfg);margin:2px 0 10px}
+
+/* ---------- lista com foto (produto em lista do Tabler / Polaris) sobre a .lista da casca ---------- */
+.lista.acl{box-shadow:none}   /* skill §13/§14: cartão em repouso sem sombra — só a borda de 1 px da casca */
+.lista.acl .row1.ac{grid-template-columns:64px minmax(0,1fr) 72px 80px 110px;gap:12px;align-items:center;padding:4px 0;border-top:0;min-height:72px}
+.lista.acl .row1.ac:not(.hd):hover{background:var(--a-ow)}
+.lista.acl .row1.hd.ac{min-height:0;padding:10px 0 8px;border-bottom:1px solid var(--a-bd);background:none;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--a-mfg)}   /* skill §7.2: 12 px, cinza, caixa normal, sem faixa */
+.lista.acl .row1.ac .num{text-align:center;font-variant-numeric:tabular-nums}
+.lista.acl .row1.ac .num .tn{display:block;font-size:14px;font-weight:600;color:var(--a-fg)}
+.lista.acl .row1.ac .num small{display:block;font-size:11px;color:var(--a-mfg);font-weight:400}
+.lista.acl .row1.ac .num .tn.nd{color:var(--a-cc);font-weight:400}
+/* foto: quadrada, fundo branco, contorno cinza fino; sem foto = silhueta cinza uniforme e discreta */
+.lista.acl .row1.ac .ft{width:64px;height:64px;border-radius:8px;background:#fff;border:1px solid var(--a-bd);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.lista.acl .row1.ac .ft img{width:100%;height:100%;object-fit:contain}
+.lista.acl .row1.ac .ft.sem{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M6 31c0-2 1-4 3-5l9-4 5-8c1-1 2-1 3 0l3 4c2 2 5 3 8 4l3 1c2 1 3 3 3 5v3H6z' fill='%23D9D9D9'/%3E%3Crect x='6' y='34' width='37' height='4' rx='2' fill='%23C9CACC'/%3E%3C/svg%3E") center/70% no-repeat}
+.lista.acl .row1.ac .ft.sem::after{content:none}
+/* nome em negrito; cor e ref. em cinza abaixo; tag = ponto + palavra */
+.lista.acl .row1.ac .nm{min-width:0}
+.lista.acl .row1.ac .nm .mo{display:block;font-size:13px;font-weight:600;color:var(--a-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lista.acl .row1.ac .nm .mt{display:block;font-size:12px;color:var(--a-mfg);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lista.acl .row1.ac .nm .dt{display:block;font-size:11px;color:var(--a-mfg);margin-top:2px}
+.lista.acl .row1.ac .tgs{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px}
+.lista.acl .st{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--a-mfg);white-space:nowrap;margin:0}
+.lista.acl .st i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.lista.acl .st.t-fl i{background:#000}.lista.acl .st.t-pt i{background:var(--a-mfg)}.lista.acl .st.t-ac i{background:var(--a-cc)}
+/* o único amarelo: "segurar" (carteira chegando — pede ação); INTERNO, some no modo cliente */
+/* skill §7.6: tom claro com texto escuro (amarelo da paleta a 35 % + preto); UMA marca por linha: com "segurar", o ponto da tag sai (a lista já diz o tipo) */
+.lista.acl .sg{display:inline-flex;flex:none;align-items:center;font-size:11px;font-weight:600;color:#000;background:rgba(255,255,26,.35);border:1px solid rgba(0,0,0,.12);border-radius:4px;padding:0 6px;line-height:18px;white-space:nowrap}
+.lista.acl .sg i{display:none}
+body:not(.cliente) .lista.acl .row1.ac.seg .st{display:none}
+.lista.acl .trt{display:inline-block;font-size:11px;font-weight:600;color:var(--a-az);margin-top:4px}
+.lista.acl .row1.ac .num.interno{color:var(--a-tx)}
+
+/* ---------- modo cliente: só lista + foto ---------- */
 body.cliente .interno,body.cliente .bts,body.cliente .rail,body.cliente .busca{display:none!important}
-@media (max-width:991.98px){.busca.a-bsc{flex:1 1 100%!important;width:100%!important;height:auto!important;padding:9px 12px!important;justify-content:flex-start;font-size:13px!important;gap:10px!important;margin:0!important}.busca.a-bsc i{font-size:16px}.a-res{grid-template-columns:repeat(2,1fr)}.lista.acl .row1.ac{grid-template-columns:44px 1fr 64px 56px}.lista.acl .row1.ac .interno{display:none}.lista.acl .row1.ac .ft{width:40px;height:40px}}
-@media (max-width:575.98px){.a-res b{font-size:22px}.a-per span,.a-fam span{padding:6px 10px}}
+
+/* ---------- tablet/celular ---------- */
+@media (max-width:991.98px){
+ .busca.a-bsc{flex:1 1 100%!important;width:100%!important;height:auto!important;min-height:44px;padding:9px 12px!important;justify-content:flex-start;font-size:13px!important;gap:10px!important;margin:0!important}
+ .busca.a-bsc i{font-size:16px}.busca.a-bsc .a-busca{font-size:16px}.busca.a-bsc kbd{display:none}
+ .lista.acl .row1.ac{grid-template-columns:56px minmax(0,1fr) 52px 60px;gap:8px;min-height:72px;padding:6px 0}
+ .lista.acl .row1.ac>.interno{display:none}
+ .lista.acl .row1.ac .ft{width:56px;height:56px}
+}
+@media (max-width:575.98px){
+ .a-per,.a-fam{display:flex}
+ .a-per span,.a-fam span{min-height:44px;padding:0 10px;flex:1 1 auto;justify-content:center}
+ .a-abas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0 2px}
+ .a-aba{min-height:48px;flex-direction:column;justify-content:center;gap:2px;padding:4px 2px;text-align:center;font-size:12px;line-height:14px}
+ .a-aba .nm{white-space:normal}
+ .lista.acl .row1.ac{grid-template-columns:48px minmax(0,1fr) 46px 54px;gap:8px;padding:12px 0}
+ .lista.acl .row1.ac .ft{width:48px;height:48px}
+ .lista.acl .row1.ac .num .tn{font-size:13px}
+}
+/* TI v5 (GAMER 28/10): no PC, em modo cliente, a coluna de custo some da grade (não fica 110 px vazios); o PICASSO pode trocar no próximo delta */
+body.cliente .lista.acl .row1.ac{grid-template-columns:64px 1fr 72px 80px}
+@media (max-width:991.98px){body.cliente .lista.acl .row1.ac{grid-template-columns:56px 1fr 72px 80px}}
+@media (max-width:575.98px){body.cliente .lista.acl .row1.ac{grid-template-columns:48px 1fr 46px 54px}}

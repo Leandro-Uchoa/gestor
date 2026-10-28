@@ -1,6 +1,6 @@
 // Gestor · AÇÃO DE PREÇO (novo) — a CAMADA DE DADOS (TI, 28/10/2026). Contrato em TI\CONTRATO_ACAO_PRECO_DADOS.md; a casca é do PICASSO
 // (window.desenharAcao(DADOS)). Fonte: v_acao_preco (0118: FORA DE LINHA · PONTA DE ESTOQUE · AÇÃO/REBAIXO — o holofote foi REVOGADO pelo Léo:
-// produto em linha nunca entra, nem preço de referência externa, nem "preço Black"); foto pela colecao.foto_url (referência + cor); corte por cliente já na view.
+// produto em linha nunca entra, nem preço de referência externa); foto pela colecao.foto_url (referência + cor); corte por cliente já na view.
 // Regras: a API corta em 1.000 linhas (.range em laço); nada embutido; a página de um cliente nunca cita outro; coluna interna (custo, carteira
 // futura, meses sem faturar, último faturamento, valor de estoque) some em ?modo=cliente; chinelo nunca somado ao tênis; meias em packs.
 window.DadosAcao = (() => {
@@ -9,14 +9,17 @@ window.DadosAcao = (() => {
   const DATA_OK = /^\d{4}-\d{2}-\d{2}/, MES_OK = /^\d{4}-\d{2}/;
   const PERIODOS = { bf: "Black Friday", outlet: "Outlet", queima: "Queima", aniversario: "Aniversário do cliente", promocao: "Promoção" };
   const TIPOS = { "FORA DE LINHA": { nome_tela: "Fora de linha", explicacao: "saiu de linha: não repor nem antecipar — queima ou outlet" },
-                  "PONTA DE ESTOQUE": { nome_tela: "Ponta de estoque", explicacao: "sem faturar para o cliente há 6 meses ou mais, ou estoque pequeno pelo corte do cliente — fechar grade" },
-                  "AÇÃO/REBAIXO": { nome_tela: "Ação / rebaixo", explicacao: "pelo corte de estoque do cliente — orientar para ação, promoção ou rebaixo" } };
+                  "PONTA DE ESTOQUE": { nome_tela: "Ponta de estoque", explicacao: "pelo corte de estoque do cliente E sem faturar para ele há 6 meses ou mais — fechar grade" },
+                  "AÇÃO/REBAIXO": { nome_tela: "Ação / rebaixo", explicacao: "pelo corte de estoque do cliente E sem faturar há 6 meses ou mais — orientar para ação, promoção ou rebaixo" } };
+  // em ?modo=cliente a explicação é neutra (GAMER 28/10: o critério interno não vai à tela do cliente)
+  const EXPLICA_CLIENTE = { "FORA DE LINHA": "modelos que saíram de linha", "PONTA DE ESTOQUE": "últimas unidades", "AÇÃO/REBAIXO": "seleção para a ação" };
   const ORDEM = ["FORA DE LINHA", "PONTA DE ESTOQUE", "AÇÃO/REBAIXO"];
   const CATALOGO = "https://catalogo.olympikus.com.br/images/produtos/";   // foto pela chave produto.imagem (Engenharia 28/10: a maioria das referências antigas tem foto em ao menos uma cor; cobertura parcial por cor)
   const UNIDADE = f => /MEIAS/.test(f) ? "packs" : /ACESS|VESTU/.test(f) ? "peças" : "pares";
   const NOME_FAM = { "TÊNIS": "Tênis Olympikus", "CHINELO": "Chinelos Olympikus", "MEIAS": "Meias Olympikus", "ACESSÓRIO": "Acessórios Olympikus", "VESTUÁRIO": "Confecção Olympikus",
                      "UA TÊNIS": "Tênis Under Armour", "UA CHINELO": "Chinelos Under Armour", "UA MEIAS": "Meias Under Armour", "UA ACESSÓRIO": "Acessórios Under Armour", "UA VESTUÁRIO": "Confecção Under Armour" };
   let BRUTO = null;
+  const fotoLembrada = k => { try { return localStorage.getItem("acao_foto:" + k) || null; } catch (e) { return null; } };   // GAMER 28/10: a cascata gerava ~31 404 por carga; a URL que carregou é lembrada neste aparelho
 
   async function tudo(q) { const out = []; for (let i = 0; ; i += 1000) { const { data, error } = await q.range(i, i + 999); if (error) throw error; out.push(...(data || [])); if (!data || data.length < 1000) break; } return out; }
   const semErro = (fn, vazio) => Promise.resolve().then(fn).catch(e => { console.warn("fonte acessória falhou", e && e.message || e); return vazio === undefined ? [] : vazio; });
@@ -27,7 +30,7 @@ window.DadosAcao = (() => {
 
   async function carregar(cliente, periodo) {
     const [linhas, perfil] = await Promise.all([
-      tudo(sb.from("v_acao_preco").select("tipo,tipo_ordem,familia,referencia,cor,descricao,genero,faixa,categoria,imagem,venda_m3,venda_12m,estoque,cobertura,excesso,ult_venda,ult_fat,meses_sem_fat,preco_medio,valor_estoque,carteira_futura,mes_estoque,meses_venda,principal")
+      tudo(sb.from("v_acao_preco").select("tipo,tipo_ordem,familia,referencia,cor,descricao,genero,faixa,categoria,imagem,venda_m3,venda_12m,estoque,cobertura,excesso,ult_venda,meses_sem_fat,mes_estoque,meses_venda,principal" + (MODO_CLIENTE ? "" : ",ult_fat,preco_medio,valor_estoque,carteira_futura"))   // GAMER 28/10: em modo cliente a consulta não traz custo, carteira futura nem último faturamento (quem abre a aba Rede não vê); meses_sem_fat fica porque a trava é calculada com ele
              .eq("cliente", cliente).order("tipo_ordem").order("estoque", { ascending: false }).order("referencia").order("cor")),
       semErro(() => tudo(sb.from("cliente_perfil").select("cliente,nome").eq("cliente", cliente)), []),
     ]);
@@ -55,7 +58,7 @@ window.DadosAcao = (() => {
     const termos = String(busca || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);   // vários termos separados por vírgula (aprendizado do CMS Space)
     const casa = it => !termos.length || termos.every(t => [it.modelo, it.ref, it.cor, it.cor_nome, it.familia, it.genero, it.categoria, it.faixa].some(v => String(v || "").toLowerCase().includes(t)));
     const itens = linhas.filter(l => ORDEM.includes(l.tipo) && permitido(l)).map(l => {
-      const k = l.referencia + "|" + (l.cor || ""), fotos = [...new Set([FOTO.get(k), FOTO.get(l.referencia + "|"), l.cor ? IMG.get(k) : null].concat(IMG.get(l.referencia) || []).filter(Boolean))], foto = fotos[0] || null;   // cascata: a casca tenta uma a uma (onerror) e cai na silhueta
+      const k = l.referencia + "|" + (l.cor || ""), lembrada = fotoLembrada(k), fotos = [...new Set([lembrada, FOTO.get(k), FOTO.get(l.referencia + "|"), l.cor ? IMG.get(k) : null].concat(IMG.get(l.referencia) || []).filter(Boolean))], foto = fotos[0] || null;   // cascata: a casca tenta uma a uma (onerror) e cai na silhueta
       const it = { ref: l.referencia, cor: l.cor || "", cor_nome: COR.get(k) || l.cor || (l.cor ? l.cor : "todas as cores"), modelo: l.descricao || l.referencia, familia: l.familia, genero: l.genero, faixa: l.faixa, categoria: l.categoria,
                    foto, fotos, foto_falta: !foto, venda_mes: l.venda_m3 != null ? Math.round(+l.venda_m3) : null, venda_12m: l.venda_12m != null ? Math.round(+l.venda_12m) : null, estoque: l.estoque != null ? +l.estoque : null,
                    cobertura: l.cobertura != null ? Math.round(+l.cobertura * 10) / 10 : null, excesso: l.excesso != null ? Math.round(+l.excesso) : null, ult_venda: MES_OK.test(String(l.ult_venda)) ? String(l.ult_venda).slice(0, 7) : null,
@@ -69,11 +72,11 @@ window.DadosAcao = (() => {
     const famSet = [...new Set(linhas.map(l => l.familia).filter(Boolean))];
     const familias = famSet.map(f => { const L = itens.filter(i => i.familia === f); return { chave: f, nome: NOME_FAM[f] || f, unidade: UNIDADE(f), n: L.length, estoque: L.reduce((s, i) => s + (i.estoque || 0), 0) }; });
     const tipos = ORDEM.map((t, i) => { const L = itens.filter(x => x.tipo === t); return Object.assign({ tipo: t, ordem: i + 1, n: L.length, estoque: L.reduce((s, x) => s + (x.estoque || 0), 0), itens: L },
-      TIPOS[t], MODO_CLIENTE ? {} : { valor_estoque: L.reduce((s, x) => s + (x.valor_estoque || 0), 0) }); }).filter(t => t.n > 0 || !familia && !termos.length);
+      TIPOS[t], MODO_CLIENTE ? { explicacao: EXPLICA_CLIENTE[t] } : { valor_estoque: L.reduce((s, x) => s + (x.valor_estoque || 0), 0) }); });   // as 3 abas sempre (com 0 quando o filtro esvazia — GAMER 28/10)
     const base = linhas[0] || {};
     return { hoje: hojeD, cliente: { codigo: cliente, nome }, periodo: { chave: PERIODOS[periodo] ? periodo : "bf", rotulo: PERIODOS[periodo] || PERIODOS.bf }, ordem_tipos: ORDEM.slice(),
              familias, tipos, filtro: { familia: familia || null, busca: busca || "" }, bases: { giro: MES_OK.test(String(base.mes_estoque)) ? String(base.mes_estoque).slice(0, 7) : null, venda: base.meses_venda || null },
-             excluidos_em_linha: excluidos.length, excluidos: MODO_CLIENTE ? undefined : excluidos, modo_cliente: MODO_CLIENTE, regra: MODO_CLIENTE ? "seleção para a ação: fora de linha, ponta de estoque e rebaixo · o período só muda o rótulo" : "só fora de linha, ponta de estoque e ação/rebaixo pelo corte do cliente · produto em linha nunca entra · sem preço de referência externa · o período só muda o rótulo" };
+             excluidos_em_linha: excluidos.length, excluidos: MODO_CLIENTE ? undefined : excluidos, modo_cliente: MODO_CLIENTE, regra: MODO_CLIENTE ? "seleção para a ação: fora de linha, ponta de estoque e rebaixo · o período só muda o rótulo" : "só fora de linha, ponta de estoque e ação/rebaixo pelo corte do cliente · produto em linha nunca entra · sem preço de referência externa · o período só muda o rótulo · critério desta tela: corte de estoque do cliente (a aba Cliente conta ponta pelo raio-x e fora de linha pelo cadastro — números diferentes com o mesmo nome)" };
   }
   return { sb, sessao, entrar, sair, clientes, carregar, refiltrar: (p, f, b) => montar(p, f, b), MODO_CLIENTE, PERIODOS, ORDEM };
 })();

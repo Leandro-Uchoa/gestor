@@ -22,11 +22,11 @@
   function aviso(titulo, detalhe) { if (main) main.style.visibility = ""; try { desenhar({ cliente: { nome: titulo, codigo: "" }, aviso: { titulo, detalhe }, tipos: [], familias: [], periodo: { chave: PERIODO, rotulo: DadosAcao.PERIODOS[PERIODO] } }); } catch (e) { document.body.insertAdjacentHTML("afterbegin", `<div style="padding:20px;font-family:Inter,Arial">${esc(titulo)} — ${esc(detalhe)}</div>`); } }
   function barra() {
     const div = document.createElement("div"); div.id = "ti-barra"; div.style.cssText = "display:flex;gap:8px;align-items:center;font-family:Inter,Arial,sans-serif";
-    div.innerHTML = (DadosAcao.MODO_CLIENTE ? "" : `<select id="ti-sel" style="border:1px solid #E6E7E8;border-radius:12px;padding:8px 10px;background:#fff;font-weight:600;font-size:13px;max-width:240px"></select>
-      <a href="cliente.html#cliente=" id="ti-cli" style="background:#fff;border:1px solid #E6E7E8;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;color:#000;text-decoration:none">aba Cliente</a>`)
-      + `<a href="#" id="ti-sair" style="font-size:12px;color:#787B86;text-decoration:underline">sair</a>`;
+    div.innerHTML = (DadosAcao.MODO_CLIENTE ? "" : `<select id="ti-sel" style="border:1px solid #E6E7E8;border-radius:12px;padding:8px 10px;background:#fff;font-weight:600;font-size:13px;max-width:240px;min-height:44px"></select>
+      <a href="cliente.html#cliente=" id="ti-cli" style="background:#fff;border:1px solid #E6E7E8;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;color:#000;text-decoration:none;min-height:44px;display:inline-flex;align-items:center">aba Cliente</a>`)
+      + (DadosAcao.MODO_CLIENTE ? "" : `<a href="#" id="ti-sair" style="font-size:12px;color:#787B86;text-decoration:underline;min-height:44px;display:inline-flex;align-items:center;padding:0 12px;min-width:44px;justify-content:center">sair</a>`);   // GAMER 28/10: "sair" não aparece ao cliente; porteiro: alvo ≥ 44 px
     (document.getElementById("slot_seletor") || document.body).appendChild(div);
-    $("ti-sair").onclick = ev => { ev.preventDefault(); DadosAcao.sair(); };
+    if ($("ti-sair")) $("ti-sair").onclick = ev => { ev.preventDefault(); DadosAcao.sair(); };
     if (!DadosAcao.MODO_CLIENTE) { const sel = $("ti-sel"); sel.innerHTML = LISTA.map(c => `<option value="${esc(c.cliente)}">${esc(c.nome || c.cliente)}</option>`).join(""); sel.value = CLIENTE; sel.onchange = () => { CLIENTE = sel.value; hashAtual(); abrir(); }; }
   }
   const hashAtual = () => { location.hash = "cliente=" + encodeURIComponent(CLIENTE) + "&periodo=" + encodeURIComponent(PERIODO); const a = $("ti-cli"); if (a) a.href = "cliente.html#cliente=" + encodeURIComponent(CLIENTE); };
@@ -58,7 +58,7 @@
   window.onPeriodo = chave => { if (!DadosAcao.PERIODOS[chave]) return; PERIODO = chave; hashAtual(); refaz(); };
   window.onFamilia = chave => { FAMILIA = chave || null; refaz(); };
   window.onBusca = texto => { BUSCA = String(texto || ""); refaz(); };
-  window.onTratar = (ref, cor) => { window.open(`../#aba=cg&cliente=${encodeURIComponent(CLIENTE || "")}&ref=${encodeURIComponent(ref || "")}&cor=${encodeURIComponent(cor || "")}`, "_blank"); };
+  window.onTratar = (ref, cor) => { if (DadosAcao.MODO_CLIENTE) return; window.open(`../#aba=cg&cliente=${encodeURIComponent(CLIENTE || "")}&ref=${encodeURIComponent(ref || "")}&cor=${encodeURIComponent(cor || "")}`, "_blank"); };
   window.onAcao = (nome, ctx) => {
     if (nome === "exportar_pdf") { window.print(); return true; }
     if (nome === "exportar_xlsx") { alert("Exportar para Excel: sai pelas saídas da vitrine (em preparação)."); return true; }     // aprendizado do CMS Space — contrato próprio

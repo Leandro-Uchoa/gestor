@@ -3,13 +3,14 @@
 <title>Gestor · Ação de preço</title>
 <!-- Gestor · AÇÃO DE PREÇO — montada SOBRE A CASCA da aba Cliente (forma aprovada pelo Léo; decisão do BOSS 28/10: copiar antes de criar; o PICASSO manda o delta).
      ZERO dado embutido: tudo vem de desenharAcao(DADOS). Contrato em TI\CONTRATO_ACAO_PRECO_DADOS.md.
-     ⛔ Trava do Léo (28/10): nunca produto em linha; sem preço de referência externa, sem desconto, sem "preço Black". Modo cliente (?modo=cliente): só lista e foto. -->
+     ⛔ Trava do Léo (28/10): nunca produto em linha; sem preço de referência externa. Modo cliente (?modo=cliente): só lista e foto.
+     PICASSO v4 (28/10): delta de desenho — modelo Primer DataTable + Tabler (o mesmo do giro limpo); ver DELTA.md. -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.6.1/dist/css/tabler.min.css" integrity="sha384-tT2UAGE9hxG/p5d0iGIvZ/s8El3nWWG3tfG02i8iOY5Pbf8cZZRVmcrrVs+JG5Vw" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<link rel="stylesheet" href="cliente.css?v=41">
-<link rel="stylesheet" href="acao.css?v=3">
+<link rel="stylesheet" href="cliente.css?v=42">
+<link rel="stylesheet" href="acao.css?v=5">
 </head>
 <body>
 <nav class="rail">
@@ -27,7 +28,7 @@
    <div><div class="pre">CLIENTES · AÇÃO DE PREÇO</div><h1 id="c_nome">—</h1>
     <div style="font-size:13px"><span id="c_sub">—</span></div></div>
    <div id="slot_seletor"></div>
-   <div class="busca a-bsc"><i class="ti ti-search"></i><input id="a_busca" class="a-busca" placeholder="Buscar modelo, referência ou cor — separe por vírgula" autocomplete="off" oninput="ACAO.busca(this.value)" aria-label="buscar na ação de preço"></div>
+   <div class="busca a-bsc"><i class="ti ti-search"></i><input id="a_busca" class="a-busca" placeholder="Buscar modelo, referência ou cor — separe por vírgula" autocomplete="off" oninput="ACAO.busca(this.value)" aria-label="buscar na ação de preço"><kbd>Ctrl K</kbd></div>
    <div class="bts"><a class="b-cl" href="#" onclick="ACAO.acao('exportar_pdf');return false"><i class="ti ti-file-type-pdf"></i>PDF</a><a class="b-cl" href="#" onclick="ACAO.acao('exportar_xlsx');return false"><i class="ti ti-file-spreadsheet"></i>Excel</a><a class="b-am" href="#" onclick="ACAO.acao('material');return false"><i class="ti ti-presentation"></i>Material<span class="d-none d-sm-inline">&nbsp;para o cliente</span></a></div>
   </div>
   <div class="a-aviso" id="a_aviso" hidden></div>
@@ -41,9 +42,9 @@
  <div id="a_listas"></div>
  <div class="text-center hora mt-3" id="rodape">Gestor · ação de preço · sobre a forma aprovada da aba Cliente (27/10/2026)</div>
 </div>
-<script src="acao_tela.js?v=3"></script>
+<script src="acao_tela.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="acao_dados.js?v=3"></script>
-<script src="acao_glue.js?v=3"></script>
+<script src="acao_dados.js?v=5"></script>
+<script src="acao_glue.js?v=5"></script>
 </body></html>

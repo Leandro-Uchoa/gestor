@@ -70,6 +70,7 @@
   let cargaAtual = 0;                                                   // Conselho (PR #1, 27/10): trocar de cliente no meio da carga não pode desenhar o cliente antigo por cima do novo
   async function abrir() {
     const carga = ++cargaAtual, cliente = CLIENTE, nomeSel = (LISTA.find(c => c.cliente === cliente) || {}).nome || cliente;
+    { const z = $("zrnota"); if (z) { z.hidden = true; z.textContent = ""; z.dataset.k = ""; } }   // GAMER 28/10 (v43): o aviso do "0" não pode ficar do cliente anterior
     // GAMER: na troca, a página não pode ficar com o cliente ANTERIOR enquanto o seletor já mostra o novo — cobre com "carregando" até o dado chegar
     // GAMER 28/10: também na PRIMEIRA carga — sem isto a casca mostrava "Sem dado deste cliente" por 2,5 s, que lê como pane diante do cliente
     try { window.desenhar({ cliente: { nome: nomeSel, codigo: "" }, prioridade: { titulo: "Carregando " + nomeSel + "…", detalhe: "lendo o banco" }, sem_bloco_topics: true }); } catch (e) { /* casca sem dado desenha "—" */ } document.querySelectorAll(".ti-ritmo").forEach(el => el.remove());
