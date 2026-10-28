@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<link rel="stylesheet" href="cliente.css?v=25">
+<link rel="stylesheet" href="cliente.css?v=26">
 </head>
 <body>
 <nav class="rail">
@@ -55,10 +55,10 @@
    <div class="vd k cob">
     <div class="lb">Cobertura</div>
     <div class="mt-2"><span class="ns" id="c_cob">—</span><span class="teto" id="c_cob_pill">—</span></div>
-    <div class="regua"><span class="z1" role="button" title="ver os produtos em ruptura" onclick="CLI.cobp('rup')"></span><span class="z2" role="button" title="ver os produtos para forçar a barra" onclick="CLI.cobp('for')"></span><span class="z3" role="button" title="ver os produtos no teto" onclick="CLI.cobp('teto')"></span><i id="c_cob_mk" style="left:-99px"></i></div>
-    <div class="rleg"><span><b class="p">ruptura </b>&lt;4</span><span><b class="p">forçar </b>4–5</span><span><b class="p">teto </b>≥5</span></div>
+    <div class="regua"><span class="z1" role="button" title="ver os produtos em ruptura" onclick="CLI.cobp('rup')"></span><span class="z2" role="button" title="ver os produtos na faixa ideal" onclick="CLI.cobp('for')"></span><span class="z3" role="button" title="ver os produtos com cobertura alta" onclick="CLI.cobp('teto')"></span><i id="c_cob_mk" style="left:-99px"></i></div>
+    <div class="rleg"><span><b class="p">ruptura </b>&lt;4</span><span><b class="p">ideal </b>4–5</span><span><b class="p">alta </b>≥5</span></div>
     <div class="cobpct" id="c_cobpct"></div>
-    <button class="ponta" id="c_ponta" onclick="CLI.cobp('ponta')" hidden></button>
+    <button class="ponta" id="c_ponta" onclick="CLI.cobp('rx')" hidden></button>
     <p class="cobleit" id="cobleit"></p>
     <div class="segs" id="c_segs"></div>
    </div>
@@ -96,7 +96,7 @@
    <div class="fx" id="fx"></div><div class="fxl" id="fxl"></div>
   </div></div>
   <div class="col-lg-6"><div class="pn lista">
-   <div class="d-flex align-items-center"><h3><i class="ti ti-trending-up" style="color:#2E3EFC"></i> Produtos para aporte</h3><span class="ms-auto hora">régua de 23/09 · teto 5</span></div>
+   <div class="d-flex align-items-center"><h3><i class="ti ti-trending-up" style="color:#2E3EFC"></i> Produtos para aporte</h3><span class="ms-auto hora">régua: ruptura &lt;4 · ideal 4–5 · alta ≥5</span></div>
    <div class="sub">modelo + cor com cobertura abaixo de 5 meses · <span class="ap ap-v" style="margin:0">aporte</span> disponível: clique e pede no CMS PASS · <span class="ap ap-r" style="margin:0">aporte S/dispo</span> sem disponível · fora de linha só entra com disponível</div>
    <div id="pre"></div>
   </div></div>
@@ -127,10 +127,10 @@
 
  <div class="text-center hora mt-3" id="rodape">Gestor · aba Cliente · forma aprovada em 27/10/2026 (piloto v19)</div>
 </div>
-<script src="cliente_tela.js?v=25"></script>
+<script src="cliente_tela.js?v=26"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="dados_paridade.js?v=25"></script>
-<script src="cliente_dados.js?v=25"></script>
-<script src="cliente_glue.js?v=25"></script>
+<script src="dados_paridade.js?v=26"></script>
+<script src="cliente_dados.js?v=26"></script>
+<script src="cliente_glue.js?v=26"></script>
 </body></html>

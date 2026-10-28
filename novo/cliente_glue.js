@@ -71,7 +71,8 @@
   async function abrir() {
     const carga = ++cargaAtual, cliente = CLIENTE, nomeSel = (LISTA.find(c => c.cliente === cliente) || {}).nome || cliente;
     // GAMER: na troca, a página não pode ficar com o cliente ANTERIOR enquanto o seletor já mostra o novo — cobre com "carregando" até o dado chegar
-    if (DADOS) { try { window.desenhar({ cliente: { nome: nomeSel, codigo: "" }, prioridade: { titulo: "Carregando " + nomeSel + "…", detalhe: "lendo o banco" }, sem_bloco_topics: true }); } catch (e) { /* casca sem dado desenha "—" */ } document.querySelectorAll(".ti-ritmo").forEach(el => el.remove()); }
+    // GAMER 28/10: também na PRIMEIRA carga — sem isto a casca mostrava "Sem dado deste cliente" por 2,5 s, que lê como pane diante do cliente
+    try { window.desenhar({ cliente: { nome: nomeSel, codigo: "" }, prioridade: { titulo: "Carregando " + nomeSel + "…", detalhe: "lendo o banco" }, sem_bloco_topics: true }); } catch (e) { /* casca sem dado desenha "—" */ } document.querySelectorAll(".ti-ritmo").forEach(el => el.remove());
     try {
       const dados = await Dados.carregar(cliente);
       if (carga !== cargaAtual) return;                                 // chegou atrasado: o seletor já está em outro cliente
