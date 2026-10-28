@@ -401,3 +401,7 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 .anos{flex-wrap:nowrap}.anos .anop{flex:0 0 auto;min-width:64px;width:64px;padding-left:0;padding-right:0;text-align:center}
 @media (max-width:991.98px){.cobp .lst .hd2+.hd2{display:none}.cobp .it.it5{grid-template-columns:minmax(0,1fr) 42px 52px 54px 50px;gap:6px}.cobp .it.it5>span:first-child{min-width:0;overflow:hidden}.cobp .it.it5>span:first-child b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 @media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.25)}#fam td:last-child,#fam_h th:last-child{display:none}.anos{gap:6px}.anos .anop{min-width:60px;width:60px}}
+
+/* v37: cabeçalho da gaveta da cobertura cabe no celular (rótulos menores); a coluna TOTAL deixa de ser fixa (vem antes dos meses) */
+@media (max-width:991.98px){.cobp .hd2 span{font-size:8.5px;letter-spacing:0;white-space:nowrap;overflow:hidden}}
+@media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:static;box-shadow:none}#fam td:last-child,#fam_h th:last-child{display:table-cell}}

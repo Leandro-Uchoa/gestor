@@ -112,7 +112,7 @@ window.Dados = (() => {
       for (const [e, c] of Object.entries(f)) { if (e === "FATURADA") continue; valor += c.valor || 0; const k = ESTN[e]; if (k) est[k] += c.itens || 0; }
       x.valor = valor; x.estados = est;
     }
-    const familias = (MEF.por_familia || []).map(f => ({ nome: f.nome, unidade: f.unidade, meses: f.meses, valor: f.valor, total: f.total }));
+    let familias = (MEF.por_familia || []).map(f => ({ nome: f.nome, unidade: f.unidade, meses: f.meses, valor: f.valor, total: f.total }));   // v37: recalculada das linhas (LIN) mais abaixo — uma base só
     let cartValor = cart.filter(x => x.mes >= hoje).reduce((s, x) => s + (x.valor || 0), 0) || null;
     // Léo 28/10 (demo), item 2a: o "+" de cada mês abre a carteira do mês por ESTADO, família a família (chinelo nunca somado ao tênis)
     const NOMEF = Object.fromEntries((MEF.familias || []).map(f => [f.familia, f])), ordemFam = (MEF.familias || []).map(f => f.familia);
@@ -132,12 +132,15 @@ window.Dados = (() => {
       if (!DATA_OK.test(String(l.prev_fat))) continue;
       const m = String(l.prev_fat).slice(0, 7), f = famDe(l.marca), k = ((NOMEF[f] || {}).nome || f) + "|" + m;
       const uf = ufDe(l), nomeF = (NOMEF[f] || {}).nome || f;
+      { const u = (PU[m] = PU[m] || {}), ufk = uf || "sem UF"; (u[ufk] = u[ufk] || {})[nomeF] = ((u[ufk] || {})[nomeF] || 0) + (+l.cart || 0); }   // v37: UF pelas MESMAS linhas do detalhe; sem UF entra como 'sem UF' para a soma fechar
       (LIN[k] = LIN[k] || []).push({ modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0,
                                      valor: (+l.preco_unit > 0 ? +l.cart * +l.preco_unit : +l.valor_total) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf });   // GAMER 28/10: pares × preço unitário — o valor_total da DETALHADA envelhece quando a linha muda
     }
-    for (const r of (BRUTO.cartUF || [])) { const m = String(r.mes).slice(0, 7), uf = PORTA_UF[String(r.porta || "").trim()] || (r.porta ? null : null); if (!uf || !(+r.pares_cart > 0)) continue;
-      const f = famDe(r.marca), nomeF = (NOMEF[f] || {}).nome || f, u = (PU[m] = PU[m] || {}); (u[uf] = u[uf] || {})[nomeF] = ((u[uf] || {})[nomeF] || 0) + (+r.pares_cart || 0); }
-    if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort().map(u => [u, PU[x.mes][u]]));
+    if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort((a, b) => (a === "sem UF") - (b === "sem UF") || a.localeCompare(b)).map(u => [u, PU[x.mes][u]]));
+    // v37 (GAMER): a matriz por família também sai das linhas (pares e R$ por 'nome|mês'), nunca de outra base; ordem e unidade vêm do MEF
+    { const FL = {}; for (const [k, L] of Object.entries(LIN)) { const [nome, m] = k.split("|"); if (m < hoje) continue; const f = FL[nome] = FL[nome] || { meses: {}, total: 0, valor: 0 }; const pz = L.reduce((s, l) => s + (l.pares || 0), 0), vz = L.reduce((s, l) => s + (l.valor || 0), 0); f.meses[m] = (f.meses[m] || 0) + pz; f.total += pz; f.valor += vz; }
+      const ordem = (MEF.familias || []).map(x => x.nome), un = Object.fromEntries((MEF.familias || []).map(x => [x.nome, x.unidade])), pos = n => ordem.indexOf(n) < 0 ? 99 : ordem.indexOf(n);
+      familias = Object.keys(FL).sort((a, b) => pos(a) - pos(b)).map(n => ({ nome: n, unidade: un[n] || "pares", meses: FL[n].meses, total: FL[n].total, valor: FL[n].valor })).filter(f => f.total > 0); }
     for (const k of Object.keys(LIN)) LIN[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
     // v36 (GAMER 28/10): o R$ do cartão e da faixa dos meses saem das MESMAS linhas que o detalhe abre (pares × preço unitário); o resumo da venda_mensal fica só no aviso
     { const nomeT = ((MEF.familias || []).find(f => f.familia === "OLY FOOTWEAR") || {}).nome || "Tênis Olympikus";
