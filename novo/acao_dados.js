@@ -28,10 +28,11 @@ window.DadosAcao = (() => {
   async function clientes() { const { data, error } = await sb.rpc("clientes_lista"); if (error) throw error; return (data || []).map(c => ({ cliente: c.cliente, nome: c.nome })); }
 
   async function carregar(cliente, periodo) {
-    const [linhas, perfil] = await Promise.all([
-      tudo(sb.from("v_acao_preco").select("tipo,tipo_ordem,familia,referencia,cor,descricao,genero,faixa,categoria,imagem,venda_m3,venda_12m,estoque,cobertura,excesso,ult_venda,meses_sem_fat,mes_estoque,meses_venda,principal" + (MODO_CLIENTE ? "" : ",ult_fat,preco_medio,valor_estoque,carteira_futura"))   // GAMER 28/10: em modo cliente a consulta não traz custo, carteira futura nem último faturamento (quem abre a aba Rede não vê); meses_sem_fat fica porque a trava é calculada com ele
+    const [linhas, perfil, corte] = await Promise.all([
+      tudo(sb.from("v_acao_preco").select("tipo,tipo_ordem,familia,referencia,cor,descricao,genero,faixa,categoria,imagem,venda_m3,venda_12m,estoque,cobertura,excesso,ult_venda,meses_sem_fat,carteira_futura,mes_estoque,meses_venda,principal" + (MODO_CLIENTE ? "" : ",ult_fat,preco_medio,valor_estoque"))   // GAMER 28/10: em modo cliente a consulta não traz custo nem último faturamento; meses_sem_fat e carteira_futura ficam porque a TRAVA é calculada com eles (o item não os expõe)
              .eq("cliente", cliente).order("tipo_ordem").order("estoque", { ascending: false }).order("referencia").order("cor")),
       semErro(() => tudo(sb.from("cliente_perfil").select("cliente,nome").eq("cliente", cliente)), []),
+      semErro(() => tudo(sb.from("corte_estoque_cliente").select("ponta_ate,acao_ate").eq("cliente", cliente)), []),   // GAMER 28/10: o texto da ponta/ação diz o número do corte do cliente
     ]);
     // fotos: colecao.foto_url por referência (+ cor), em blocos de 200 referências
     const refs = [...new Set(linhas.map(l => l.referencia).filter(Boolean))], FOTO = new Map();
@@ -45,16 +46,23 @@ window.DadosAcao = (() => {
     const COR = new Map(CAD.map(p => [p.referencia + "|" + (p.cor || ""), p.cor_descricao])), IMG = new Map();
     for (const p of CAD) { if (!p.foto_url) continue; IMG.set(p.referencia + "|" + (p.cor || ""), p.foto_url); (IMG.get(p.referencia) || IMG.set(p.referencia, []).get(p.referencia)).push(p.foto_url); }
     const situ = await semErro(() => tudo(sb.from("produto_situacao").select("referencia,em_linha").eq("em_linha", false).order("referencia")));
-    BRUTO = { cliente, nome: (perfil[0] || {}).nome || cliente, linhas, FOTO, COR, IMG, FORA: new Set(situ.map(s => s.referencia)) };
+    BRUTO = { cliente, nome: (perfil[0] || {}).nome || cliente, linhas, FOTO, COR, IMG, FORA: new Set(situ.map(s => s.referencia)), corte: (corte || [])[0] || null };
     return montar(periodo || "bf", null, "");
   }
 
   function montar(periodo, familia, busca) {
-    const { cliente, nome, linhas, FOTO, COR, IMG, FORA } = BRUTO, hojeD = new Date().toISOString().slice(0, 10);
+    const { cliente, nome, linhas, FOTO, COR, IMG, FORA, corte } = BRUTO, hojeD = new Date().toISOString().slice(0, 10);
+    const nPt = corte && corte.ponta_ate != null ? Math.round(+corte.ponta_ate).toLocaleString("pt-BR") : null, nAc = corte && corte.acao_ate != null ? Math.round(+corte.acao_ate).toLocaleString("pt-BR") : null, nPt1 = corte && corte.ponta_ate != null ? (Math.round(+corte.ponta_ate) + 1).toLocaleString("pt-BR") : null;
+    const EXPL = Object.assign({}, TIPOS);   // GAMER 28/10: limite com número, do corte deste cliente
+    if (nPt) EXPL["PONTA DE ESTOQUE"] = { nome_tela: "Ponta de estoque", explicacao: "até " + nPt + " pares em estoque (corte deste cliente) E sem faturar para ele há 6 meses ou mais E sem carteira chegando — fechar grade" };
+    if (nAc) EXPL["AÇÃO/REBAIXO"] = { nome_tela: "Ação / rebaixo", explicacao: "de " + nPt1 + " a " + nAc + " pares em estoque (corte deste cliente) E sem faturar há 6 meses ou mais E sem carteira chegando — orientar para ação, promoção ou rebaixo" };
     // ⛔ TRAVA (Léo, 28/10 — a maior bronca do dia; PICASSO): ação de preço NUNCA mostra produto EM LINHA. Fica só o que é fora de linha (tipo ou cadastro) ou está
     // sem faturar para o cliente há 6+ meses. O que a view trouxe pelo corte de estoque e ainda vende (ex.: 4 meses sem faturar) SAI, e é contado para o porteiro.
-    const permitido = l => l.tipo === "FORA DE LINHA" || FORA.has(l.referencia) || (+l.meses_sem_fat >= 6);
-    const excluidos = linhas.filter(l => ORDEM.includes(l.tipo) && !permitido(l)).map(l => ({ ref: l.referencia, modelo: l.descricao, tipo: l.tipo, meses_sem_fat: l.meses_sem_fat, estoque: l.estoque }));
+    // GAMER 28/10: com carteira chegando o produto SAI da lista nos dois modos (não se promove o que está chegando); no interno vai ao #a_exc com o motivo
+    const chegando = l => +l.carteira_futura > 0;
+    const permitido = l => !chegando(l) && (l.tipo === "FORA DE LINHA" || FORA.has(l.referencia) || (+l.meses_sem_fat >= 6));
+    const excluidos = linhas.filter(l => ORDEM.includes(l.tipo) && !permitido(l)).map(l => ({ ref: l.referencia, modelo: l.descricao, tipo: l.tipo, meses_sem_fat: l.meses_sem_fat, estoque: l.estoque, motivo: chegando(l) ? "carteira chegando" : "ainda em linha (menos de 6 meses sem faturar)" }));
+    const nCheg = excluidos.filter(e => e.motivo === "carteira chegando").length, nLinha = excluidos.length - nCheg;
     const termos = String(busca || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);   // vários termos separados por vírgula
     const casa = it => !termos.length || termos.every(t => [it.modelo, it.ref, it.cor, it.cor_nome, it.familia, it.genero, it.categoria, it.faixa].some(v => String(v || "").toLowerCase().includes(t)));
     const itens = linhas.filter(l => ORDEM.includes(l.tipo) && permitido(l)).map(l => {
@@ -65,18 +73,18 @@ window.DadosAcao = (() => {
                    mes_estoque: MES_OK.test(String(l.mes_estoque)) ? String(l.mes_estoque).slice(0, 7) : null, meses_venda: l.meses_venda || "", principal: !!l.principal, tipo: l.tipo,
                    tag: l.tipo === "FORA DE LINHA" ? "fora de linha" : l.tipo === "PONTA DE ESTOQUE" ? "ponta" : "ação/rebaixo", sem_repor: l.tipo === "FORA DE LINHA", unidade: UNIDADE(l.familia) };
       if (!MODO_CLIENTE) Object.assign(it, { preco_medio: l.preco_medio != null ? +l.preco_medio : null, valor_estoque: l.valor_estoque != null ? Math.round(+l.valor_estoque) : null, meses_sem_fat: l.meses_sem_fat,
-                                              ult_fat: DATA_OK.test(String(l.ult_fat)) ? String(l.ult_fat).slice(0, 10) : null, carteira_futura: l.carteira_futura != null ? +l.carteira_futura : 0, segurar: +l.carteira_futura > 0 });
+                                              ult_fat: DATA_OK.test(String(l.ult_fat)) ? String(l.ult_fat).slice(0, 10) : null, carteira_futura: 0, segurar: false });   // quem tem carteira chegando já saiu da lista
       return it;
     }).filter(it => (!familia || it.familia === familia) && casa(it));
     itens.sort((a, b) => ORDEM.indexOf(a.tipo) - ORDEM.indexOf(b.tipo) || (b.estoque || 0) - (a.estoque || 0) || String(a.modelo).localeCompare(String(b.modelo), "pt-BR"));   // ordem garantida aqui (não depende do banco nem do harness)
     const famSet = [...new Set(linhas.map(l => l.familia).filter(Boolean))];
     const familias = famSet.map(f => { const L = itens.filter(i => i.familia === f); return { chave: f, nome: NOME_FAM[f] || f, unidade: UNIDADE(f), n: L.length, estoque: L.reduce((s, i) => s + (i.estoque || 0), 0) }; });
     const tipos = ORDEM.map((t, i) => { const L = itens.filter(x => x.tipo === t); return Object.assign({ tipo: t, ordem: i + 1, n: L.length, estoque: L.reduce((s, x) => s + (x.estoque || 0), 0), itens: L },
-      TIPOS[t], MODO_CLIENTE ? { explicacao: EXPLICA_CLIENTE[t] } : { valor_estoque: L.reduce((s, x) => s + (x.valor_estoque || 0), 0) }); });   // as 3 abas sempre (com 0 quando o filtro esvazia — GAMER 28/10)
+      EXPL[t], MODO_CLIENTE ? { explicacao: EXPLICA_CLIENTE[t] } : { valor_estoque: L.reduce((s, x) => s + (x.valor_estoque || 0), 0) }); });   // as 3 abas sempre (com 0 quando o filtro esvazia — GAMER 28/10)
     const base = linhas[0] || {};
     return { hoje: hojeD, cliente: { codigo: cliente, nome }, periodo: { chave: PERIODOS[periodo] ? periodo : "bf", rotulo: PERIODOS[periodo] || PERIODOS.bf }, ordem_tipos: ORDEM.slice(),
              familias, tipos, filtro: { familia: familia || null, busca: busca || "" }, bases: { giro: MES_OK.test(String(base.mes_estoque)) ? String(base.mes_estoque).slice(0, 7) : null, venda: base.meses_venda || null },
-             excluidos_em_linha: MODO_CLIENTE ? 0 : excluidos.length, excluidos: MODO_CLIENTE ? undefined : excluidos,   /* GAMER 28/10: em modo cliente nem o número vai ao DOM */ modo_cliente: MODO_CLIENTE, regra: MODO_CLIENTE ? "seleção para a ação: fora de linha, ponta de estoque e rebaixo" : "só fora de linha, ponta de estoque e ação/rebaixo pelo corte do cliente · produto em linha nunca entra · sem preço de referência externa · o período só muda o rótulo · critério desta tela: corte de estoque do cliente (a aba Cliente conta ponta pelo raio-x e fora de linha pelo cadastro — números diferentes com o mesmo nome)" };
+             excluidos_em_linha: MODO_CLIENTE ? 0 : excluidos.length, excluidos_carteira: MODO_CLIENTE ? 0 : nCheg, excluidos_linha: MODO_CLIENTE ? 0 : nLinha, excluidos: MODO_CLIENTE ? undefined : excluidos,   /* GAMER 28/10: em modo cliente nem o número vai ao DOM */ modo_cliente: MODO_CLIENTE, regra: MODO_CLIENTE ? "seleção para a ação: fora de linha, ponta de estoque e rebaixo" : "só fora de linha, ponta de estoque e ação/rebaixo pelo corte do cliente · produto em linha nunca entra · sem preço de referência externa · o período só muda o rótulo · critério desta tela: corte de estoque do cliente (a aba Cliente conta ponta pelo raio-x e fora de linha pelo cadastro — números diferentes com o mesmo nome)" };
   }
   return { sb, sessao, entrar, sair, clientes, carregar, refiltrar: (p, f, b) => montar(p, f, b), MODO_CLIENTE, PERIODOS, ORDEM };
 })();

@@ -20,7 +20,7 @@
 .a-per,.a-fam{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px;padding:3px;border-radius:8px;background:#fff;border:1px solid var(--a-bd);max-width:100%}
 .a-per{margin:12px 0 4px}
 .a-fam{margin:0 0 6px}
-.a-per span,.a-fam span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:32px;padding:0 12px;border-radius:6px;font:500 13px Inter;color:var(--a-mfg);white-space:nowrap;user-select:none}
+.a-per span,.a-fam span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:44px;padding:0 12px;border-radius:6px;font:500 13px Inter;color:var(--a-mfg);white-space:nowrap;user-select:none}
 .a-per span:hover,.a-fam span:hover{color:var(--a-fg)}
 .a-per span.on,.a-fam span.on{background:#000;color:#fff}
 .a-per span:focus-visible,.a-fam span:focus-visible{outline:2px solid var(--a-az);outline-offset:1px}
@@ -30,7 +30,7 @@
 /* ---------- abas das 3 listas com contagem (Polaris IndexFilters / Linear) ---------- */
 .a-res{margin:8px 0 4px}
 .a-abas{display:flex;flex-wrap:wrap;gap:2px;background:#fff;border:1px solid var(--a-bd);border-radius:8px;padding:0 6px}
-.a-aba{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;font:500 13px Inter;color:var(--a-tx);box-shadow:inset 0 -2px 0 transparent}
+.a-aba{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;font:500 13px Inter;color:var(--a-tx);box-shadow:inset 0 -2px 0 transparent}
 .a-aba:hover{box-shadow:inset 0 -2px 0 var(--a-bd)}
 .a-aba:focus-visible{outline:2px solid var(--a-az);outline-offset:-2px}
 .a-aba b{font:600 12px Inter;color:var(--a-fg);background:var(--a-ow);border:1px solid var(--a-bd);border-radius:999px;padding:0 8px;line-height:18px;font-variant-numeric:tabular-nums}
@@ -57,9 +57,10 @@
 .lista.acl .row1.ac .ft.sem::after{content:none}
 /* nome em negrito; cor e ref. em cinza abaixo; tag = ponto + palavra */
 .lista.acl .row1.ac .nm{min-width:0}
-.lista.acl .row1.ac .nm .mo{display:block;font-size:13px;font-weight:600;color:var(--a-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lista.acl .row1.ac .nm .mt{display:block;font-size:12px;color:var(--a-mfg);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lista.acl .row1.ac .nm .dt{display:block;font-size:11px;color:var(--a-mfg);margin-top:2px}
+.lista.acl .row1.ac .nm .mo{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;font-size:13px;font-weight:600;line-height:1.3;color:var(--a-fg);overflow:hidden;white-space:normal;overflow-wrap:normal;word-break:normal}   /* v8: até 2 linhas, sem partir palavra; clamp só como último recurso (title) */
+.lista.acl .row1.ac .nm .mt{display:block;font-size:12px;color:var(--a-mfg);margin-top:1px;white-space:normal}
+.lista.acl .row1.ac .nm .mt .mr{display:inline-block;white-space:nowrap}   /* v8: a ref. é um bloco inteiro — se não cabe, desce inteira */
+.lista.acl .row1.ac .nm .dt{display:block;font-size:11px;color:var(--a-mfg);margin-top:2px;white-space:normal}
 .lista.acl .row1.ac .tgs{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px}
 .lista.acl .st{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--a-mfg);white-space:nowrap;margin:0}
 .lista.acl .st i{width:6px;height:6px;border-radius:50%;display:inline-block}
@@ -69,7 +70,7 @@
 .lista.acl .sg{display:inline-flex;flex:none;align-items:center;font-size:11px;font-weight:600;color:#000;background:rgba(255,255,26,.35);border:1px solid rgba(0,0,0,.12);border-radius:4px;padding:0 6px;line-height:18px;white-space:nowrap}
 .lista.acl .sg i{display:none}
 body:not(.cliente) .lista.acl .row1.ac.seg .st{display:none}
-.lista.acl .trt{display:inline-block;font-size:11px;font-weight:600;color:var(--a-az);margin-top:4px}
+.lista.acl .trt{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;font-size:11px;font-weight:600;color:var(--a-az)}
 .lista.acl .row1.ac .num.interno{color:var(--a-tx)}
 
 /* ---------- modo cliente: só lista + foto ---------- */
@@ -97,3 +98,21 @@ body.cliente .interno,body.cliente .bts,body.cliente .rail,body.cliente .busca{d
 body.cliente .lista.acl .row1.ac{grid-template-columns:64px 1fr 72px 80px}
 @media (max-width:991.98px){body.cliente .lista.acl .row1.ac{grid-template-columns:56px 1fr 72px 80px}}
 @media (max-width:575.98px){body.cliente .lista.acl .row1.ac{grid-template-columns:48px 1fr 46px 54px}}
+
+/* ===== PICASSO v8 · regras NOVAS (as alteradas foram na origem) ===== */
+/* celular: cor numa linha e a ref. inteira na de baixo; .dt um pedaço por linha, sem o separador */
+@media (max-width:991.98px){.lista.acl .row1.ac .nm .mt .mc,.lista.acl .row1.ac .nm .mt .mr{display:block}.lista.acl .row1.ac .nm .dt .dp{display:block}.lista.acl .row1.ac .nm .sp{display:none}}
+/* alvo ≥ 44 px sem aumentar a letra: área de toque invisível nos números que abrem o giro (só existem no modo interno) */
+.lista.acl .row1.ac .num .abre{position:relative;display:inline-block}
+.lista.acl .row1.ac .num .abre::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+.lista.acl .mais{display:inline-flex;align-items:center;min-height:44px}
+/* celular (< 576, os dois modos): o nome ganha a largura da linha (colunas 2 a 4) e cobertura/estoque descem para baixo dele,
+   nas mesmas colunas do cabeçalho — padrão de lista no celular (Tabler .table-mobile / Polaris). As colunas da grade NÃO mudam. */
+@media (max-width:575.98px){
+ .lista.acl .row1.ac:not(.hd)>.ft{grid-row:1/span 2;align-self:start}
+ .lista.acl .row1.ac:not(.hd)>.nm{grid-column:2/-1;grid-row:1}
+ .lista.acl .row1.ac:not(.hd)>.num:nth-of-type(3){grid-column:3;grid-row:2}
+ .lista.acl .row1.ac:not(.hd)>.num:nth-of-type(4){grid-column:4;grid-row:2}
+}
+/* botões do topo (PDF · Excel · Material) com alvo de 44 px nesta tela */
+.topo .bts a{min-height:44px}
