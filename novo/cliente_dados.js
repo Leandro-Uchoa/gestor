@@ -70,6 +70,8 @@ window.Dados = (() => {
     // os CDs do líder no GTM (código EBM → UF): a carteira por UF de destino (Léo 28/10, cliente com mais de um CD); carteira_linha.codigo é o CD que recebe
     const codLider = ((doc || {}).perfil || {}).cod_lider;
     BRUTO.cds = codLider ? await semErro(() => tudo(sb.from("gtm_porta").select("codigo_ebm,uf,cidade,centro_distribuicao").eq("codigo_lider", String(codLider)).eq("centro_distribuicao", true).order("codigo_ebm"))) : [];
+    // carteira por porta (CD) na MESMA fonte do mês (venda_mensal), para a UF fechar com o total do mês (GAMER 28/10)
+    BRUTO.cartUF = await semErro(() => tudo(sb.from("venda_mensal").select("mes,marca,porta,pares_cart").eq("cliente", cliente).eq("fonte", "DETALHADA").gte("mes", new Date().toISOString().slice(0, 7) + "-01").gt("pares_cart", 0).order("mes").order("porta").order("referencia").order("cor")));
     await nomesDasCores(drill.concat(cartLin || []));                                 // nomes de cor também para as linhas da carteira (família × mês, Léo 28/10)
     return montar({ marca: ["OLY"], tipo: "tenis", genero: [], categoria: [] });
   }
@@ -122,7 +124,8 @@ window.Dados = (() => {
     }
     // UF de destino (Léo 28/10, cliente com mais de um CD): carteira_linha.codigo é o CD que recebe; a UF vem do GTM (gtm_porta do líder, centro_distribuicao)
     const UFCD = new Map(); for (const c of (BRUTO.cds || [])) { const m = String(c.codigo_ebm || "").match(/^\d+/); if (m && c.uf) UFCD.set(m[0], c.uf); }
-    const ufDe = l => UFCD.get(String(l.codigo || "").trim()) || null, PU = {};
+    const ufDe = l => UFCD.get(String(l.codigo || "").trim()) || null, PU = {}, PORTA_UF = {};
+    for (const l of (cartLin || [])) { const u = ufDe(l); if (u && l.porta) PORTA_UF[String(l.porta).trim()] = u; }   // porta ("CD FOR") → UF, pelo código do CD
     // item 2b: todo número da matriz família × mês abre a carteira daquela família naquele mês, linha a linha (carteira_linha, PREV FAT no mês)
     const LIN = {};
     for (const l of (cartLin || [])) {
@@ -131,8 +134,9 @@ window.Dados = (() => {
       const uf = ufDe(l), nomeF = (NOMEF[f] || {}).nome || f;
       (LIN[k] = LIN[k] || []).push({ modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0,
                                      valor: +l.valor_total || (+l.cart * +(l.preco_unit || 0)) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf });
-      if (uf) { const u = (PU[m] = PU[m] || {}); (u[uf] = u[uf] || {})[nomeF] = ((u[uf] || {})[nomeF] || 0) + (+l.cart || 0); }
     }
+    for (const r of (BRUTO.cartUF || [])) { const m = String(r.mes).slice(0, 7), uf = PORTA_UF[String(r.porta || "").trim()] || (r.porta ? null : null); if (!uf || !(+r.pares_cart > 0)) continue;
+      const f = famDe(r.marca), nomeF = (NOMEF[f] || {}).nome || f, u = (PU[m] = PU[m] || {}); (u[uf] = u[uf] || {})[nomeF] = ((u[uf] || {})[nomeF] || 0) + (+r.pares_cart || 0); }
     if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort().map(u => [u, PU[x.mes][u]]));
     for (const k of Object.keys(LIN)) LIN[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
     // ---------- giro (já vem só tênis OLY do banco) + cobertura: último mês COM estoque ÷ média dos 3 meses fechados — "—" quando falta
@@ -165,13 +169,15 @@ window.Dados = (() => {
     // CORTE POR CLIENTE (Léo na demo, 28/10 — "depende muito de cliente a cliente"; 0095): pelo estoque em pares (praças somadas) — até ponta_ate = PONTA
     // (mesmo em linha), até acao_ate = AÇÃO/REBAIXO, acima = leitura normal da régua; fora de linha sempre indicado e nunca propõe repor. Sem corte
     // (clientes que o Léo ainda não calibrou): piso 12/mês + curva dos 80% (cauda de pouco volume fora das barras), fora de linha e raio-x → ponta.
-    const PT = (drill || []).map(r => { const k = r.referencia + "|" + (r.cor || ""), venda = r.venda_media != null ? Math.round(r.venda_media) : null, cob = r.cobertura != null ? Math.round(r.cobertura * 10) / 10 : null, fora = FORA.has(r.referencia), est = r.estoque || 0;
+    const PT = (drill || []).map(r => { const k = r.referencia + "|" + (r.cor || ""), venda = r.venda_media != null ? Math.round(r.venda_media) : null, fora = FORA.has(r.referencia), est = r.estoque || 0;
+      const curta = r.cobertura == null && r.venda_media > 0 && r.estoque != null && (r.meses_com_venda || 0) > 0;   // GAMER 28/10: sem 3 meses fechados a cobertura saía "—" e 16.450 pares de encalhe sumiam da régua
+      const cob = r.cobertura != null ? Math.round(r.cobertura * 10) / 10 : curta ? Math.round(r.estoque / r.venda_media * 10) / 10 : null, base_curta = curta ? r.meses_com_venda : null;
       const na_curva = !temCurva || NACURVA.has(k), relevante = (venda || 0) >= PISO && na_curva && !(cob != null && cob >= 5 && est < EST_TETO);
       let grupo;
       if (CORTE) { grupo = est <= CORTE.ponta_ate ? "ponta" : est <= CORTE.acao_ate ? "acao" : cob != null ? "barra" : "sem_base"; if (fora && grupo !== "barra") grupo = "fora_linha"; }
       else grupo = fora || ja.has(k) ? "ponta" : !relevante ? "cauda" : cob != null ? "barra" : "sem_base";
       return { modelo: r.produto, cor: r.cor ? (cores.get(k) || r.cor) : "todas as cores", ref: r.referencia, venda, estoque: r.estoque, cobertura: cob, giro: r.giro,
-               carteira: r.cor ? (CL.get(k) || {}).cart || 0 : (CR.get(r.referencia) || {}).cart || 0, fora_linha: fora, sem_repor: fora, na_curva, relevante, grupo }; });
+               carteira: r.cor ? (CL.get(k) || {}).cart || 0 : (CR.get(r.referencia) || {}).cart || 0, fora_linha: fora, sem_repor: fora, na_curva, relevante, grupo, base_curta }; });
     const totEst = ((drill || {}).meta || {}).total_estoque || PT.reduce((s, r) => s + (r.estoque || 0), 0) || 0;
     const naBarra = PT.filter(r => r.grupo === "barra");
     const fx2 = (fn) => { const p = naBarra.filter(fn).reduce((s, r) => s + (r.estoque || 0), 0); return { pares: p, pct: totEst ? p / totEst * 100 : null }; };
@@ -197,7 +203,9 @@ window.Dados = (() => {
     const tabela = P.filter(r => (r.venda || 0) > 0).sort((a, b) => b.venda - a.venda).slice(0, 20);
     const fx = { alto: { modelos: 0, pares: 0, valor: 0 }, medio: { modelos: 0, pares: 0, valor: 0 }, baixo: { modelos: 0, pares: 0, valor: 0 }, novo: { modelos: 0, pares: 0, valor: 0 } };
     for (const r of P) { if (!(r.carteira > 0)) continue; const k = r.giro == null ? "novo" : r.giro >= 30 ? "alto" : r.giro <= 20 ? "baixo" : "medio"; fx[k].modelos++; fx[k].pares += r.carteira; fx[k].valor += r.valor; }
-    const produtos = { base: `${meta_d.nome || "tênis Olympikus"} · AG consolidada · ${txtBase}`, top_base: "venda ≥ 40/mês, em linha, por giro", top, aporte, baixo, tabela, faixas: fx,
+    { const refsP = new Set(P.filter(r => !r.cor).map(r => r.ref)), chavesP = new Set(P.filter(r => r.cor).map(r => r.ref + "|" + r.cor));   // GAMER 28/10: 7.212 pares de carteira estavam em referências sem linha na AG — entram como "novo, sem giro"
+      for (const [k, c] of CL) { const ref = k.split("|")[0]; if (refsP.has(ref) || chavesP.has(k) || !(c.cart > 0)) continue; fx.novo.modelos++; fx.novo.pares += c.cart; fx.novo.valor += c.valor; } }
+    const produtos = { base: `${meta_d.nome || "tênis Olympikus"} · AG consolidada · ${String(txtBase).replace("régua teto 5", "régua: ruptura < 4 · ideal 4–5 · alta ≥ 5")}`, top_base: "venda ≥ 40/mês, em linha, por giro", top, aporte, baixo, tabela, faixas: fx,
                        novos: { modelos: fx.novo.modelos, pares: fx.novo.pares }, fora_sem_dispo: [...new Set(P.filter(r => r.fora_linha && r.cobertura != null && r.cobertura < 5 && (r.venda || 0) >= 20 && !r.disponivel).map(r => r.modelo))].sort(), aba: aba ? aba.tipo : "tenis" };
     // cobertura por produto (só tênis OLY): lista das faixas (≥ 20/mês, corte do v19), % do estoque por faixa (todos) e a ponta de estoque (raio-x do NÚCLEO)
     // ponta de estoque (cartão ⌛): o raio-x do NÚCLEO + os fora de linha com estoque (não estão em ruptura: não há o que antecipar de produto que saiu de linha)
