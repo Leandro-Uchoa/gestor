@@ -126,17 +126,18 @@
   };
   // TOPICS tratável: grava no topics_item pelo mesmo caminho da aba TOPICS (política do banco: só quem está em topics_leitor).
   // Linha vinda da v_decidir_cliente (id "dec:…") não é item do TOPICS: "orientar" e "feito" viram um item novo no bloco do cliente, com a linha como nota.
+  // devolve Promise<boolean>: a casca só confirma ("gravado") quando resolve true; false ou erro = "não gravou" (PICASSO, 27/10 noite)
   window.onTopico = async (acao, id, texto) => {
-    if (Dados.MODO_CLIENTE) return;                                      // modo cliente: o TOPICS é interno; nada se lê nem se grava
+    if (Dados.MODO_CLIENTE) return false;                                // modo cliente: o TOPICS é interno; nada se lê nem se grava
     const sb = Dados.sb, b = BLOCO || (((DADOS || {}).topics || [])[0] || {}).bloco || null;
     try {
       const { data: { user } } = await sb.auth.getUser(); const quem = (user && user.email) || null;
-      if (acao === "abrir") { window.open(`../#aba=topics${b ? "&bloco=" + encodeURIComponent(b) : ""}`, "_blank"); return; }
+      if (acao === "abrir") { window.open(`../#aba=topics${b ? "&bloco=" + encodeURIComponent(b) : ""}`, "_blank"); return true; }
       const ehView = String(id || "").startsWith("dec:"), item = (DADOS.decidir || []).find(i => i.id === id);
       if (!b && acao !== "abrir") throw new Error("este cliente não tem bloco no TOPICS");
       if (ehView) {
         const novoId = "cl" + Date.now().toString(36), txt = acao === "feito" ? "Decidido na aba Cliente: " + (item ? item.texto : id) : (texto || "");
-        if (!txt) return;
+        if (!txt) return false;
         const r = await sb.from("topics_item").insert({ escritorio_id: ESC, id: novoId, bloco: b, sub: "aba Cliente · " + (item ? item.regra : "decidir"), txt, nota: item ? `${item.regra} · ${item.fonte}` : null, tipo: acao === "feito" ? "tarefa" : "decisao", dono: "LEO", quem, feito: acao === "feito", alerta: false, atualizado_por: quem }); if (r.error) throw r.error;
       }
       else if (acao === "feito") { const r = await sb.from("topics_item").update({ feito: true, atualizado_por: quem }).match({ escritorio_id: ESC, id }); if (r.error) throw r.error; if (item) item.feito = true; }
@@ -146,7 +147,8 @@
         const r = await sb.from("topics_item").insert({ escritorio_id: ESC, id: novoId, bloco: b, sub: "aba Cliente", txt: texto, tipo: "tarefa", dono: "LEO", quem, feito: false, alerta: false, atualizado_por: quem }); if (r.error) throw r.error;
       }
       abrir();                                                           // relê do banco: a tela mostra o que está gravado, não o que eu acho
-    } catch (e) { alert("o TOPICS não gravou: " + (e.message || e)); abrir(); }
+      return true;
+    } catch (e) { console.error("TOPICS não gravou", e); abrir(); return false; }
   };
   arranque();
 })();
