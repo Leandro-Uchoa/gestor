@@ -188,7 +188,7 @@ function matriz(){const ms=mesesDe(PER),tri=ms.length>1;$('secfx').style.display
  $('mx').innerHTML=`<thead><tr><th>Faixa / família</th>${CLI.map(c=>`<th>${esc(c.nome)}</th>`).join('')}${LEO?`<th>Léo (${CLI.length})</th>`:''}</tr></thead><tbody>`+FX.map(([k,n])=>row(k,n,'pares')).join('')+row('__TT','Total tênis Olympikus','pares',1)+FAM.filter(([k])=>quem.some(c=>L(m,k,c))).map(([k,n,u])=>row(k,n,u)).join('')+'</tbody>';
  const C=(D.controle||[]).filter(x=>String(x.mes).slice(0,7)===m.slice(0,7));
  // conferência como no piloto metas_v2: a linha do TÊNIS (TT CALCADOS) — soma dos clientes × Carta, diferença e limite; famílias em R$ sem Carta
- const TC=C.find(x=>/TT CALCADOS/i.test(String(x.chave||''))),lim=TC&&TC.tolerancia!=null?(TC.tolerancia<1?TC.tolerancia*100:+TC.tolerancia):2;
+ const TC=C.find(x=>/TT CALCADOS/i.test(String(x.chave||''))),lim=(()=>{const t=TC&&TC.tolerancia;if(typeof t==='number')return t<1?t*100:t;const m=String(t||'').match(/([\d.,]+)\s*%/);return m?+m[1].replace(',','.'):2})();
  const dif=TC&&TC.carta?Math.abs(TC.soma_tres-TC.carta)/TC.carta*100:null,okT=dif!=null&&dif<=lim;
  $('conf').innerHTML=TC&&TC.carta?`<i class="ti ti-${okT?'circle-check':'alert-triangle'}"></i><span><b>Conferência com a Carta:</b> soma dos ${CLI.length===3?'três':CLI.length} ${fmt(TC.soma_tres)} × Carta ${fmt(TC.carta)} pares — diferença ${dif.toFixed(1).replace('.',',')}% (limite ${String(lim).replace('.',',')}%). Famílias em R$: fonte DETALHADA × PDC, sem conferência com a Carta.</span>`
   :TC?`<i class="ti ti-alert-triangle"></i><span><b>Conferência com a Carta:</b> carta do tênis ainda não lida. Famílias em R$: fonte DETALHADA × PDC, sem conferência com a Carta.</span>`:''}
@@ -205,6 +205,6 @@ window.desenharMetas(window.DADOS_METAS||{});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="metas_dados.js?v=3"></script>
-<script src="metas_glue.js?v=3"></script>
+<script src="metas_dados.js?v=4"></script>
+<script src="metas_glue.js?v=4"></script>
 </body></html>
