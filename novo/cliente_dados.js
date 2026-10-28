@@ -136,18 +136,19 @@ window.Dados = (() => {
       (LIN[k] = LIN[k] || []).push({ modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0,
                                      valor: (+l.preco_unit > 0 ? +l.cart * +l.preco_unit : +l.valor_total) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf });   // GAMER 28/10: pares × preço unitário — o valor_total da DETALHADA envelhece quando a linha muda
     }
+    const VRES = {};   // R$ do resumo (venda_mensal, carteira a faturar) por 'nome|mês' e 'nome|todos' — a tela compara com as linhas
+    for (const [m, fams] of Object.entries(MEF.matriz || {})) { if (m < hoje) continue; for (const [f, es] of Object.entries(fams)) { const v = Object.entries(es).filter(([e]) => e !== "FATURADA").reduce((s, [, c]) => s + (c.valor || 0), 0); const nomeF = (NOMEF[f] || {}).nome || f; VRES[nomeF + "|" + m] = v; VRES[nomeF + "|todos"] = (VRES[nomeF + "|todos"] || 0) + v; } }
     if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort((a, b) => (a === "sem UF") - (b === "sem UF") || a.localeCompare(b)).map(u => [u, PU[x.mes][u]]));
     // v37 (GAMER): a matriz por família também sai das linhas (pares e R$ por 'nome|mês'), nunca de outra base; ordem e unidade vêm do MEF
     { const FL = {}; for (const [k, L] of Object.entries(LIN)) { const [nome, m] = k.split("|"); if (m < hoje) continue; const f = FL[nome] = FL[nome] || { meses: {}, total: 0, valor: 0 }; const pz = L.reduce((s, l) => s + (l.pares || 0), 0), vz = L.reduce((s, l) => s + (l.valor || 0), 0); f.meses[m] = (f.meses[m] || 0) + pz; f.total += pz; f.valor += vz; }
       const ordem = (MEF.familias || []).map(x => x.nome), un = Object.fromEntries((MEF.familias || []).map(x => [x.nome, x.unidade])), pos = n => ordem.indexOf(n) < 0 ? 99 : ordem.indexOf(n);
-      familias = Object.keys(FL).sort((a, b) => pos(a) - pos(b)).map(n => ({ nome: n, unidade: un[n] || "pares", meses: FL[n].meses, total: FL[n].total, valor: FL[n].valor })).filter(f => f.total > 0); }
+      for (const [k, v] of Object.entries(VRES)) { const [n, m] = k.split("|"); if (m === "todos" && v > 0 && !FL[n]) FL[n] = { meses: {}, total: 0, valor: 0, sem_linhas: true }; }   // v38 (GAMER): família com resumo e sem linha não some calada
+      familias = Object.keys(FL).sort((a, b) => pos(a) - pos(b)).map(n => ({ nome: n, unidade: un[n] || "pares", meses: FL[n].meses, total: FL[n].total, valor: FL[n].valor, sem_linhas: !!FL[n].sem_linhas, resumo_valor: VRES[n + "|todos"] || 0 })).filter(f => f.total > 0 || f.sem_linhas); }
     for (const k of Object.keys(LIN)) LIN[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
     // v36 (GAMER 28/10): o R$ do cartão e da faixa dos meses saem das MESMAS linhas que o detalhe abre (pares × preço unitário); o resumo da venda_mensal fica só no aviso
     { const nomeT = ((MEF.familias || []).find(f => f.familia === "OLY FOOTWEAR") || {}).nome || "Tênis Olympikus";
       for (const x of cart) { const L = LIN[nomeT + "|" + x.mes]; if (L) x.valor = L.reduce((s, l) => s + (l.valor || 0), 0); } }
     const linhasBase = (cartLin || []).reduce((m, l) => l.base_em && (!m || String(l.base_em) > m) ? String(l.base_em).slice(0, 10) : m, null);
-    const VRES = {};   // R$ do resumo (venda_mensal, carteira a faturar) por 'nome|mês' e 'nome|todos' — a tela compara com as linhas
-    for (const [m, fams] of Object.entries(MEF.matriz || {})) { if (m < hoje) continue; for (const [f, es] of Object.entries(fams)) { const v = Object.entries(es).filter(([e]) => e !== "FATURADA").reduce((s, [, c]) => s + (c.valor || 0), 0); const nomeF = (NOMEF[f] || {}).nome || f; VRES[nomeF + "|" + m] = v; VRES[nomeF + "|todos"] = (VRES[nomeF + "|todos"] || 0) + v; } }
     const LREF = {};   // carteira por referência (e por referência|cor): as linhas que o giro baixo abre
     for (const l of (cartLin || [])) { if (!DATA_OK.test(String(l.prev_fat))) continue; const it = { modelo: l.descricao || l.referencia, ref: l.referencia, cor: l.cor || "", cor_nome: cores.get(l.referencia + "|" + (l.cor || "")) || l.cor || "", pares: +l.cart || 0, valor: (+l.preco_unit > 0 ? +l.cart * +l.preco_unit : +l.valor_total) || 0, prev_fat: String(l.prev_fat).slice(0, 10), uf: ufDe(l) };
       (LREF[l.referencia] = LREF[l.referencia] || []).push(it); if (l.cor) (LREF[l.referencia + "|" + l.cor] = LREF[l.referencia + "|" + l.cor] || []).push(it); }

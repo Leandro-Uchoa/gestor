@@ -405,3 +405,7 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 /* v37: cabeçalho da gaveta da cobertura cabe no celular (rótulos menores); a coluna TOTAL deixa de ser fixa (vem antes dos meses) */
 @media (max-width:991.98px){.cobp .hd2 span{font-size:8.5px;letter-spacing:0;white-space:nowrap;overflow:hidden}}
 @media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:static;box-shadow:none}#fam td:last-child,#fam_h th:last-child{display:table-cell}}
+
+/* v38 (GAMER): a matriz por família cabe no celular (célula compacta, nome curto); linha sem linhas na carteira */
+@media (max-width:575.98px){#fam td,#fam_h th{padding:5px 3px;font-size:11px;white-space:nowrap}#fam td:first-child{max-width:74px;white-space:normal;line-height:1.15}#fam td.num small{display:none}}
+#fam tr.sem-lin td{font-size:11px}
