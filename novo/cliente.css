@@ -433,3 +433,17 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 #fam .zero-res{cursor:help;white-space:nowrap}#fam .zero-res .pt-av{display:inline-block;width:6px;height:6px;border-radius:50%;background:#FFFF1A;box-shadow:0 0 0 1px #000;margin-left:3px;vertical-align:5px}
 /* (g) unidade do TOTAL: piso de 11 px do Design System */
 #fam td.num small{font-size:11px}
+
+/* ===== PICASSO v41 · piso de 11 px do Design System (Gestor) ===== */
+/* Os seletores antigos abaixo estavam entre 9 e 10,5 px. Aqui só sobe a letra; onde o espaço apertava, ajusta padding/largura — nunca volta a menos de 11 px. */
+.rail a .bd{font-size:11px;padding:0 4px;line-height:14px}
+.busca kbd{font-size:11px}
+.rleg{font-size:11px}
+.rk .nm small,.lista .nm small,.lista .hd,.rp,.rp.x,.mini-bt small,.flt .t,.menu .g,.fb .sub,.fb small,.famd .it small,.famd .hd2,.cobp .it small,.cobp .hd2,.bro .aviso,.manch .t,.manch .ev small,.cobpct small{font-size:11px}
+.tag,.ap,.ap.ap-v,.ap.ap-r,.chip,.cor,.evl .tp,.cal .dw,.exc{font-size:11px}
+.fl{font-size:11px;padding:1px 5px}
+.tl .dt small,.evl .dt small{font-size:11px}
+.rail a .rl,span.rl{font-size:11px;letter-spacing:0}
+#gx text.rot{font-size:11px}
+/* menor que 11 por herança (small = .875em dentro de caixa de 11–12 px) também sobe */
+small,.small{font-size:max(11px,.875em)}
