@@ -122,7 +122,7 @@ function trade(){const t=D.trade;$('trd').hidden=!t;if(!t)return;
  $('trt').textContent=t.titulo||'—';$('trm').textContent=t.periodo||(t.inicio&&t.fim?dm(t.inicio)+' a '+dm(t.fim):'');
  const ini=t.inicio?new Date(t.inicio):null,fim=t.fim?new Date(t.fim):null,hj=new Date(hoje());
  $('trp').style.width=ini&&fim?Math.max(2,Math.min(100,(hj-ini)/(fim-ini)*100))+'%':'0';
- $('trv').textContent=t.investimento!=null?'R$ '+fmt(t.investimento/1000)+' mil':'—';$('trmeta').textContent=fmt(t.meta_pares);
+ $('trv').textContent=t.investimento!=null?'R$ '+fmt(t.investimento):'—';   // Léo 28/10 (via TRADE): verba nunca arredonda — R$ 9.600, o MESMO número da aba de trade$('trmeta').textContent=fmt(t.meta_pares);
  $('trf').textContent=fim?Math.max(0,Math.round((fim-hj)/864e5))+' dias':'—'}
 // ---------------- cartões: sell-out, estoque, carteira ----------------
 function spark(id,a){const el=$(id);if(!a||a.length<2){el.innerHTML='';return}const mn=Math.min(...a),mx=Math.max(...a),X=i=>i*300/(a.length-1),Y=v=>40-(v-mn)/((mx-mn)||1)*34;
