@@ -116,3 +116,5 @@ body.cliente .lista.acl .row1.ac{grid-template-columns:64px 1fr 72px 80px}
 }
 /* botões do topo (PDF · Excel · Material) com alvo de 44 px nesta tela */
 .topo .bts a{min-height:44px}
+/* TI v9 (GAMER): palavra longa quebra em vez de cortar, como na aba Cliente v46 */
+.lista.acl .row1.ac .nm .mo,.lista.acl .row1.ac .nm .mt,.lista.acl .row1.ac .nm .dt,.lista.acl .row1.ac .nm .mr,.lista.acl .row1.ac .nm .dp{overflow-wrap:anywhere!important}

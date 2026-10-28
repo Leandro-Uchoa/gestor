@@ -52,7 +52,7 @@
     const carga = ++cargaAtual, nomeSel = (LISTA.find(p => p.codigo === PREPOSTO) || {}).nome || PREPOSTO;
     try { desenhar(vazio("Carregando " + nomeSel + "…", "lendo o banco")); } catch (e) { /* casca sem dado desenha "—" */ }
     try {
-      const dados = await DadosMeta.carregar(PREPOSTO);
+      const dados = await DadosMeta.carregar(PREPOSTO, parcial => { if (carga === cargaAtual) desenhar(parcial); });   // v2: em fila, o placar aparece primeiro
       if (carga !== cargaAtual) return;
       FAIXA = null; DADOS = dados; desenhar(DADOS);
     } catch (e) { if (carga !== cargaAtual) return; console.error(e); desenhar(vazio("Não foi possível carregar os dados", "não consegui ler o banco: " + (e && e.message || e) + " — troque o vendedor no seletor ou recarregue a página"));

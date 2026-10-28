@@ -1,16 +1,14 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestor · Buscar a meta</title>
-<!-- Gestor · BUSCAR A META — montada SOBRE A CASCA da aba Cliente (forma aprovada pelo Léo; copiar antes de criar; o PICASSO manda o delta).
-     ZERO dado embutido: tudo vem de desenharMeta(DADOS). Contrato em TI\CONTRATO_META_BUSCA_DADOS.md. Brief do NÚCLEO (28/10) + interação do GAMER.
-     ⛔ Tela INTERNA: atrás do login, nunca em ?modo=cliente (meta de vendedor é nome + dinheiro). A tela só mostra e marca; nada sai sem o clique. -->
+<!-- Gestor · buscar a meta. Sem dado embutido: tudo vem de desenharMeta(DADOS). Tela interna. -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.6.1/dist/css/tabler.min.css" integrity="sha384-tT2UAGE9hxG/p5d0iGIvZ/s8El3nWWG3tfG02i8iOY5Pbf8cZZRVmcrrVs+JG5Vw" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <link rel="stylesheet" href="cliente.css?v=46">
-<link rel="stylesheet" href="acao.css?v=8">
-<link rel="stylesheet" href="meta_busca.css?v=1">
+<link rel="stylesheet" href="acao.css?v=9">
+<link rel="stylesheet" href="meta_busca.css?v=2">
 </head>
 <body>
 <nav class="rail">
@@ -33,17 +31,18 @@
   </div>
   <div class="a-aviso" id="a_aviso" hidden></div>
   <div class="mb-placar" id="a_placar"></div>
+  <div id="a_batidas"></div>
   <div id="a_reais"></div>
   <div id="a_ua"></div>
   <div class="hora" id="a_regra" style="color:#fff;opacity:.9;margin-top:8px"></div>
  </section>
- <div id="a_blocos"></div>
  <div id="a_previa" hidden></div>
+ <div id="a_blocos"></div>
  <div class="text-center hora mt-3" id="rodape">Gestor · buscar a meta · sobre a forma aprovada da aba Cliente (27/10/2026)</div>
 </div>
-<script src="meta_busca_tela.js?v=1"></script>
+<script src="meta_busca_tela.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="meta_busca_dados.js?v=1"></script>
-<script src="meta_busca_glue.js?v=1"></script>
+<script src="meta_busca_dados.js?v=2"></script>
+<script src="meta_busca_glue.js?v=2"></script>
 </body></html>

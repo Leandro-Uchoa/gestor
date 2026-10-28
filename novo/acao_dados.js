@@ -32,7 +32,7 @@ window.DadosAcao = (() => {
       tudo(sb.from("v_acao_preco").select("tipo,tipo_ordem,familia,referencia,cor,descricao,genero,faixa,categoria,imagem,venda_m3,venda_12m,estoque,cobertura,excesso,ult_venda,meses_sem_fat,carteira_futura,mes_estoque,meses_venda,principal" + (MODO_CLIENTE ? "" : ",ult_fat,preco_medio,valor_estoque"))   // GAMER 28/10: em modo cliente a consulta não traz custo nem último faturamento; meses_sem_fat e carteira_futura ficam porque a TRAVA é calculada com eles (o item não os expõe)
              .eq("cliente", cliente).order("tipo_ordem").order("estoque", { ascending: false }).order("referencia").order("cor")),
       semErro(() => tudo(sb.from("cliente_perfil").select("cliente,nome").eq("cliente", cliente)), []),
-      semErro(() => tudo(sb.from("corte_estoque_cliente").select("ponta_ate,acao_ate").eq("cliente", cliente)), []),   // GAMER 28/10: o texto da ponta/ação diz o número do corte do cliente
+      MODO_CLIENTE ? Promise.resolve([]) : semErro(() => tudo(sb.from("corte_estoque_cliente").select("ponta_ate,acao_ate").eq("cliente", cliente)), []),   // GAMER 28/10: o texto da ponta/ação diz o número do corte do cliente (só no interno; em modo cliente a rede não pede o corte)
     ]);
     // fotos: colecao.foto_url por referência (+ cor), em blocos de 200 referências
     const refs = [...new Set(linhas.map(l => l.referencia).filter(Boolean))], FOTO = new Map();
