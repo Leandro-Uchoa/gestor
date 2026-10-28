@@ -1,0 +1,24 @@
+/* Gestor · AÇÃO DE PREÇO — complemento ao cliente.css (casca da aba Cliente, layout aprovado). Só o que a tela de ação precisa; cores da paleta oficial. Piso 11 px. */
+.a-per span,.a-fam span{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:700 12px Inter;padding:6px 12px;border-radius:999px;border:1px solid var(--cl);background:#fff;margin:0 6px 6px 0;min-height:32px}
+.a-per span,.a-fam span{color:#000}.a-per span.on,.a-fam span.on{background:#000;color:#fff;border-color:#000}
+.a-res>div{color:#000}
+.busca.a-bsc{cursor:text}.busca.a-bsc .a-busca{flex:1;min-width:0;border:0;background:transparent;padding:0;font:500 13px Inter;color:#fff;max-width:none;outline:0;border-radius:0}.busca.a-bsc .a-busca::placeholder{color:rgba(255,255,255,.72)}
+.lista.acl .fl{white-space:nowrap}
+.a-fam span small{font:600 11px Inter;opacity:.7}
+.a-busca{width:100%;max-width:520px;padding:9px 12px;border:1px solid var(--cl);border-radius:12px;font:500 13px Inter;background:#fff}
+.a-res{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 4px}.a-res>div{background:#fff;border:1px solid var(--cl);border-radius:16px;padding:12px 14px}
+.a-res small{display:block;font-size:11px;color:var(--ce)}.a-res b{font:800 26px Barlow;line-height:1.05;display:block;margin:2px 0}
+.a-aviso{background:#FFF8CC;border:1px solid #FFE680;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}
+.a-exc{font-size:12px;color:var(--ce);margin:2px 0 10px}
+.lista.acl .row1.ac{grid-template-columns:56px 1fr 74px 64px 110px}
+.lista.acl .row1.ac .ft{width:52px;height:52px;border-radius:10px;background:#F1F1EC;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.lista.acl .row1.ac .ft img{width:100%;height:100%;object-fit:cover}
+.lista.acl .row1.ac .ft.sem::after{content:"";width:28px;height:18px;border-radius:9px 9px 3px 3px;background:#D5D5CE;transform:skewX(-12deg)}
+.lista.acl .row1.ac .num small{display:block;font-size:11px;color:var(--ce);font-weight:500}
+.lista.acl .row1.ac .fl.seg{background:#FFFF1A;color:#000}
+.lista.acl .row1.ac.seg{background:#FFFDE8}
+.lista.acl .trt{display:inline-block;font-size:11px;font-weight:700;color:var(--az);margin-top:4px}
+.lista.acl .row1.hd.ac{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ce);border-top:0}
+body.cliente .interno,body.cliente .bts,body.cliente .rail,body.cliente .busca{display:none!important}
+@media (max-width:991.98px){.busca.a-bsc{flex:1 1 100%!important;width:100%!important;height:auto!important;padding:9px 12px!important;justify-content:flex-start;font-size:13px!important;gap:10px!important;margin:0!important}.busca.a-bsc i{font-size:16px}.a-res{grid-template-columns:repeat(2,1fr)}.lista.acl .row1.ac{grid-template-columns:44px 1fr 64px 56px}.lista.acl .row1.ac .interno{display:none}.lista.acl .row1.ac .ft{width:40px;height:40px}}
+@media (max-width:575.98px){.a-res b{font-size:22px}.a-per span,.a-fam span{padding:6px 10px}}
