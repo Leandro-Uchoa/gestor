@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestor · Trade</title>
+<!-- Gestor · trade. Sem dado embutido: tudo vem de desenharTrade(DADOS). Tela interna. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.6.1/dist/css/tabler.min.css" integrity="sha384-tT2UAGE9hxG/p5d0iGIvZ/s8El3nWWG3tfG02i8iOY5Pbf8cZZRVmcrrVs+JG5Vw" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<link rel="stylesheet" href="cliente.css?v=46">
+<link rel="stylesheet" href="acao.css?v=9">
+<link rel="stylesheet" href="trade.css?v=1">
+</head>
+<body>
+<nav class="rail">
+ <div class="marca"></div>
+ <a href="cliente.html" id="nav_cliente" title="Clientes"><i class="ti ti-building-store"></i><span class="rl">Cliente</span></a>
+ <a href="acao.html" id="nav_acao" title="Ação de preço"><i class="ti ti-tag"></i><span class="rl">Ação</span></a>
+ <a href="meta_busca.html" id="nav_meta" title="Buscar a meta"><i class="ti ti-target-arrow"></i><span class="rl">Meta</span></a>
+ <a href="#" id="nav_trade" class="on" title="Trade"><i class="ti ti-speakerphone"></i><span class="rl">Trade</span></a>
+ <div class="pe">LP</div>
+</nav>
+<div class="main">
+ <section class="hero">
+  <img class="marcadagua" src="oly_branco.png" alt="" onerror="this.remove()">
+  <div class="topo">
+   <div><div class="pre">TRADE · VERBA, CONSUMIDO E SALDO</div><h1 id="c_nome">—</h1>
+    <div style="font-size:13px"><span id="c_sub">—</span></div></div>
+   <div id="slot_seletor"></div>
+   <div class="bts"><a class="b-cl" href="#" onclick="TRADE.acao('exportar_pdf');return false"><i class="ti ti-file-type-pdf"></i>PDF</a><a class="b-cl" href="#" onclick="TRADE.acao('recarregar');return false" title="reler o banco"><i class="ti ti-refresh"></i>Atualizar</a></div>
+  </div>
+  <div class="a-aviso" id="a_aviso" hidden></div>
+  <div class="tr-placar" id="a_placar"></div>
+  <div class="tr-sec" id="a_sec"></div>
+  <div class="hora" id="a_regra" style="color:#fff;opacity:.9;margin-top:8px"></div>
+ </section>
+ <div class="tr-filtros" role="group" aria-label="filtros">
+  <span class="lb">vendedor</span><div class="a-fam" id="a_vend"></div>
+  <span class="lb">status</span><div class="a-fam" id="a_st"></div>
+  <div class="busca a-bsc"><i class="ti ti-search"></i><input id="a_busca" class="a-busca" placeholder="Buscar cliente, estratégia, nota ou vendedor" autocomplete="off" oninput="TRADE.busca(this.value)" aria-label="buscar no trade"></div>
+ </div>
+ <div id="a_lista"></div>
+ <div class="text-center hora mt-3" id="rodape">Gestor · trade · sobre a forma aprovada da aba Cliente (27/10/2026)</div>
+</div>
+<script src="trade_tela.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+<script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
+<script src="trade_dados.js?v=1"></script>
+<script src="trade_glue.js?v=1"></script>
+</body></html>
