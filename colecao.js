@@ -404,8 +404,15 @@ function pdfCartao(it, ctx){
 }
 // os BLOCOS: por tipo; no tênis um bloco por família oficial (a lista já vem na ordem tipo → família → PDV); 8 por página, o título e a faixa
 // de preço (do primeiro ao último da página) repetidos a cada quebra; rodapé com cliente · coleção e k/n
-function pdfBlocos(lista, ctxDe, rod){
+function pdfBlocos(lista, ctxDe, rod, unico){
   const out = [];
+  if (unico) {   // 28/10 (ele): UM bloco só, em PDV crescente puro, atravessando tipos e famílias (a família segue escrita no cartão); a ordem vem de quem chama
+    const pags = []; for (let i = 0; i < lista.length; i += PDF_POR_PAGINA) pags.push(lista.slice(i, i + PDF_POR_PAGINA));
+    pags.forEach((grupo, k) => out.push(`<div class="pg"><div class="topo"><h2>${esc(unico)}</h2><span>${esc(dinheiro(grupo[0].p))} a ${esc(dinheiro(grupo[grupo.length - 1].p))}</span></div>
+<div class="grade">${grupo.map(it => pdfCartao(it, ctxDe(it))).join("")}</div>
+<div class="rod"><span>${rod.esq}</span><span><b>${rod.dir}</b> &nbsp; ${k + 1}/${pags.length}</span></div></div>`));
+    return out;
+  }
   for (const [tv] of PDF_TIPOS) {
     const doTipo = lista.filter(it => pdfTipo(it) === tv); if (!doTipo.length) continue;
     const fams = new Map(); for (const it of doTipo) { const f = pdfFamilia(it); if (!fams.has(f)) fams.set(f, []); fams.get(f).push(it); }
@@ -523,17 +530,16 @@ async function imprimirVitrine(opcoes){
     else if (!atual) ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir";
     return ctx; };
   const paresDe = it => { const pm = mesesDe(it); return pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; };
-  // um arquivo: a capa própria da vitrine + os cartões dela (tipo → família oficial → PDV crescente) + a parede dela
+  // um arquivo: a capa própria da vitrine + os cartões dela (PDV crescente puro, sem separar por família) + a parede dela
   const gerar = async (p, sub, pref) => {
-    sub.sort((a, b) => (pdfTipoIdx(pdfTipo(a)) - pdfTipoIdx(pdfTipo(b))) || (famOrd(pdfFamilia(a) ? familiaDe(a) : "") - famOrd(pdfFamilia(b) ? familiaDe(b) : "")) || pdfFamilia(a).localeCompare(pdfFamilia(b))
-      || pdfCmpPdv(a, b) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
+    sub.sort((a, b) => pdfCmpPdv(a, b) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));   // 28/10: faixa de preço pura, do mais barato ao mais caro
     // a capa: uma linha por tipo (cores · modelos; na programação os pares), nunca somando chinelo com tênis — sem total geral
     const linhas = PDF_TIPOS.map(([v, r]) => { const its = sub.filter(it => pdfTipo(it) === v); if (!its.length) return ""; const pr = grade ? its.reduce((s, it) => s + paresDe(it), 0) : 0;
       return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${pr ? ` · ${pr.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : (grade ? " · pares a definir" : "")}`; }).filter(Boolean);   // PICASSO 19/10 21:0x: na programação o tipo sem pares diz "a definir", nunca some nem soma ao tênis
     const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)} · ${esc(titulo(p))}` };
     const paginas = [`<div class="pg capa"><h1>${tituloDoc} ${esc(p)}<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
-<p>${linhas.join("<br>")}<br>Cartões do mais barato ao mais caro, por tipo · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
-      ...pdfBlocos(sub, ctxDe, rod), ...pdfParedes(sub, rod)];
+<p>${linhas.join("<br>")}<br>Cartões do mais barato ao mais caro (faixa de preço) · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
+      ...pdfBlocos(sub, ctxDe, rod, `${tituloDoc} ${p}`), ...pdfParedes(sub, rod)];
     return GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, tituloDoc + " " + col + " " + p),
       { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: palco => { pdfRepaginarParedes(palco); pdfAjustarParedes(palco); }, avisa: t => avisa(pref + "gerando o PDF… " + t) });
   };
