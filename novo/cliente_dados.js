@@ -113,7 +113,7 @@ window.Dados = (() => {
       x.valor = valor; x.estados = est;
     }
     const familias = (MEF.por_familia || []).map(f => ({ nome: f.nome, unidade: f.unidade, meses: f.meses, valor: f.valor, total: f.total }));
-    const cartValor = cart.filter(x => x.mes >= hoje).reduce((s, x) => s + (x.valor || 0), 0) || null;
+    let cartValor = cart.filter(x => x.mes >= hoje).reduce((s, x) => s + (x.valor || 0), 0) || null;
     // Léo 28/10 (demo), item 2a: o "+" de cada mês abre a carteira do mês por ESTADO, família a família (chinelo nunca somado ao tênis)
     const NOMEF = Object.fromEntries((MEF.familias || []).map(f => [f.familia, f])), ordemFam = (MEF.familias || []).map(f => f.familia);
     for (const x of cart) {
@@ -139,6 +139,9 @@ window.Dados = (() => {
       const f = famDe(r.marca), nomeF = (NOMEF[f] || {}).nome || f, u = (PU[m] = PU[m] || {}); (u[uf] = u[uf] || {})[nomeF] = ((u[uf] || {})[nomeF] || 0) + (+r.pares_cart || 0); }
     if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort().map(u => [u, PU[x.mes][u]]));
     for (const k of Object.keys(LIN)) LIN[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
+    // v36 (GAMER 28/10): o R$ do cartão e da faixa dos meses saem das MESMAS linhas que o detalhe abre (pares × preço unitário); o resumo da venda_mensal fica só no aviso
+    { const nomeT = ((MEF.familias || []).find(f => f.familia === "OLY FOOTWEAR") || {}).nome || "Tênis Olympikus";
+      for (const x of cart) { const L = LIN[nomeT + "|" + x.mes]; if (L) x.valor = L.reduce((s, l) => s + (l.valor || 0), 0); } }
     const linhasBase = (cartLin || []).reduce((m, l) => l.base_em && (!m || String(l.base_em) > m) ? String(l.base_em).slice(0, 10) : m, null);
     const VRES = {};   // R$ do resumo (venda_mensal, carteira a faturar) por 'nome|mês' e 'nome|todos' — a tela compara com as linhas
     for (const [m, fams] of Object.entries(MEF.matriz || {})) { if (m < hoje) continue; for (const [f, es] of Object.entries(fams)) { const v = Object.entries(es).filter(([e]) => e !== "FATURADA").reduce((s, [, c]) => s + (c.valor || 0), 0); const nomeF = (NOMEF[f] || {}).nome || f; VRES[nomeF + "|" + m] = v; VRES[nomeF + "|todos"] = (VRES[nomeF + "|todos"] || 0) + v; } }
@@ -319,7 +322,7 @@ window.Dados = (() => {
       hoje: hojeD,
       cliente: { nome: perfil.nome || cliente, codigo: cod, lojas_ativas: null, recorte, marcas },
       agenda, atas, decidir, prioridade: pri, trade,
-      carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), valor: cartValor, recorte: "tênis Olympikus", familias, linhas: LIN, linhas_base: linhasBase, linhas_ref: LREF, valor_resumo: VRES,
+      carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), valor: (cartValor = cart.filter(x => x.mes >= hoje).reduce((s, x) => s + (x.valor || 0), 0) || null), recorte: "tênis Olympikus", familias, linhas: LIN, linhas_base: linhasBase, linhas_ref: LREF, valor_resumo: VRES,
                   outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: baseMax, estado_lido_em: MEF.estado_lido_em || null, reserva: MEF.reserva || null },
       giro, cobertura, produtos, metas, participacao, anos, filtro,
       etiquetas: { sellin: "sell-in = faturado (EBM até jun/26 · DETALHADA por data de NF depois) · do mês corrente em diante soma a carteira a faturar (ponto vazado)", sellout: "sell-out pela AG do cliente",

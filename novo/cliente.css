@@ -397,3 +397,7 @@ body.cliente .busca,body.cliente .bts{display:none!important}
 .mtb .c .mtd{background:#F6F5F0;border-top:0;border-radius:10px;padding:6px 10px}.mtb .c .mtd div+div{border-top:1px solid #E6E7E8}
 .lin-ref{background:#F6F5F0;border-left:3px solid #2E3EFC;border-radius:0 8px 8px 0}.lin-ref div+div{border-top:1px solid #E6E7E8}
 @media (max-width:768px){.cobpct .xf small,.cobpct .fx3 small{font-size:11px}.exc{font-size:11px}.mtb .c .mtd{font-size:11px}}
+/* v36 (GAMER 28/10, celular): pílulas dos anos com largura fixa, sem quebra; gaveta da cobertura com um cabeçalho só e colunas que cabem; matriz com o total sempre à vista */
+.anos{flex-wrap:nowrap}.anos .anop{flex:0 0 auto;min-width:64px;width:64px;padding-left:0;padding-right:0;text-align:center}
+@media (max-width:991.98px){.cobp .lst .hd2+.hd2{display:none}.cobp .it.it5{grid-template-columns:minmax(0,1fr) 42px 52px 54px 50px;gap:6px}.cobp .it.it5>span:first-child{min-width:0;overflow:hidden}.cobp .it.it5>span:first-child b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+@media (max-width:575.98px){#fam td:nth-last-child(2),#fam_h th:nth-last-child(2){position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.25)}#fam td:last-child,#fam_h th:last-child{display:none}.anos{gap:6px}.anos .anop{min-width:60px;width:60px}}
