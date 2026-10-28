@@ -50,7 +50,9 @@ window.DadosMetas = (() => {
       for (const cli of clis) { const x = soma(cli, ms); if (Object.values(x).some(v => v > 0)) participacao.push(Object.assign({ periodo: per, cliente: cli, etiqueta: etq(ms) }, x)); for (const k of Object.keys(tot)) tot[k] += x[k]; }
       if (leo && Object.values(tot).some(v => v > 0)) participacao.push(Object.assign({ periodo: per, cliente: leo, etiqueta: etq(ms) }, tot));
     }
-    return { linhas: L, clientes, controle: controle.filter(x => MES_OK.test(String(x.mes))), participacao, periodos: P.periodos, periodo_atual: P.atual, preposto: null };
+    // a casca lê `tolerancia` como número em %: a view manda texto ("≤ 2%" · "≤ 10 pares") — passa o número quando é %, senão nulo (a casca assume 2%)
+    const ctrl = controle.filter(x => MES_OK.test(String(x.mes))).map(x => { const m = /(\d+(?:[.,]\d+)?)\s*%/.exec(String(x.tolerancia || "")); return Object.assign({}, x, { tolerancia_texto: x.tolerancia, tolerancia: m ? +m[1].replace(",", ".") : null }); });
+    return { linhas: L, clientes, controle: ctrl, participacao, periodos: P.periodos, periodo_atual: P.atual, preposto: null };
   }
   return { sb, sessao, entrar, sair, carregar, MODO_CLIENTE };
 })();

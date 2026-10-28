@@ -331,10 +331,20 @@ html,body,.main{overflow-x:clip;max-width:100vw}
 .busca{cursor:pointer}
 /* OPÇÃO A (palavra do Léo pelo BOSS, 27/10): SÓ no celular, faixa de resumo — carteira e cobertura com base e âncora — logo abaixo da manchete; o PC não muda */
 .bento>.rcel{display:none}
-@media (max-width:991.98px){.bento>.rcel{display:grid;order:0;grid-column:span 12;grid-template-columns:1fr 1fr;gap:0;padding:0;overflow:hidden}
- .rcel a{all:unset;cursor:pointer;display:block;padding:12px 14px}.rcel a+a{border-left:1px solid rgba(255,255,255,.16)}
- .rcel .t{font:800 11px Inter;letter-spacing:.06em;text-transform:uppercase;opacity:.8}.rcel b{font:800 26px Barlow;display:block;line-height:1.1;margin-top:4px}
- .rcel small{display:block;font-size:11px;opacity:.85;margin-top:2px}.rcel .pl{display:inline-block;font:800 11px Inter;border-radius:6px;padding:2px 7px;margin-top:4px;background:#E6E7E8;color:#000}}
+@media (max-width:768px){.bento>.rcel{display:grid;order:0;grid-column:span 12;grid-template-columns:1.25fr 1fr;gap:0;padding:0;overflow:hidden}
+ .rcel a{all:unset;cursor:pointer;display:flex;flex-direction:column;justify-content:center;min-height:52px;padding:8px 12px;min-width:0}.rcel a+a{border-left:1px solid rgba(255,255,255,.16)}
+ .rcel .l1{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden}
+ .rcel .t{font:800 11px Inter;letter-spacing:.02em;text-transform:uppercase;opacity:.8}.rcel b{font:800 20px Barlow;line-height:1.1}
+ .rcel .u{font-size:11px;opacity:.85;flex:none}
+ .rcel small{display:block;font-size:11px;opacity:.8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rcel .pl{font:800 11px Inter;border-radius:6px;padding:1px 6px;background:#E6E7E8;color:#000}}
+/* para a faixa caber na 1ª tela do celular: botões do topo numa linha só (rolam de lado) e busca mais baixa */
+@media (max-width:991.98px){.topo .bts{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;gap:6px}.topo .bts::-webkit-scrollbar{display:none}
+ .topo .bts a{flex:0 0 auto!important;padding:7px 11px}.topo .mini-bt{padding:4px 10px}.topo .busca{padding:7px 12px}
+ .topo .selo{font-size:11px!important;padding:1px 6px!important;margin-left:4px!important}
+ .manch>div{padding:8px 14px!important}.manch .s{margin-top:2px}
+ .manch .ev{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:2px 8px!important;margin-top:4px}.manch .ev b{font-size:15px!important}
+ .manch .ev small{line-height:1.2}.manch .tag{margin-top:4px}}
+.dec .vertodos{all:unset;cursor:pointer;display:inline-block;margin-top:8px;font-size:12px;font-weight:800;padding:6px 12px;min-height:32px;line-height:20px;border-radius:999px;border:1px solid rgba(255,255,255,.35)}.dec .vertodos:hover{background:rgba(255,255,255,.15)}
 /* modo cliente (decisão do BOSS 27/10): busca e botões internos somem */
 body.cliente .busca,body.cliente .bts{display:none!important}
 /* GAMER: no celular, rótulo de número nunca abaixo de 11 px */

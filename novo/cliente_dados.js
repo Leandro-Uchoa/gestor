@@ -146,7 +146,7 @@ window.Dados = (() => {
       regra: l.regra, fonte: fonteTela(l.fonte), numero: l.numero, unidade: l.unidade, valor_rs: l.valor_rs, da_view: true }));
     const jaTem = new Set(linhas.map(l => l.id));
     const itens = (t.itens || []).filter(i => !i.feito_em && !i.feito && idOk(i.id) && !jaTem.has(i.id)).map(i => ({ id: i.id, texto: limpa(i.txt || i.texto), urgente: !!i.alerta, criado_em: i.criado_em || i.data || null, bloco: "", sub: i.sub || "", prazo: i.prazo || null, dono: i.dono || "" }));
-    const decidir = linhas.concat(itens).slice(0, 4), topics_pendentes = MODO_CLIENTE ? 0 : (t.pendentes != null ? +t.pendentes : itens.length + linhas.filter(l => !/^dec:/.test(l.id)).length);   // v19: 4 itens na tela + "N no TOPICS" (GAMER)
+    const decidir_todos = linhas.concat(itens), decidir = decidir_todos.slice(0, 4), topics_pendentes = MODO_CLIENTE ? 0 : (t.pendentes != null ? +t.pendentes : itens.length + linhas.filter(l => !/^dec:/.test(l.id)).length);   // v19: 4 itens na tela + "N no TOPICS" (GAMER)
     const pri = linhas[0] ? { titulo: linhas[0].texto, detalhe: `${linhas[0].fonte}${dtBR(linhas[0].criado_em) ? " · base " + dtBR(linhas[0].criado_em) : ""}` }   // GAMER: o código da regra (R1…) não vai à tela do Caio
              : MODO_CLIENTE ? undefined : { titulo: "Sem decisão apontada pelas regras do NÚCLEO", detalhe: "nada na carteira marcada, meta do mês, trade, ruptura ou TOPICS" };
     // ---------- ação de trade em andamento: a faixa da casca (v19) + o ritmo (trade_acao_deck) para a agenda e o decidir
@@ -211,7 +211,7 @@ window.Dados = (() => {
                    estoque: "estoque na AG (tênis Olympikus)" },
       fontes: { sellout_ate: (() => { const sz = ((rx || {}).sazonal || {})["TÊNIS"]; const ms = sz ? Object.keys(sz.mensal || {}).filter(m => MES_OK.test(m)).sort() : []; return ms.length ? ms[ms.length - 1] : null; })(),
                 sellin_ate: sellin.length ? String(sellin[sellin.length - 1].puxado_em).slice(0, 10) : null, meta_lida_em: meta.length ? String(meta[meta.length - 1].meta_lida_em).slice(0, 10) : null },
-      sem_bloco_topics: !bloco, topics: decidir, topics_pendentes, modo_cliente: MODO_CLIENTE, sem_meta: !temMeta,
+      sem_bloco_topics: !bloco, topics: decidir, decidir_todos, topics_pendentes, modo_cliente: MODO_CLIENTE, sem_meta: !temMeta,
       atualizado: { carteira: baseMax, sellin: sellin.length ? sellin[sellin.length - 1].puxado_em : null }
     };
   }

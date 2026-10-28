@@ -185,9 +185,13 @@ function matriz(){const ms=mesesDe(PER),tri=ms.length>1;$('secfx').style.display
  const m=ms[0],cel=(x,u)=>!x||!x.meta_cliente?'<td class="cel abs">sem meta</td>':`<td class="cel"><span class="p ${okc(x.atingimento)}">${pc(x.atingimento)}</span><span class="g ${x.gap<0?'gap neg':'gap pos'}">${x.gap<0?'−':'+'}${u==='R$'?R$(Math.abs(x.gap)):fmt(Math.abs(x.gap))}</span><div class="mb"><i style="width:${Math.min(100,(x.potencial||0)/Math.max(x.meta_cliente,x.potencial||0)*100)}%"></i><b style="left:${Math.min(100,x.meta_cliente/Math.max(x.meta_cliente,x.potencial||0)*100)}%"></b></div></td>`;
  const quem=CLI.map(c=>c.codigo).concat(LEO?[LEO]:[]);
  const row=(k,nm,u,tot)=>`<tr class="${tot?'tot':''}"><td class="fx">${nm}<small>${u}</small></td>${quem.map(c=>cel(k==='__TT'?tt(m,c):L(m,k,c),u)).join('')}</tr>`;
- $('mx').innerHTML=`<thead><tr><th>Faixa / família</th>${CLI.map(c=>`<th>${esc(c.nome)}</th>`).join('')}${LEO?'<th>Léo (3)</th>':''}</tr></thead><tbody>`+FX.map(([k,n])=>row(k,n,'pares')).join('')+row('__TT','Total tênis Olympikus','pares',1)+FAM.filter(([k])=>quem.some(c=>L(m,k,c))).map(([k,n,u])=>row(k,n,u)).join('')+'</tbody>';
+ $('mx').innerHTML=`<thead><tr><th>Faixa / família</th>${CLI.map(c=>`<th>${esc(c.nome)}</th>`).join('')}${LEO?`<th>Léo (${CLI.length})</th>`:''}</tr></thead><tbody>`+FX.map(([k,n])=>row(k,n,'pares')).join('')+row('__TT','Total tênis Olympikus','pares',1)+FAM.filter(([k])=>quem.some(c=>L(m,k,c))).map(([k,n,u])=>row(k,n,u)).join('')+'</tbody>';
  const C=(D.controle||[]).filter(x=>String(x.mes).slice(0,7)===m.slice(0,7));
- const TT=C.find(x=>/^TT CALCADOS/.test(x.chave)),pct=x=>x==null?'—':(Math.round(+x*1000)/10).toString().replace('.',',')+'%'; $('conf').innerHTML=TT?`<i class="ti ti-${TT.situacao==='ok'?'circle-check':'alert-triangle'}"></i><span><b>Conferência com a Carta:</b> soma dos três ${fmt(TT.soma_tres)} × Carta ${fmt(TT.carta)}, diferença ${pct(TT.diferenca)} (limite ${esc(TT.tolerancia||'2%')})${TT.situacao==='DIVERGE'?' · <b>diverge</b>':''}${C.some(x=>x.situacao==='DIVERGE'&&!/^TT CALCADOS/.test(x.chave))?' · faixas que divergem: '+C.filter(x=>x.situacao==='DIVERGE'&&!/^TT CALCADOS/.test(x.chave)).map(x=>esc(x.chave)).join(', '):''}. Famílias em R$: fonte DETALHADA × PDC, sem conferência com a Carta.</span>`:''}
+ // conferência como no piloto metas_v2: a linha do TÊNIS (TT CALCADOS) — soma dos clientes × Carta, diferença e limite; famílias em R$ sem Carta
+ const TC=C.find(x=>/TT CALCADOS/i.test(String(x.chave||''))),lim=TC&&TC.tolerancia!=null?(TC.tolerancia<1?TC.tolerancia*100:+TC.tolerancia):2;
+ const dif=TC&&TC.carta?Math.abs(TC.soma_tres-TC.carta)/TC.carta*100:null,okT=dif!=null&&dif<=lim;
+ $('conf').innerHTML=TC&&TC.carta?`<i class="ti ti-${okT?'circle-check':'alert-triangle'}"></i><span><b>Conferência com a Carta:</b> soma dos ${CLI.length===3?'três':CLI.length} ${fmt(TC.soma_tres)} × Carta ${fmt(TC.carta)} pares — diferença ${dif.toFixed(1).replace('.',',')}% (limite ${String(lim).replace('.',',')}%). Famílias em R$: fonte DETALHADA × PDC, sem conferência com a Carta.</span>`
+  :TC?`<i class="ti ti-alert-triangle"></i><span><b>Conferência com a Carta:</b> carta do tênis ainda não lida. Famílias em R$: fonte DETALHADA × PDC, sem conferência com a Carta.</span>`:''}
 // ---------------- API ----------------
 window.MET={per:p=>{PER=p;desenhar()}};
 function desenhar(){topo();participacao();cartoes();matriz()}
@@ -201,6 +205,6 @@ window.desenharMetas(window.DADOS_METAS||{});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="metas_dados.js?v=2"></script>
-<script src="metas_glue.js?v=2"></script>
+<script src="metas_dados.js?v=3"></script>
+<script src="metas_glue.js?v=3"></script>
 </body></html>

@@ -70,7 +70,8 @@ const limpa=(t,b)=>{let x=String(t||'');if(b)x=x.replace(new RegExp('^\\s*'+escR
 const ehCli=b=>{const n=((D.cliente||{}).nome||'').toUpperCase().replace(/\s+/g,''),bb=String(b||'').toUpperCase().replace(/\s+/g,'');return !bb||bb===n||n.startsWith(bb)||bb.startsWith(n)};
 // segurança (TI, 27/10): o id do item nunca entra em código inline — vai em data-id e um único ouvinte trata os cliques
 const ehTopic=t=>!String(t.id||'').startsWith('dec:');
-function decidir(){const L=D.decidir||D.topics||[];
+let TODOS=false;
+function decidir(){const L0=D.decidir||D.topics||[],LT=D.decidir_todos||null,L=TODOS&&LT?LT:L0;
  // selo: o total do TOPICS vem do TI (topics_pendentes); sem ele, conta só os itens do TOPICS (as linhas "dec:" da view não entram)
  const nT=D.topics_pendentes!=null?D.topics_pendentes:L.filter(ehTopic).length;$('c_ntp').textContent=nT+' no TOPICS';
  // cliente sem bloco no TOPICS: o bloco fica e diz isso por escrito (BOSS), nunca some calado
@@ -79,9 +80,11 @@ function decidir(){const L=D.decidir||D.topics||[];
  $('c_dec_tit').innerHTML=L.some(t=>t.urgente)?'<i class="ti ti-bolt"></i> O que decidir hoje':'<i class="ti ti-checklist"></i> TOPICS · sem urgente';
  $('tpnovo').placeholder='+ novo item para o '+nome()+' no TOPICS…';
  $('tpl').innerHTML=L.length?L.map((t,i)=>`<div class="it" data-id="${esc(t.id)}"><span class="pt ${t.urgente?'u':''}"></span><div style="flex:1"><b>${esc(limpa(t.texto,t.bloco))}</b><small>${esc([ehCli(t.bloco)?null:t.bloco,t.criado_em?dm(t.criado_em):null].filter(Boolean).join(' · '))}</small><div class="nota"></div>
-  ${ehTopic(t)?`<div class="acts"><button class="ok" data-acao="feito">✓ feito</button><button data-acao="ori">✎ orientar</button><button data-acao="abrir">abrir no TOPICS</button></div>
-  <div class="ori"><input placeholder="escreva a orientação…" data-acao="enter"><button data-acao="salva">salvar</button></div>`:''}</div></div>`).join('')
+  <div class="acts"><button class="ok" data-acao="feito">✓ feito</button><button data-acao="ori">✎ orientar</button><button data-acao="abrir">abrir no TOPICS</button></div>
+  <div class="ori"><input placeholder="escreva a orientação…" data-acao="enter"><button data-acao="salva">salvar</button></div></div></div>`).join('')
   :'<div class="it" style="border:0"><div style="opacity:.8">nada pendente no TOPICS</div></div>';
+ // abre com os itens de DADOS.decidir (4); "ver todos" mostra DADOS.decidir_todos sem nova consulta
+ if(LT&&LT.length>L0.length)$('tpl').insertAdjacentHTML('beforeend',`<button class="vertodos" onclick="CLI.todos()">${TODOS?'mostrar menos':'ver todos ('+LT.length+')'}</button>`);
  $('c_tp_lido').textContent='TOPICS · lido em '+dm(hoje())}
 // grava no TOPICS e só confirma quando onTopico resolver (o TI relê do banco e redesenha)
 async function grava(acao,id,texto,nota){if(typeof window.onTopico!=='function'){if(nota)nota.textContent='não gravado: TOPICS fora do ar nesta tela';return false}
@@ -196,6 +199,12 @@ function cobertura(){const g=D.giro||{},B=baseCob(),c=B.ok?g.cobertura:null,fx=f
  if(bb)txt+=` ${txt?'Do outro lado, ':''}<b>${fmt(bT)} pares</b>${ct?` (${Math.round(bT/ct*100)}% da carteira de tênis, ${mil(bxV())})`:''} estão em ${bb} modelos-cor de giro até 20%.`;
  const L=txt?txt+' <span style="opacity:.8">Leitura automática: sinal para olhar, não veredito — conferir estoque em peças, entrada recente e trânsito.</span>':'';
  $('cobleit').innerHTML=$('leit').innerHTML=L}
+// faixa de resumo do celular (Opção A): os mesmos números dos cartões, com a base; o toque leva ao cartão
+function resumoCel(){const c=D.carteira||{},g=D.giro||{},B=baseCob(),cb=B.ok?g.cobertura:null,fx=faixaCob(cb);
+ const be=c.base_em||((c.meses||[]).find(x=>x.base_em)||{}).base_em,pl=cb==null?'':`<span class="pl" style="${cb<4?'background:#FDE3E5;color:#E3001B':cb<5?'background:#FFFF1A':''}">${fx}</span>`;
+ // 2 linhas por lado: 1ª = rótulo + número; 2ª = base + âncora
+ $('rcel').innerHTML=`<a role="button" tabindex="0" onclick="CLI.ir('car')"><span class="l1"><span class="t">Carteira</span><b>${fmt(c.a_faturar)}</b><span class="u">pares</span></span><small>${c.valor!=null?mil(c.valor)+' · ':''}${be?'lida '+dm(be):'sem base'} ↓</small></a>`+
+  `<a role="button" tabindex="0" onclick="CLI.ir('cob')"><span class="l1"><span class="t">Cobertura</span><b>${B.ok?dec(cb):'—'}</b></span><small>${pl||'sem base'}${g.estoque_mes?' · '+mesN(g.estoque_mes):''} ↓</small></a>`}
 function pontaLista(el){const PO=CO().ponta||{},IT=PO.itens||[],t=IT.reduce((a,r)=>a+(r.estoque||0),0);
  el.innerHTML=`<div class="ct"><span style="font-size:16px">⌛</span><b>Ponta de estoque</b><span style="font-size:12px;opacity:.85">${IT.length} modelos-cor · ${fmt(t)} pares · sem faturar há 6+ meses, sem carteira futura, cobertura ≥ 9 meses ou venda ≤ 10/mês</span>
   <div class="tabs ms-3"><button onclick="CLI.cobp('rup',1)">Ruptura</button><button onclick="CLI.cobp('for',1)">Forçar a barra</button><button onclick="CLI.cobp('teto',1)">No teto</button><button class="on">Ponta</button></div><button class="x" onclick="CLI.cobp('ponta')" title="fechar">×</button></div>
@@ -381,6 +390,8 @@ window.CLI={
  cam:c=>{CAM[c]=CAM[c]?0:1;grafico()},
  mm:m=>{MM=m;metas()},
  cobp:(f,troca)=>cobp(f,troca),
+ todos:()=>{TODOS=!TODOS;decidir()},
+ ir:k=>{const el=document.querySelector('.bento>.'+k);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})},
  tratar:(ref,cor)=>!chama('onTratar',ref,cor),
  aporte:(ref,cor)=>!chama('onAporte',ref,cor),
  acao:(n,x)=>{const ctx=Object.assign({cliente:(D.cliente||{}).codigo||null},x||{});if(chama('onAcao',n,ctx))return;
@@ -400,7 +411,7 @@ window.desenhar=function(dados){const troca=((dados||{}).cliente||{}).codigo!==(
  if(troca){CM=null;SD=null;MM=null;COBF=null;$('cobp').style.display='none';$('brmsg').innerHTML=''}
  FIL=JSON.parse(JSON.stringify(D.filtro||{marca:['OLY'],tipo:'tenis',genero:[],categoria:[]}));FIL.marca=FIL.marca||['OLY'];FIL.genero=FIL.genero||[];FIL.categoria=FIL.categoria||[];
  const passo=(n,f)=>{try{f()}catch(e){console.error('desenhar · '+n,e)}};
- passo('topo',topo);passo('manchete',manchete);passo('decidir',decidir);passo('ouvinte',ouveTopics);passo('agenda',agenda);passo('trade',trade);passo('cartoes',cartoes);passo('cobertura',cobertura);
+ passo('topo',topo);passo('manchete',manchete);passo('decidir',decidir);passo('ouvinte',ouveTopics);passo('agenda',agenda);passo('trade',trade);passo('cartoes',cartoes);passo('cobertura',cobertura);passo('resumo',resumoCel);
  passo('metas',metas);passo('giro',giro);passo('carteira',carteiraSec);passo('filtro',()=>{$('htit').textContent=titulo(FIL);if(AB)painel()});passo('grafico',grafico);passo('bro',broSug)};
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(grafico,150)});
 if(new URLSearchParams(location.search).get('modo')==='cliente')document.body.classList.add('cliente');
