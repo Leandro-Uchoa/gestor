@@ -49,7 +49,7 @@ window.Dados = (() => {
       sb.rpc("trade_acao_deck", { p_cliente: cliente }).then(r => r.error ? null : r.data, () => null),
       semErro(() => DP.drillCobertura ? DP.drillCobertura(sb, cliente, "OLY FOOTWEAR", { minVenda: 0 }) : [], []),
       semErro(() => DP.carteiraMesEstadoFamilia ? DP.carteiraMesEstadoFamilia(sb, cliente, { desde: "2026-07" }) : null, null),
-      semErro(() => tudo(sb.from("carteira_linha").select("marca,referencia,descricao,cor,cart,valor_total,preco_unit,prev_fat,porta,codigo").eq("cliente", cliente).eq("excluida", false).gt("cart", 0).order("referencia").order("cor"))),
+      semErro(() => tudo(sb.from("carteira_linha").select("marca,referencia,descricao,cor,cart,valor_total,preco_unit,prev_fat,porta,codigo,base_em").eq("cliente", cliente).eq("excluida", false).gt("cart", 0).order("referencia").order("cor"))),
       // disponível para aporte: carteira de OUTROS clientes posta à disposição (ação CMS / repasse na DETALHADA). A ORIGEM NUNCA VAI À TELA.
       semErro(() => tudo(sb.from("carteira_linha").select("referencia,cor,cart,prev_fat").neq("cliente", cliente).eq("excluida", false).gt("cart", 0)
                            .in("acao_xl", ["CMS", "REPASSAR", "REPASSE", "REPASSE PARCIAL", "REPASSAR PARCIAL", "EM REPASSE"]).order("referencia").order("cor"))),
@@ -139,6 +139,7 @@ window.Dados = (() => {
       const f = famDe(r.marca), nomeF = (NOMEF[f] || {}).nome || f, u = (PU[m] = PU[m] || {}); (u[uf] = u[uf] || {})[nomeF] = ((u[uf] || {})[nomeF] || 0) + (+r.pares_cart || 0); }
     if (UFCD.size > 1) for (const x of cart) if (PU[x.mes]) x.por_uf = Object.fromEntries(Object.keys(PU[x.mes]).sort().map(u => [u, PU[x.mes][u]]));
     for (const k of Object.keys(LIN)) LIN[k].sort((a, b) => a.prev_fat < b.prev_fat ? -1 : a.prev_fat > b.prev_fat ? 1 : b.pares - a.pares);
+    const linhasBase = (cartLin || []).reduce((m, l) => l.base_em && (!m || String(l.base_em) > m) ? String(l.base_em).slice(0, 10) : m, null);
     // ---------- giro (já vem só tênis OLY do banco) + cobertura: último mês COM estoque ÷ média dos 3 meses fechados — "—" quando falta
     const g = (doc.giro || []).filter(x => MES_OK.test(String(x.mes))).map(x => ({ mes: String(x.mes).slice(0, 7), v: x.v || 0, e: x.e, parcial: String(x.mes).slice(0, 7) >= hoje }));
     const fech = g.filter(x => !x.parcial), tres = fech.slice(-3), media = tres.length ? tres.reduce((s, x) => s + x.v, 0) / tres.length : 0;
@@ -179,8 +180,8 @@ window.Dados = (() => {
     // CORTE POR CLIENTE (Léo na demo, 28/10 — "depende muito de cliente a cliente"; 0095): pelo estoque em pares (praças somadas) — até ponta_ate = PONTA
     // (mesmo em linha), até acao_ate = AÇÃO/REBAIXO, acima = leitura normal da régua; fora de linha sempre indicado e nunca propõe repor. Sem corte
     // (clientes que o Léo ainda não calibrou): piso 12/mês + curva dos 80% (cauda de pouco volume fora das barras), fora de linha e raio-x → ponta.
-    const PT = (drill || []).map(r => { const k = r.referencia + "|" + (r.cor || ""), venda = r.venda_media != null ? Math.round(r.venda_media) : null, fora = FORA.has(r.referencia), est = r.estoque || 0;
-      const BC = baseCurtaDe(k, r);   // GAMER 28/10: sem 3 meses fechados a cobertura saía "—" e 16.450 pares de encalhe sumiam da régua; travas do NÚCLEO em baseCurtaDe
+    const PT = (drill || []).map(r => { const k = r.referencia + "|" + (r.cor || ""), fora = FORA.has(r.referencia), est = r.estoque || 0;
+      const BC = baseCurtaDe(k, r), venda = BC && BC.vm > 0 ? Math.round(BC.vm) : r.venda_media != null ? Math.round(r.venda_media) : null;   // a venda mostrada é a que entrou na conta da cobertura   // GAMER 28/10: sem 3 meses fechados a cobertura saía "—" e 16.450 pares de encalhe sumiam da régua; travas do NÚCLEO em baseCurtaDe
       const cob = r.cobertura != null ? Math.round(r.cobertura * 10) / 10 : BC && BC.vm > 0 ? Math.round(r.estoque / BC.vm * 10) / 10 : null, base_curta = BC ? BC.n : null, provisoria = !!(BC && BC.provisoria), base_curta_txt = BC ? BC.texto : null;
       const na_curva = !temCurva || NACURVA.has(k), relevante = (venda || 0) >= PISO && na_curva && !(cob != null && cob >= 5 && est < EST_TETO);
       let grupo;
@@ -312,7 +313,7 @@ window.Dados = (() => {
       hoje: hojeD,
       cliente: { nome: perfil.nome || cliente, codigo: cod, lojas_ativas: null, recorte, marcas },
       agenda, atas, decidir, prioridade: pri, trade,
-      carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), valor: cartValor, recorte: "tênis Olympikus", familias, linhas: LIN,
+      carteira: { meses: cart, a_faturar: cart.filter(x => x.mes >= hoje).reduce((s, x) => s + x.cart, 0), valor: cartValor, recorte: "tênis Olympikus", familias, linhas: LIN, linhas_base: linhasBase,
                   outras: Object.entries(outras).map(([f, n]) => `${f} ${Math.round(n).toLocaleString("pt-BR")}`).join(" · "), base_em: baseMax, estado_lido_em: MEF.estado_lido_em || null, reserva: MEF.reserva || null },
       giro, cobertura, produtos, metas, participacao, anos, filtro,
       etiquetas: { sellin: "sell-in = faturado (EBM até jun/26 · DETALHADA por data de NF depois) · do mês corrente em diante soma a carteira a faturar (ponto vazado)", sellout: "sell-out pela AG do cliente",
