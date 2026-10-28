@@ -88,7 +88,7 @@
       dec.style.display = ""; const tpl = $("tpl"); if (tpl) tpl.innerHTML = '<div class="it" style="border:0"><div style="opacity:.8">sem bloco no TOPICS para este cliente</div></div>';
       const nv = dec.querySelector(".novo"); if (nv) nv.style.display = "none"; const n = $("c_ntp"); if (n) n.textContent = "sem bloco";
     } else if (dec && !Dados.MODO_CLIENTE) { const nv = dec.querySelector(".novo"); if (nv) nv.style.display = ""; }
-    // cliente que não pontua no 25745 (Casa Pio): o bloco de metas diz de quem é a meta, nunca "rateio em andamento" nem número inventado (BOSS, 27/10)
+    // cliente sem meta rateada nem meta direta: o bloco de metas diz de quem é a meta, nunca "rateio em andamento" nem número inventado (BOSS, 27/10)
     if (DADOS.sem_meta) { const nota = '<div class="hora" style="padding:8px 0">meta do vendedor responsável, não do Léo · sem número nesta tela; o gráfico compara sell-in e sell-out com o mesmo mês do ano anterior</div>';
       for (const id of ["mtb", "mtu"]) { const el = $(id); if (el) el.innerHTML = id === "mtb" ? nota : ""; } }
     const ntp = $("c_ntp"); if (ntp && !Dados.MODO_CLIENTE && !DADOS.sem_bloco_topics && DADOS.topics_pendentes != null) ntp.textContent = DADOS.topics_pendentes + " no TOPICS";   // v19: 4 itens na tela, o selo diz quantos há no bloco (GAMER)

@@ -185,7 +185,9 @@ function cobertura(){const g=D.giro||{},B=baseCob(),c=B.ok?g.cobertura:null,fx=f
  // % do estoque por faixa (faixas do TI; sem elas, soma os itens)
  const IT=CO().itens||[],FX=CO().faixas||(IT.length?(()=>{const s=k=>IT.filter(r=>k==='rup'?r.cobertura<4:k==='for'?r.cobertura>=4&&r.cobertura<5:r.cobertura>=5).reduce((a,r)=>a+(r.estoque||0),0),t=IT.reduce((a,r)=>a+(r.estoque||0),0)||1;
   return {ruptura:{pares:s('rup'),pct:s('rup')/t*100},forcar:{pares:s('for'),pct:s('for')/t*100},teto:{pares:s('teto'),pct:s('teto')/t*100}}})():null);
- $('c_cobpct').innerHTML=FX?[['rup','ruptura','#ff6b78'],['for','forcar','#FFFF1A'],['teto','teto','']].map(([k,n,cr])=>{const x=FX[n]||{};return `<span onclick="CLI.cobp('${k}')"${cr?` style="color:${cr}"`:''}>${x.pct!=null?Math.round(x.pct)+'%':'—'}<small>do estoque · ${fmt(x.pares)} pares</small></span>`}).join(''):'';
+ $('c_cobpct').innerHTML=FX?[['rup','ruptura','#ff6b78'],['for','forcar','#FFFF1A'],['teto','teto','']].map(([k,n,cr])=>{const x=FX[n]||{};return `<span onclick="CLI.cobp('${k}')"${cr?` style="color:${cr}"`:''}>${x.pct!=null?Math.round(x.pct)+'%':'—'}<small>do estoque · ${fmt(x.pares)} pares</small></span>`}).join('')
+  // o que fica FORA das três barras (fora de linha → ponta; pouco volume; sem base) — NÚCLEO 28/10: as barras não somam 100% e a tela diz onde está o resto
+  +(FX.sem_base&&FX.sem_base.pares?`<span onclick="CLI.cobp('ponta')" style="opacity:.75" title="fora de linha vai à ponta; pouco volume e sem base ficam fora das barras">${FX.sem_base.pct!=null?Math.round(FX.sem_base.pct)+'%':'—'}<small>fora das barras · ${fmt(FX.sem_base.pares)} pares</small></span>`:''):'';
  const PO=CO().ponta;$('c_ponta').hidden=!PO;
  if(PO){const n=PO.modelos!=null?PO.modelos:(PO.itens||[]).length;$('c_ponta').innerHTML=`<span style="font-size:18px">⌛</span><span><b>${fmt(PO.pares)} pares</b> <small>· ${PO.pct!=null?Math.round(PO.pct)+'% do estoque de tênis':''}</small><br><small>ponta de estoque: ${fmt(n)} modelos-cor parados (sem faturar há 6+ meses, sem carteira) · toque para ver</small></span>`}
  // onde falta / onde sobra por segmento (opcional)
@@ -218,8 +220,8 @@ function cobp(f,troca){const el=$('cobp');if(!troca&&COBF===f&&el.style.display!
  const [n,d,c,fn]=G[f],L=(CO().itens||[]).filter(r=>r&&r.cobertura!=null).filter(fn).sort((a,b)=>(b.venda||0)-(a.venda||0)),nf=L.filter(r=>r.fora_linha).length;
  el.innerHTML=`<div class="ct"><span style="width:14px;height:14px;border-radius:4px;background:${c};display:inline-block"></span><b>${n}</b><span style="font-size:12px;opacity:.85">${d} · ${L.length} modelos-cor${nf?' ('+nf+' fora de linha)':''} · ${fmt(L.reduce((a,r)=>a+(r.estoque||0),0))} pares em estoque</span>
   <div class="tabs ms-3">${Object.entries(G).map(([k,g])=>`<button class="${k===f?'on':''}" onclick="CLI.cobp('${k}',1)">${g[0]}</button>`).join('')}${CO().ponta?'<button onclick="CLI.cobp(\'ponta\',1)">Ponta</button>':''}</div><button class="x" onclick="CLI.cobp('${f}')" title="fechar">×</button></div>
-  <div class="lst">${[0,1].map(()=>`<div class="it hd2"><span>modelo · cor</span><span class="num">cob.</span><span class="num">venda/mês</span><span class="num">carteira</span></div>`).join('')}
-  ${L.length?L.map(r=>`<div class="it"><span><b>${esc(r.modelo)}</b> ${esc(r.cor)}${r.fora_linha?' <span class="fl">fora de linha</span>':''}<small>${esc(r.ref)}${r.giro!=null?' · giro '+r.giro+'%':''} · estoque ${fmt(r.estoque)}</small></span><span class="cb" style="background:${f==='for'?'#FFFF1A':f==='rup'?'#FDE3E5':'rgba(255,255,255,.15)'};color:${f==='rup'?'#E3001B':f==='for'?'#000':'#fff'}">${dec(r.cobertura)}</span><span class="num">${fmt(r.venda)}</span><span class="num">${r.carteira?fmt(r.carteira):'—'}</span></div>`).join(''):'<div class="it">nenhum modelo-cor nesta faixa</div>'}</div>
+  <div class="lst">${[0,1].map(()=>`<div class="it it5 hd2"><span>modelo · cor</span><span class="num">cob.</span><span class="num">venda/mês</span><span class="num">estoque atual</span><span class="num">carteira</span></div>`).join('')}
+  ${L.length?L.map(r=>`<div class="it it5"><span><b>${esc(r.modelo)}</b> ${esc(r.cor)}${r.fora_linha?' <span class="fl">fora de linha</span>':''}<small>${esc(r.ref)}${r.giro!=null?' · giro '+r.giro+'%':''}</small></span><span class="cb" style="background:${f==='for'?'#FFFF1A':f==='rup'?'#FDE3E5':'rgba(255,255,255,.15)'};color:${f==='rup'?'#E3001B':f==='for'?'#000':'#fff'}">${dec(r.cobertura)}</span><span class="num">${fmt(r.venda)}</span><span class="num fw-bold">${fmt(r.estoque)}</span><span class="num">${r.carteira?fmt(r.carteira):'—'}</span></div>`).join(''):'<div class="it">nenhum modelo-cor nesta faixa</div>'}</div>
   <div style="font-size:11px;opacity:.75;margin-top:6px">${esc(CO().base||'régua de 23/09 (teto 5) · leitura é sinal, não veredito')}</div>`;
  el.style.display='block'}
 // ---------------- metas do cliente + participação por família ----------------
@@ -229,7 +231,7 @@ function metas(){const X=D.metas||{},MT=X.meses||{},TR=X.trimestres||{},ks=Objec
  $('mt_base').textContent=X.base||'meta do preposto dividida pela participação do cliente · potencial = faturado + carteira do mês · regra do NÚCLEO';
  $('mtm').innerHTML=ks.map(m=>`<span class="${m===MM?'on':''}" style="cursor:pointer" onclick="CLI.mm('${m}')">${mesN(m)}</span>`).join('')+Object.entries(TR).map(([k,t])=>`<span class="${MM===k?'on':''}" style="cursor:pointer;border-left:1px solid #E6E7E8;margin-left:4px" onclick="CLI.mm('${k}')">${esc(t.nome||k)}</span>`).join('');
  $('mt15').innerHTML=participacao(MM);
- const zero=n=>`<div class="c zero"><div class="t">${n}</div><div class="p">0</div><small>sem meta para o Léo</small><small>quadro guardado para a equipe</small></div>`,anda=n=>`<div class="c zero"><div class="t">${n}</div><div class="p">—</div><small>${X.sem_meta?'meta do vendedor responsável, não do Léo':'rateio em andamento (NÚCLEO)'}</small></div>`;
+ const zero=n=>`<div class="c zero"><div class="t">${n}</div><div class="p">0</div><small>${X.direta?'sem meta na carta':'sem meta para o Léo'}</small><small>${X.direta?'família sem meta no código':'quadro guardado para a equipe'}</small></div>`,anda=n=>`<div class="c zero"><div class="t">${n}</div><div class="p">—</div><small>${X.sem_meta?'meta do vendedor responsável, não do Léo':(X.sem_numero||'rateio em andamento (NÚCLEO)')}</small></div>`;
  if(X.sem_meta)MM=null;
  if(!MM){$('mtb').innerHTML=MTK.map(([,n])=>n==='Confecção'?zero(n):anda(n)).join('');$('mtu').innerHTML=MTU.map(([,n])=>n==='Confecção'?zero(n):anda(n)).join('');return}
  if(TR[MM]){const ms=(TR[MM].meses||[]).filter(m=>MT[m]);
@@ -273,11 +275,23 @@ function giro(){const X=P(),T=X.top||[],A=X.aporte||[],BX=X.baixo||[],TB=X.tabel
 // ---------------- carteira: por mês e estado · por família ----------------
 function carteiraSec(){const c=D.carteira||{},M=(c.meses||[]).filter(x=>(x.cart||0)>0),be=((c.meses||[]).find(x=>x.base_em)||{}).base_em;
  $('ct_base').textContent=(be?'carteira '+dm(be)+(String(be).length>10?' '+String(be).slice(11,16):'')+' · ':'')+'estado pela cor da AG';
- $('cart').innerHTML=M.length?M.map(x=>{const e=x.estados||{},t=(e.confirmada||0)+(e.aporte||0)+(e.atencao||0)+(e.cancelar||0);
-  return `<div class="mb-3"><div class="d-flex mb-1"><b class="text-capitalize">${MS2[+String(x.mes).slice(5,7)-1]}</b><span class="ms-auto num">${fmt(x.cart)} pares${x.valor!=null?' · R$ '+fmt(x.valor/1000)+' mil':''}</span></div><div class="est-b">${t?[['confirmada','e-conf'],['aporte','e-ap'],['atencao','e-at'],['cancelar','e-can']].map(([k,cl])=>e[k]?`<span class="${cl}" style="width:${e[k]/t*100}%"></span>`:'').join(''):''}</div></div>`}).join(''):'<div class="text-secondary small">sem carteira aberta</div>';
- const FM=c.familias||[],ms=[...new Set(FM.flatMap(f=>Object.keys(f.meses||{})))].sort();
+ // Léo 28/10 (demo): o "+" do mês abre a carteira do mês por ESTADO, família a família (carteira.meses[].detalhe); o estado é o da AG
+ const ESTC={CONFIRMADA:['confirmada','#92D050'],APORTE:['aporte','#00B050'],SUGESTAO:['sugestão','#2E3EFC'],ATENCAO:['atenção','#FFFF00'],CANCELAR:['a cancelar','#FF0000']};
+ $('cart').innerHTML=M.length?M.map((x,i)=>{const e=x.estados||{},t=(e.confirmada||0)+(e.aporte||0)+(e.atencao||0)+(e.cancelar||0),DT=x.detalhe||[];
+  const det=DT.length?`<div class="cart-d" id="cartd${i}">${DT.map(d=>`<div><b>${esc(d.nome)} · ${fmt(d.total)} ${esc(d.unidade)}</b>${Object.entries(d.estados||{}).filter(([,q])=>q>0).map(([k,q])=>`<span><i style="background:${(ESTC[k]||['',''])[1]}"></i>${esc((ESTC[k]||[k])[0])} ${fmt(q)}</span>`).join('')}</div>`).join('')}</div>`:'';
+  return `<div class="mb-3 cart-m"><div class="d-flex mb-1 align-items-center">${DT.length?`<button class="mais-m" onclick="CLI.cartd(${i},this)" title="abrir o mês por estado">+</button>`:''}<b class="text-capitalize">${MS2[+String(x.mes).slice(5,7)-1]}</b><span class="ms-auto num">${fmt(x.cart)} pares${x.valor!=null?' · R$ '+fmt(x.valor/1000)+' mil':''}</span></div><div class="est-b">${t?[['confirmada','e-conf'],['aporte','e-ap'],['atencao','e-at'],['cancelar','e-can']].map(([k,cl])=>e[k]?`<span class="${cl}" style="width:${e[k]/t*100}%"></span>`:'').join(''):''}</div>${det}</div>`}).join(''):'<div class="text-secondary small">sem carteira aberta</div>';
+ // a matriz família × mês: todo número com carteira abre a carteira daquela família naquele mês, linha a linha (carteira.linhas['nome|AAAA-MM'])
+ const FM=c.familias||[],ms=[...new Set(FM.flatMap(f=>Object.keys(f.meses||{})))].sort(),LN=c.linhas||{};
  $('fam_h').innerHTML=`<tr><th>Família</th>${ms.map(m=>`<th class="num">${MS2[+m.slice(5,7)-1]}</th>`).join('')}<th class="num">pares</th><th class="num">R$</th></tr>`;
- $('fam').innerHTML=FM.length?FM.map(f=>{const t=ms.reduce((a,m)=>a+((f.meses||{})[m]||0),0);return `<tr><td>${esc(f.nome)}</td>${ms.map(m=>`<td class="num">${fmt((f.meses||{})[m]||0)}</td>`).join('')}<td class="num fw-bold">${fmt(t)}</td><td class="num">${f.valor!=null?fmt(f.valor/1000)+' mil':'—'}</td></tr>`}).join(''):`<tr><td colspan="${ms.length+3}" class="text-secondary">sem carteira por família</td></tr>`}
+ $('fam').innerHTML=FM.length?FM.map(f=>{const t=ms.reduce((a,m)=>a+((f.meses||{})[m]||0),0);return `<tr><td>${esc(f.nome)}</td>${ms.map(m=>{const q=(f.meses||{})[m]||0,k=f.nome+'|'+m;return `<td class="num">${q&&LN[k]?`<a data-k="${esc(k)}" onclick="CLI.famcel(this)" title="abrir a carteira de ${esc(f.nome)} em ${MSX[+m.slice(5,7)-1]}">${fmt(q)}</a>`:fmt(q)}</td>`}).join('')}<td class="num fw-bold">${fmt(t)}</td><td class="num">${f.valor!=null?fmt(f.valor/1000)+' mil':'—'}</td></tr>`}).join(''):`<tr><td colspan="${ms.length+3}" class="text-secondary">sem carteira por família</td></tr>`;
+ const fd=$('famd');if(fd){fd.classList.remove('ab');fd.innerHTML=''}}
+function famcel(a){const fd=$('famd');if(!fd)return;const k=a.dataset.k,[nome,m]=k.split('|'),L=((D.carteira||{}).linhas||{})[k]||[];
+ const on=fd.classList.contains('ab')&&fd.dataset.k===k;[...document.querySelectorAll('#fam td.num a.on')].forEach(x=>x.classList.remove('on'));
+ if(on){fd.classList.remove('ab');fd.innerHTML='';fd.dataset.k='';return}
+ a.classList.add('on');fd.dataset.k=k;const u=/meia/i.test(nome)?'packs':/acess|confec/i.test(nome)?'peças':'pares',tp=L.reduce((s,r)=>s+(r.pares||0),0),tv=L.reduce((s,r)=>s+(r.valor||0),0);
+ fd.innerHTML=`<div class="ct"><b>${esc(nome)} · ${MSX[+m.slice(5,7)-1]}/${m.slice(2,4)}</b><span class="hora">${fmt(tp)} ${u} · ${mil(tv)} · ${L.length} ${L.length===1?'linha':'linhas'} da carteira · previsão de faturamento no mês</span><button class="x" onclick="CLI.famfecha()" title="fechar">×</button></div>
+  <div class="lst"><div class="it hd2"><span>modelo · cor</span><span class="num">prev. fat.</span><span class="num">${u}</span><span class="num rs">R$</span></div>${L.map(r=>`<div class="it"><span><b>${esc(r.modelo)}</b> <span class="cor">${esc(r.cor_nome||r.cor||'')}</span><small>${esc(r.ref)}</small></span><span class="num">${dm(r.prev_fat)}</span><span class="num fw-bold">${fmt(r.pares)}</span><span class="num rs">${r.valor?fmt(r.valor):'—'}</span></div>`).join('')}</div>`;
+ fd.classList.add('ab');fd.scrollIntoView({behavior:'smooth',block:'nearest'})}
 // ---------------- filtro (3 blocos) ----------------
 const TIPOS=[['tenis','Tênis (footwear)'],['meias','Meias'],['chinelo','Chinelo'],['acess','Acessório'],['conf','Confecção']];
 const GT=[['MASCULINO','Masculino'],['FEMININO','Feminino'],['INFANTIL','Infantil'],['UNISSEX','Unissex']],GM=[['MASCULINO','Masculino (39/44)'],['FEMININO','Feminino (33/38)']];
@@ -386,8 +400,12 @@ document.addEventListener('click',e=>{const el=$('bro');if(el.classList.contains
 window.CLI={
  mes:d=>{CM=[CM[0]+(CM[1]+d>11?1:CM[1]+d<0?-1:0),(CM[1]+d+12)%12];agenda()},dia:d=>{SD=d;agenda()},
  ag:i=>{const e=(D.agenda||[])[i];if(chama('onAcao','agenda',e))return false;return !!(e&&e.link)},
- ano:y=>{clearTimeout(CLI._t);CLI._t=setTimeout(()=>{ANS[y]=ANS[y]?0:1;grafico()},220)},so:y=>{clearTimeout(CLI._t);Object.keys(ANS).forEach(a=>ANS[a]=a===y?1:0);grafico()},
+ // Léo 28/10 (demo, item 3b): o toque no ano liga/desliga NA HORA (a espera de 220 ms para separar do toque duplo engolia o segundo toque e
+ // o toque duplo virava "só este ano", apagando os outros — por isso "custava religar"); "só este ano" continua no toque duplo, sem espera
+ ano:y=>{ANS[y]=ANS[y]?0:1;grafico()},so:y=>{Object.keys(ANS).forEach(a=>ANS[a]=a===y?1:0);grafico()},
  cam:c=>{CAM[c]=CAM[c]?0:1;grafico()},
+ cartd:(i,b)=>{const el=$('cartd'+i);if(!el)return;el.classList.toggle('ab');const ab=el.classList.contains('ab');if(b){b.classList.toggle('ab',ab);b.textContent=ab?'−':'+'}},
+ famcel:a=>famcel(a),famfecha:()=>{const fd=$('famd');if(fd){fd.classList.remove('ab');fd.innerHTML='';fd.dataset.k=''}[...document.querySelectorAll('#fam td.num a.on')].forEach(x=>x.classList.remove('on'))},
  mm:m=>{MM=m;metas()},
  cobp:(f,troca)=>cobp(f,troca),
  todos:()=>{TODOS=!TODOS;decidir()},

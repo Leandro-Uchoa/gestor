@@ -203,6 +203,18 @@ svg.graf{height:170px}
 .cobp .tabs button.on{background:#fff;color:#000}
 .cobp .lst{max-height:300px;overflow:auto;display:grid;grid-template-columns:repeat(2,1fr);gap:0 24px}
 .cobp .it{display:grid;grid-template-columns:1fr 54px 64px 60px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.14);font-size:12.5px}
+.cobp .it.it5{grid-template-columns:1fr 54px 64px 64px 60px}
+/* carteira: o "+" do mês (por estado, família a família) e a matriz família × mês clicável (Léo 28/10, demo) */
+.cart-m .mais-m{all:unset;cursor:pointer;width:20px;height:20px;border-radius:6px;border:1px solid var(--cl);display:inline-flex;align-items:center;justify-content:center;font:800 14px Barlow;margin-right:8px;line-height:1}
+.cart-m .mais-m:hover,.cart-m .mais-m.ab{background:#000;color:#fff;border-color:#000}
+.cart-d{display:none;margin:4px 0 6px 28px;font-size:12px}.cart-d.ab{display:block}.cart-d div{display:flex;flex-wrap:wrap;gap:4px 10px;padding:3px 0;border-top:1px dashed var(--cl)}.cart-d div:first-child{border-top:0}.cart-d b{min-width:150px}.cart-d i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+#fam td.num a{color:inherit;text-decoration:underline dotted;text-underline-offset:3px;font-weight:600;cursor:pointer}#fam td.num a:hover{color:var(--az)}#fam td.num a.on{color:var(--az);font-weight:800}
+.famd{display:none;margin-top:10px;border:1px solid var(--cl);border-radius:14px;padding:12px 14px;background:#F6F5F0}.famd.ab{display:block}
+.famd .ct{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.famd .ct b{font:800 16px Barlow}.famd .x{all:unset;cursor:pointer;margin-left:auto;font-size:20px;line-height:1;padding:2px 8px;border-radius:8px}.famd .x:hover{background:#E6E7E8}
+.famd .lst{max-height:320px;overflow:auto;margin-top:6px}.famd .it{display:grid;grid-template-columns:1fr 70px 70px 90px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--cl);font-size:12.5px}
+.famd .it small{display:block;font-size:10.5px;color:var(--ce)}.famd .hd2{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ce);border-top:0}
+@media (max-width:575.98px){.famd .it{grid-template-columns:1fr 60px 60px}.famd .it .rs{display:none}}
+.vazio{pointer-events:none}
 .cobp .it small{display:block;font-size:10.5px;opacity:.8}.cobp .it .cb{font:800 14px Barlow;text-align:center;border-radius:6px;padding:2px 0}
 .cobp .hd2{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.75;border-top:0}
 @media (max-width:991.98px){.cobp .lst{grid-template-columns:1fr}}
