@@ -142,7 +142,7 @@ window.Dados = (() => {
     const t = MODO_CLIENTE ? {} : (doc.topics || {}), bloco = String(t.bloco || perfil.bloco_topics || "");
     const limpa = s => { const b = bloco.trim(); let x = String(s || "").trim(); if (b && x.toUpperCase().startsWith(b.toUpperCase())) x = x.slice(b.length).replace(/^\s*[-–:·]\s*/, ""); return x; };
     const linhas = MODO_CLIENTE ? [] : (DEC || []).filter(l => idOk(l.id)).map(l => ({
-      id: /^(r\d|trade:)/.test(l.id) ? "dec:" + l.id : l.id, texto: limpa(l.texto), urgente: !!l.urgente, criado_em: DATA_OK.test(String(l.base_em)) ? String(l.base_em).slice(0, 10) : null, bloco: "",
+      id: /^(r\d|reg|trade:)/.test(l.id) ? "dec:" + l.id : l.id, texto: limpa(l.texto), urgente: !!l.urgente, criado_em: DATA_OK.test(String(l.base_em)) ? String(l.base_em).slice(0, 10) : null, bloco: "",
       regra: l.regra, fonte: fonteTela(l.fonte), numero: l.numero, unidade: l.unidade, valor_rs: l.valor_rs, da_view: true }));
     const jaTem = new Set(linhas.map(l => l.id));
     const itens = (t.itens || []).filter(i => !i.feito_em && !i.feito && idOk(i.id) && !jaTem.has(i.id)).map(i => ({ id: i.id, texto: limpa(i.txt || i.texto), urgente: !!i.alerta, criado_em: i.criado_em || i.data || null, bloco: "", sub: i.sub || "", prazo: i.prazo || null, dono: i.dono || "" }));
