@@ -34,12 +34,12 @@
   async function arranque() {
     try {
       const s = await DadosAcao.sessao(); if (!s) { overlayLogin(); return; }
-      LISTA = await DadosAcao.clientes();
+      LISTA = DadosAcao.MODO_CLIENTE ? [] : await DadosAcao.clientes();   // GAMER 28/10: em modo cliente a rede não traz a lista de clientes
       const h = new URLSearchParams(location.hash.slice(1)), q = new URLSearchParams(location.search), pedido = h.get("cliente") || q.get("cliente");
-      CLIENTE = LISTA.some(c => c.cliente === pedido) ? pedido : null; PERIODO = DadosAcao.PERIODOS[h.get("periodo") || q.get("periodo")] ? (h.get("periodo") || q.get("periodo")) : "bf";
+      CLIENTE = DadosAcao.MODO_CLIENTE ? (pedido || null) : (LISTA.some(c => c.cliente === pedido) ? pedido : null); PERIODO = DadosAcao.PERIODOS[h.get("periodo") || q.get("periodo")] ? (h.get("periodo") || q.get("periodo")) : "bf";
       if (DadosAcao.MODO_CLIENTE) { for (const el of document.querySelectorAll(".rail, .busca, .bts, .interno")) el.style.setProperty("display", "none", "important"); if (main) main.style.marginLeft = "16px"; }
-      barra(); if (main) main.style.visibility = "";
-      if (!CLIENTE) { aviso(pedido ? "Cliente não encontrado" : "Escolha um cliente", pedido ? `“${pedido}” não está na lista — escolha no seletor` : "no seletor, no topo da página"); return; }
+      if (!DadosAcao.MODO_CLIENTE) barra(); if (main) main.style.visibility = "";
+      if (!CLIENTE) { aviso(pedido ? "Cliente não encontrado" : (DadosAcao.MODO_CLIENTE ? "Endereço incompleto" : "Escolha um cliente"), pedido ? `“${pedido}” não está na lista — escolha no seletor` : (DadosAcao.MODO_CLIENTE ? "abra o endereço que recebeu" : "no seletor, no topo da página")); return; }
       await abrir();
     } catch (e) { console.error(e); aviso("A página não conseguiu arrancar", DadosAcao.MODO_CLIENTE ? "tente de novo em instantes" : "sem resposta do banco: " + (e && e.message || e)); }
   }

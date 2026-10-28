@@ -9,8 +9,8 @@ window.DadosAcao = (() => {
   const DATA_OK = /^\d{4}-\d{2}-\d{2}/, MES_OK = /^\d{4}-\d{2}/;
   const PERIODOS = { bf: "Black Friday", outlet: "Outlet", queima: "Queima", aniversario: "Aniversário do cliente", promocao: "Promoção" };
   const TIPOS = { "FORA DE LINHA": { nome_tela: "Fora de linha", explicacao: "saiu de linha: não repor nem antecipar — queima ou outlet" },
-                  "PONTA DE ESTOQUE": { nome_tela: "Ponta de estoque", explicacao: "pelo corte de estoque do cliente E sem faturar para ele há 6 meses ou mais — fechar grade" },
-                  "AÇÃO/REBAIXO": { nome_tela: "Ação / rebaixo", explicacao: "pelo corte de estoque do cliente E sem faturar há 6 meses ou mais — orientar para ação, promoção ou rebaixo" } };
+                  "PONTA DE ESTOQUE": { nome_tela: "Ponta de estoque", explicacao: "pelo corte de estoque do cliente (até o limite de ponta) E sem faturar para ele há 6 meses ou mais — fechar grade; com carteira chegando, segurar" },
+                  "AÇÃO/REBAIXO": { nome_tela: "Ação / rebaixo", explicacao: "pelo corte de estoque do cliente (acima da ponta, até o limite de ação) E sem faturar há 6 meses ou mais — orientar para ação, promoção ou rebaixo; com carteira chegando, segurar" } };
   // em ?modo=cliente a explicação é neutra (GAMER 28/10: o critério interno não vai à tela do cliente)
   const EXPLICA_CLIENTE = { "FORA DE LINHA": "modelos que saíram de linha", "PONTA DE ESTOQUE": "últimas unidades", "AÇÃO/REBAIXO": "seleção para a ação" };
   const ORDEM = ["FORA DE LINHA", "PONTA DE ESTOQUE", "AÇÃO/REBAIXO"];
@@ -41,7 +41,7 @@ window.DadosAcao = (() => {
     }
     // cadastro: nome da cor e a foto verificada por cor (produto.foto_url, 0124)
     const CAD = []; for (let i = 0; i < refs.length; i += 200) CAD.push(...await semErro(() => tudo(sb.from("produto").select("referencia,cor,cor_descricao,imagem,foto_url").in("referencia", refs.slice(i, i + 200)).order("referencia").order("cor"))));
-    // foto VERIFICADA (Engenharia 0124, 28/10): produto.foto_url só existe quando o site do catálogo devolveu 200 com imagem — sem cascata, sem 404; Under Armour quase sem foto → silhueta
+    // foto VERIFICADA (Engenharia 0124, 28/10): produto.foto_url só existe quando o catálogo devolveu 200 com imagem — sem cascata, sem 404; Under Armour quase sem foto → silhueta
     const COR = new Map(CAD.map(p => [p.referencia + "|" + (p.cor || ""), p.cor_descricao])), IMG = new Map();
     for (const p of CAD) { if (!p.foto_url) continue; IMG.set(p.referencia + "|" + (p.cor || ""), p.foto_url); (IMG.get(p.referencia) || IMG.set(p.referencia, []).get(p.referencia)).push(p.foto_url); }
     const situ = await semErro(() => tudo(sb.from("produto_situacao").select("referencia,em_linha").eq("em_linha", false).order("referencia")));
@@ -55,7 +55,7 @@ window.DadosAcao = (() => {
     // sem faturar para o cliente há 6+ meses. O que a view trouxe pelo corte de estoque e ainda vende (ex.: 4 meses sem faturar) SAI, e é contado para o porteiro.
     const permitido = l => l.tipo === "FORA DE LINHA" || FORA.has(l.referencia) || (+l.meses_sem_fat >= 6);
     const excluidos = linhas.filter(l => ORDEM.includes(l.tipo) && !permitido(l)).map(l => ({ ref: l.referencia, modelo: l.descricao, tipo: l.tipo, meses_sem_fat: l.meses_sem_fat, estoque: l.estoque }));
-    const termos = String(busca || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);   // vários termos separados por vírgula (aprendizado do CMS Space)
+    const termos = String(busca || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);   // vários termos separados por vírgula
     const casa = it => !termos.length || termos.every(t => [it.modelo, it.ref, it.cor, it.cor_nome, it.familia, it.genero, it.categoria, it.faixa].some(v => String(v || "").toLowerCase().includes(t)));
     const itens = linhas.filter(l => ORDEM.includes(l.tipo) && permitido(l)).map(l => {
       const k = l.referencia + "|" + (l.cor || ""), lembrada = fotoLembrada(k), fotos = [...new Set([l.cor ? IMG.get(k) : null, lembrada].concat(IMG.get(l.referencia) || [], [FOTO.get(k), FOTO.get(l.referencia + "|")]).filter(Boolean))], foto = fotos[0] || null;   // cascata: a casca tenta uma a uma (onerror) e cai na silhueta
@@ -76,7 +76,7 @@ window.DadosAcao = (() => {
     const base = linhas[0] || {};
     return { hoje: hojeD, cliente: { codigo: cliente, nome }, periodo: { chave: PERIODOS[periodo] ? periodo : "bf", rotulo: PERIODOS[periodo] || PERIODOS.bf }, ordem_tipos: ORDEM.slice(),
              familias, tipos, filtro: { familia: familia || null, busca: busca || "" }, bases: { giro: MES_OK.test(String(base.mes_estoque)) ? String(base.mes_estoque).slice(0, 7) : null, venda: base.meses_venda || null },
-             excluidos_em_linha: excluidos.length, excluidos: MODO_CLIENTE ? undefined : excluidos, modo_cliente: MODO_CLIENTE, regra: MODO_CLIENTE ? "seleção para a ação: fora de linha, ponta de estoque e rebaixo · o período só muda o rótulo" : "só fora de linha, ponta de estoque e ação/rebaixo pelo corte do cliente · produto em linha nunca entra · sem preço de referência externa · o período só muda o rótulo · critério desta tela: corte de estoque do cliente (a aba Cliente conta ponta pelo raio-x e fora de linha pelo cadastro — números diferentes com o mesmo nome)" };
+             excluidos_em_linha: MODO_CLIENTE ? 0 : excluidos.length, excluidos: MODO_CLIENTE ? undefined : excluidos,   /* GAMER 28/10: em modo cliente nem o número vai ao DOM */ modo_cliente: MODO_CLIENTE, regra: MODO_CLIENTE ? "seleção para a ação: fora de linha, ponta de estoque e rebaixo" : "só fora de linha, ponta de estoque e ação/rebaixo pelo corte do cliente · produto em linha nunca entra · sem preço de referência externa · o período só muda o rótulo · critério desta tela: corte de estoque do cliente (a aba Cliente conta ponta pelo raio-x e fora de linha pelo cadastro — números diferentes com o mesmo nome)" };
   }
   return { sb, sessao, entrar, sair, clientes, carregar, refiltrar: (p, f, b) => montar(p, f, b), MODO_CLIENTE, PERIODOS, ORDEM };
 })();
