@@ -58,7 +58,7 @@ window.Dados = (() => {
       // meta DIRETA (0093, 28/10): cliente que pontua sozinho num código CMS da carta = 100% da carta desse código, sem rateio (tabela meta_cliente_direto)
       semErro(() => tudo(sb.from("v_meta_cliente_direto").select("mes,chave,unidade,meta_cliente,faturado,carteira,potencial,gap,etiqueta,base_em,meta_lida_em,participacao_regra,potencial_detalhada,diferenca_carta,carta_real_pares").eq("cliente", cliente).order("mes"))),
       // 12 meses de venda por modelo-cor (tênis OLY, AG consolidada): a curva dos 80% que decide quem entra nas barras da cobertura (NÚCLEO 28/10)
-      semErro(() => tudo(sb.from("giro_mensal").select("referencia,cor,venda").eq("cliente", cliente).is("praca", null).like("marca", "OLY_FTW*").gte("mes", desde12).order("mes").order("fonte").order("referencia").order("cor"))),
+      semErro(() => tudo(sb.from("giro_mensal").select("mes,referencia,cor,venda,estoque").eq("cliente", cliente).is("praca", null).like("marca", "OLY_FTW*").gte("mes", desde12).order("mes").order("fonte").order("referencia").order("cor"))),
       // corte de estoque por cliente (0095, Léo na demo: "depende muito de cliente a cliente"): ponta_ate / acao_ate em pares, praças somadas
       semErro(() => tudo(sb.from("corte_estoque_cliente").select("ponta_ate,acao_ate,nota").eq("cliente", cliente))),
     ]);
@@ -163,6 +163,16 @@ window.Dados = (() => {
     const ordC = [...V12.entries()].sort((a, b) => b[1] - a[1]), tot12 = ordC.reduce((s, [, v]) => s + v, 0), NACURVA = new Set(); let acc = 0;
     for (const [k, v] of ordC) { if (acc / tot12 < 0.8) NACURVA.add(k); acc += v; }
     const temCurva = tot12 > 0, PISO = 12, EST_TETO = 24;
+    const V12M = new Map(); for (const r of (giro12 || [])) { if (!MES_OK.test(String(r.mes))) continue; const k = r.referencia + "|" + (r.cor || ""), m = String(r.mes).slice(0, 7); const o = V12M.get(k) || new Map(); const c = o.get(m) || { v: 0, e: null }; c.v += (+r.venda || 0); if (r.estoque != null) c.e = (c.e || 0) + (+r.estoque); o.set(m, c); V12M.set(k, o); }
+    const JANELA = ((drill || {}).meta || {}).meses_media || [];
+    // NÚCLEO 28/10 (base curta aceita, com travas): 1 mês fechado = cobertura PROVISÓRIA (o 1º mês costuma ser parcial) — entra na barra, não dispara ação;
+    // 2 meses = régua normal, mas se o 1º deles é o mês de ENTRADA (1º mês com estoque), a média é só do 2º, e a etiqueta diz
+    const baseCurtaDe = (k, r) => { const o = V12M.get(k); if (!o || !(r.venda_media > 0) || r.estoque == null || r.cobertura != null) return null;
+      const ms = JANELA.filter(m => (o.get(m) || {}).v > 0).sort(); if (!ms.length || ms.length >= 3) return null;
+      const entrada = [...o.keys()].sort().find(m => (o.get(m) || {}).e > 0) || null;
+      if (ms.length === 1) return { n: 1, vm: o.get(ms[0]).v, provisoria: true, texto: "base curta: 1 de 3 · provisória" };
+      if (entrada && ms[0] === entrada) return { n: 2, vm: o.get(ms[1]).v, provisoria: false, texto: "base curta: 2 de 3 · 1º é o mês de entrada, média só do 2º" };
+      return { n: 2, vm: (o.get(ms[0]).v + o.get(ms[1]).v) / 2, provisoria: false, texto: "base curta: 2 de 3" }; };
     // ponta do raio-x do NÚCLEO (6+ meses sem faturar, sem carteira): quem está nela não entra nas barras
     const itRX = (ponta && ponta.ponta && Array.isArray(ponta.ponta.itens)) ? ponta.ponta.itens.filter(x => /^OLY[ _]FTW/i.test(x.marca || "") && !x.excluido).map(x => ({ modelo: x.desc, cor: x.cor || "", ref: x.ref, venda: x.venda_mes, estoque: x.estoque || 0, situacao: x.situacao || "", leitura: x.sugestao || "", sem_faturar_desde: x.sem_fat_desde || "" })) : [];
     const ja = new Set(itRX.map(x => x.ref + "|" + (x.cor || "")));
@@ -170,14 +180,15 @@ window.Dados = (() => {
     // (mesmo em linha), até acao_ate = AÇÃO/REBAIXO, acima = leitura normal da régua; fora de linha sempre indicado e nunca propõe repor. Sem corte
     // (clientes que o Léo ainda não calibrou): piso 12/mês + curva dos 80% (cauda de pouco volume fora das barras), fora de linha e raio-x → ponta.
     const PT = (drill || []).map(r => { const k = r.referencia + "|" + (r.cor || ""), venda = r.venda_media != null ? Math.round(r.venda_media) : null, fora = FORA.has(r.referencia), est = r.estoque || 0;
-      const curta = r.cobertura == null && r.venda_media > 0 && r.estoque != null && (r.meses_com_venda || 0) > 0;   // GAMER 28/10: sem 3 meses fechados a cobertura saía "—" e 16.450 pares de encalhe sumiam da régua
-      const cob = r.cobertura != null ? Math.round(r.cobertura * 10) / 10 : curta ? Math.round(r.estoque / r.venda_media * 10) / 10 : null, base_curta = curta ? r.meses_com_venda : null;
+      const BC = baseCurtaDe(k, r);   // GAMER 28/10: sem 3 meses fechados a cobertura saía "—" e 16.450 pares de encalhe sumiam da régua; travas do NÚCLEO em baseCurtaDe
+      const cob = r.cobertura != null ? Math.round(r.cobertura * 10) / 10 : BC && BC.vm > 0 ? Math.round(r.estoque / BC.vm * 10) / 10 : null, base_curta = BC ? BC.n : null, provisoria = !!(BC && BC.provisoria), base_curta_txt = BC ? BC.texto : null;
       const na_curva = !temCurva || NACURVA.has(k), relevante = (venda || 0) >= PISO && na_curva && !(cob != null && cob >= 5 && est < EST_TETO);
       let grupo;
       if (CORTE) { grupo = est <= CORTE.ponta_ate ? "ponta" : est <= CORTE.acao_ate ? "acao" : cob != null ? "barra" : "sem_base"; if (fora && grupo !== "barra") grupo = "fora_linha"; }
       else grupo = fora || ja.has(k) ? "ponta" : !relevante ? "cauda" : cob != null ? "barra" : "sem_base";
+      if (provisoria && cob != null && !fora) grupo = "barra";   // provisória: entra na barra pela cobertura, nunca em ponta/ação (não dispara ação)
       return { modelo: r.produto, cor: r.cor ? (cores.get(k) || r.cor) : "todas as cores", ref: r.referencia, venda, estoque: r.estoque, cobertura: cob, giro: r.giro,
-               carteira: r.cor ? (CL.get(k) || {}).cart || 0 : (CR.get(r.referencia) || {}).cart || 0, fora_linha: fora, sem_repor: fora, na_curva, relevante, grupo, base_curta }; });
+               carteira: r.cor ? (CL.get(k) || {}).cart || 0 : (CR.get(r.referencia) || {}).cart || 0, fora_linha: fora, sem_repor: fora, na_curva, relevante, grupo, base_curta, base_curta_txt, provisoria }; });
     const totEst = ((drill || {}).meta || {}).total_estoque || PT.reduce((s, r) => s + (r.estoque || 0), 0) || 0;
     const naBarra = PT.filter(r => r.grupo === "barra");
     const fx2 = (fn) => { const p = naBarra.filter(fn).reduce((s, r) => s + (r.estoque || 0), 0); return { pares: p, pct: totEst ? p / totEst * 100 : null }; };
@@ -197,7 +208,8 @@ window.Dados = (() => {
                disponivel: d && d.pares > 0 ? { pares: d.pares, data: d.data } : null, fora_linha: FORA.has(r.referencia), base: r.base }; });
     const meta_d = (itensDrill && itensDrill.meta) || {}, txtBase = meta_d.nota || "";
     const top = P.filter(r => (r.venda || 0) >= 40 && r.giro != null && !r.fora_linha).sort((a, b) => b.giro - a.giro).slice(0, 10);
-    const naBarraP = r => !aba ? GRUPO.get(r.ref + "|" + (r.cor || "")) === "barra" : ((r.venda || 0) >= 20 && !r.fora_linha);
+    const PROV = new Set(PT.filter(r => r.provisoria).map(r => r.ref + "|" + (r.cor === "todas as cores" ? "" : r.cor)));
+    const naBarraP = r => !aba ? (GRUPO.get(r.ref + "|" + (r.cor || "")) === "barra" && !PROV.has(r.ref + "|" + (r.cor || ""))) : ((r.venda || 0) >= 20 && !r.fora_linha);
     const aporte = P.filter(r => r.cobertura != null && r.cobertura < 5 && naBarraP(r)).sort((a, b) => (a.cobertura >= 4) - (b.cobertura >= 4) || b.venda - a.venda);
     const baixo = P.filter(r => r.giro != null && r.giro <= 20 && r.carteira > 0).sort((a, b) => b.carteira - a.carteira);
     const tabela = P.filter(r => (r.venda || 0) > 0).sort((a, b) => b.venda - a.venda).slice(0, 20);
