@@ -11,6 +11,8 @@ window.DadosTrade = (() => {
   const ORD_ST = ["em andamento", "planejada", "feita", "não usada", "arquivada"];
   const ROTULO_ST = { arquivada: "arquivadas" };
   const num = v => v == null || v === "" ? null : (isNaN(+v) ? null : +v);
+  const semKey = s => { const m = /^(\d)S(\d\d)$/.exec(String(s || "")); return m ? m[2] + m[1] : String(s || ""); };   /* GAMER: '2S26' x '1S27' — ordena por ano, depois semestre */
+  const semOrd = (a, b) => semKey(b).localeCompare(semKey(a));
   let BRUTO = null, FILTRO = { vendedor: [], status: [], busca: "" };
 
   async function tudo(q) { const out = []; for (let i = 0; ; i += 1000) { const { data, error } = await q.range(i, i + 999); if (error) throw error; out.push(...(data || [])); if (!data || data.length < 1000) break; } return out; }
@@ -33,21 +35,22 @@ window.DadosTrade = (() => {
     const c = await sb.rpc("trade_consulta");
     if (c.error) { BRUTO.falhas.acoes = c.error.message || "sem resposta"; BRUTO.consulta = { acoes: [], semestres: [], carga: null }; }
     else BRUTO.consulta = c.data || { acoes: [], semestres: [], carga: null };
-    if (!BRUTO.semestre) { const sems = (BRUTO.consulta.semestres || []).slice().sort().reverse(); BRUTO.semestre = sems[0] || null; }
+    if (!BRUTO.semestre) { const sems = (BRUTO.consulta.semestres || []).slice().sort(semOrd); BRUTO.semestre = sems[0] || null; }
     emitir(2, "ações");
     // 3 · o escritório (só para o match da gravação; acessório)
-    const e = await semErro(() => tudo(sb.from("escritorio").select("id").limit(1)), []);
+    const e = await semErro(() => tudo(sb.from("escritorio").select("id").order("id").limit(1)), []);
     BRUTO.esc = (e[0] || {}).id || null;
     return montar(null);
   }
 
   function montar(carregando) {
     const { semestre, resumo, consulta, falhas } = BRUTO, hoje = new Date().toISOString().slice(0, 10);
+    const parcial = !consulta;   /* passo 1: só a RPC do placar chegou — o que depende das ações fica "—" (GAMER: nada de número errado valendo) */
     const todas = (consulta && consulta.acoes) || [];
     const doSem = todas.filter(a => (a.semestre || null) === (semestre || null));
     const valor = a => num(a.provisionado != null ? a.provisionado : a.verba) || 0;
     const stDe = a => ARQ(a.status) ? "arquivada" : a.status;
-    const sems = [...new Set(todas.map(a => a.semestre).filter(Boolean))].sort().reverse();
+    const sems = [...new Set(todas.map(a => a.semestre).filter(Boolean))].sort(semOrd);
     if (resumo && resumo.semestre && !sems.includes(resumo.semestre)) sems.unshift(resumo.semestre);
     const semestres = sems.map(s => ({ chave: s, n: todas.filter(a => a.semestre === s).length }));
     // verba: da RPC (0102) quando o semestre tem verba lançada; se não, só o que se soma das ações
@@ -58,12 +61,12 @@ window.DadosTrade = (() => {
       saldo: semVerba ? null : num(resumo.saldo), feita: semVerba ? doSem.filter(a => a.status === "feita").reduce((s, a) => s + valor(a), 0) : num(resumo.feita),
       em_andamento: semVerba ? doSem.filter(a => a.status === "em andamento").reduce((s, a) => s + valor(a), 0) : num(resumo.em_andamento),
       n_aprovadas: semVerba ? doSem.filter(a => APROVADA(a.status)).length : num(resumo.n_acoes),
-      provisionada: doSem.filter(a => a.status === "planejada").reduce((s, a) => s + valor(a), 0),
-      arquivadas: { n: doSem.filter(a => ARQ(a.status)).length, valor: doSem.filter(a => ARQ(a.status)).reduce((s, a) => s + valor(a), 0) },
-      nao_usada: { n: doSem.filter(a => a.status === "não usada").length, valor: doSem.filter(a => a.status === "não usada").reduce((s, a) => s + valor(a), 0) },
-      sem_verba: semVerba,
+      provisionada: parcial ? null : doSem.filter(a => a.status === "planejada").reduce((s, a) => s + valor(a), 0), n_planejada: doSem.filter(a => a.status === "planejada").length,
+      arquivadas: parcial ? null : { n: doSem.filter(a => ARQ(a.status)).length, valor: doSem.filter(a => ARQ(a.status)).reduce((s, a) => s + valor(a), 0) },
+      nao_usada: parcial ? null : { n: doSem.filter(a => a.status === "não usada").length, valor: doSem.filter(a => a.status === "não usada").reduce((s, a) => s + valor(a), 0) },
+      sem_verba: semVerba, parcial,
     };
-    verba.em_aberto = verba.total == null ? null : verba.total - (verba.consumido || 0) - verba.provisionada;
+    verba.em_aberto = parcial || verba.total == null ? null : verba.total - (verba.consumido || 0) - verba.provisionada;
     const ct = (resumo && resumo.controle) || {};
     const controle = semVerba ? null : { saldo_planilha: num(ct.saldo_planilha), consumido_planilha: num(ct.consumido_planilha), saldo_celula: num(ct.saldo_celula), bate: !!ct.bate, diferenca: num(ct.diferenca),
       lida_em: resumo.verba_lida_em || null, rotulo: resumo.verba_rotulo || null, celula: resumo.verba_celula || null, arquivo: resumo.arquivo || null };
@@ -82,10 +85,12 @@ window.DadosTrade = (() => {
     const acoes = lista.map(a => ({ id: a.id, cliente: a.cliente, nome: a.nome || a.cliente, vendedor: a.vendedor || null, portas: num(a.portas), titulo: a.titulo, tipo: a.tipo || null,
       status: a.status, status_tela: stDe(a), arquivada: ARQ(a.status), aprovada: APROVADA(a.status), provisionado: valor(a), utilizada: num(a.utilizada), restante: num(a.restante),
       nota: a.nota || null, atualizacao: a.atualizacao || null, periodo: a.periodo || null, periodo_ini: a.periodo_ini || null, periodo_fim: a.periodo_fim || null, meta_pares: num(a.meta_pares),
+      meta: a.meta || null, mecanica: a.mecanica || null, produtos: a.produtos || null, objetivo: a.objetivo || null, aprovacao: a.aprovacao || null, proximo: a.proximo || null, loja: a.loja || null,
+      status_planilha: a.status_planilha || null, fonte: a.fonte || null, criado_por: a.criado_por || null, criado_em: a.criado_em || null, atualizado_em: a.atualizado_em || null,   /* a ficha da ação (GAMER: todo número abre o detalhe) */
       semestre: a.semestre || null, pct: Math.round(100 * valor(a) / max) }));
     const tot = k => acoes.reduce((s, a) => s + (num(a[k]) || 0), 0);
     return { hoje, semestre, semestres, carregando: carregando || null, falhas: Object.keys(falhas).length ? falhas : null, aviso: null, gravado: null,
-      verba, controle, carga, filtros, acoes, n: acoes.length, n_total: doSem.length, totais: { provisionado: tot("provisionado"), utilizada: tot("utilizada"), restante: tot("restante") },
+      verba, controle, carga, filtros, acoes, n: acoes.length, n_total: parcial ? null : doSem.length, totais: { provisionado: tot("provisionado"), utilizada: tot("utilizada"), restante: tot("restante") },
       regra: "consumido = feita + em andamento · planejada é provisionada · arquivada some da frente e volta pelo chip · nenhum valor arredondado" };
   }
 
@@ -93,13 +98,15 @@ window.DadosTrade = (() => {
   // grava status ou atualização em trade_acao (o gatilho guarda o histórico); devolve null ou a mensagem de erro
   async function gravar(id, patch) {
     const q = sb.from("trade_acao").update(Object.assign({ atualizado_em: new Date().toISOString() }, patch));
-    const r = await (BRUTO.esc ? q.match({ id: Number(id), escritorio_id: BRUTO.esc }) : q.match({ id: Number(id) }));
+    const r = await (BRUTO.esc ? q.match({ id: Number(id), escritorio_id: BRUTO.esc }) : q.match({ id: Number(id) })).select("id");   /* GAMER: sem select a RLS que barra devolve 0 linhas sem erro e a tela dizia "Gravado" */
     if (r.error) return r.error.message || "o banco recusou";
+    if (!r.data || !r.data.length) return "nenhuma linha gravada — este usuário não tem permissão de escrita neste escritório";
     const a = ((BRUTO.consulta || {}).acoes || []).find(x => Number(x.id) === Number(id)); if (a) Object.assign(a, patch);
     // o resumo (verba · consumido · saldo) vem da RPC: depois de mudar status, relê só ela (leve)
     if (patch.status !== undefined) { const r2 = await semErro(() => sb.rpc("trade_resumo", { p_semestre: BRUTO.semestre }).then(x => { if (x.error) throw x.error; return x.data; }), null); if (r2) BRUTO.resumo = r2; }
     return null;
   }
 
-  return { sb, MODO_CLIENTE, sessao, entrar, sair, carregar, refiltrar, gravar, semestre: () => BRUTO && BRUTO.semestre, filtro: () => FILTRO };
+  const acao = id => BRUTO && ((BRUTO.consulta || {}).acoes || []).find(x => Number(x.id) === Number(id)) || null;
+  return { sb, MODO_CLIENTE, sessao, entrar, sair, carregar, refiltrar, gravar, acao, semestre: () => BRUTO && BRUTO.semestre, filtro: () => FILTRO };
 })();

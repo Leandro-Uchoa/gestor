@@ -8,7 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <link rel="stylesheet" href="cliente.css?v=46">
 <link rel="stylesheet" href="acao.css?v=9">
-<link rel="stylesheet" href="trade.css?v=1">
+<link rel="stylesheet" href="trade.css?v=2">
 </head>
 <body>
 <nav class="rail">
@@ -31,19 +31,20 @@
   <div class="a-aviso" id="a_aviso" hidden></div>
   <div class="tr-placar" id="a_placar"></div>
   <div class="tr-sec" id="a_sec"></div>
+  <div class="tr-expl" id="a_expl" hidden></div>
   <div class="hora" id="a_regra" style="color:#fff;opacity:.9;margin-top:8px"></div>
  </section>
  <div class="tr-filtros" role="group" aria-label="filtros">
   <span class="lb">vendedor</span><div class="a-fam" id="a_vend"></div>
   <span class="lb">status</span><div class="a-fam" id="a_st"></div>
-  <div class="busca a-bsc"><i class="ti ti-search"></i><input id="a_busca" class="a-busca" placeholder="Buscar cliente, estratégia, nota ou vendedor" autocomplete="off" oninput="TRADE.busca(this.value)" aria-label="buscar no trade"></div>
+  <div class="busca a-bsc"><i class="ti ti-search"></i><input id="a_busca" class="a-busca" placeholder="Buscar cliente ou ação" autocomplete="off" oninput="TRADE.busca(this.value)" aria-label="buscar no trade"></div>
  </div>
  <div id="a_lista"></div>
  <div class="text-center hora mt-3" id="rodape">Gestor · trade · sobre a forma aprovada da aba Cliente (27/10/2026)</div>
 </div>
-<script src="trade_tela.js?v=1"></script>
+<script src="trade_tela.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="trade_dados.js?v=1"></script>
-<script src="trade_glue.js?v=1"></script>
+<script src="trade_dados.js?v=2"></script>
+<script src="trade_glue.js?v=2"></script>
 </body></html>
