@@ -36,7 +36,7 @@ window.DadosMeta = (() => {
   const PASSOS = 8;
   async function carregar(preposto, aoPasso) {
     const P = preposto || "TODOS", emitir = (passo, rotulo) => { try { if (aoPasso) aoPasso(montar(null, { passo, total: PASSOS, rotulo })); } catch (e) { console.error("passo " + passo, e); } };
-    const placar = await tudo(sb.from("v_onde_buscar_meta").select("mes,marca,preposto,preposto_nome,faixa,unidade,faixa_ordem,total,gatilho_pct,meta,gatilho,real,faturado,falta_gatilho,falta_100,bate,alcanca,se_nao_faturar,m1_cobrar,m1_vencida,m2_marcado,m3_antecipar,m3_efeito_mes_seguinte,m3_cob_alta,m4_repasse,m5_rfv_clientes,m5_rfv_pares_2025,cms_bate,cms_alcanca,vale_buscar,quinzena2,dias_uteis_restantes,real_lido_em,meta_lida_em")
+    const placar = await tudo(sb.from("v_onde_buscar_meta").select("*")   // "*": colunas novas no FIM (m3_sem_ag, em curso no DBA) entram sem quebrar a consulta
              .eq("preposto", P).order("marca").order("faixa_ordem"));
     const nomeP = (placar[0] || {}).preposto_nome || (P === "TODOS" ? "CMS" : P);
     BRUTO = { P, nomeP, placar, estados: [], linhas: [], pedido: [], cms: [], COR: new Map(), IMG: new Map() }; MARCADOS = new Set();
@@ -58,9 +58,9 @@ window.DadosMeta = (() => {
     BRUTO.COR = new Map(CAD.map(p => [p.referencia + "|" + (p.cor || ""), p.cor_descricao])); const IMG = BRUTO.IMG = new Map();
     for (const p of CAD) { if (!p.foto_url) continue; IMG.set(p.referencia + "|" + (p.cor || ""), p.foto_url); (IMG.get(p.referencia) || IMG.set(p.referencia, []).get(p.referencia)).push(p.foto_url); }
     emitir(6, "fotos");
-    BRUTO.estados = await semErro(() => tudo(sb.from("v_buscar_meta_placar").select("preposto,faixa,falta_gatilho,fecha_na_regua,fecha_com_alta,repasse_a_confirmar,estado,fecha_com_pedido,fecha_com_pedido_sem_teto").eq("preposto", P)));
+    BRUTO.estados = await semErro(() => tudo(sb.from("v_buscar_meta_placar").select("preposto,faixa,falta_gatilho,fecha_na_regua,fecha_com_alta,repasse_a_confirmar,estado,fecha_com_pedido,fecha_com_pedido_sem_teto,base_em").eq("preposto", P)));   // 0127: tabela pronta, base_em = hora do cálculo (se a carga das 05:00 falhar, não há refresh — a hora importa)
     emitir(7, "estados do placar");
-    BRUTO.pedido = await semErro(() => tudo(sb.from("v_buscar_meta_pedido_sugerido").select("preposto,faixa,cliente,referencia,cor,descricao,venda_mes,estoque,carteira,transito,cob_base,cap,gdisp,pedido_sugerido,cabe_mais,cob_depois,alvo_faixa").eq("preposto", P).gt("pedido_sugerido", 0).order("faixa").order("cliente")));
+    BRUTO.pedido = await semErro(() => tudo(sb.from("v_buscar_meta_pedido_sugerido").select("preposto,faixa,cliente,referencia,cor,descricao,venda_mes,estoque,carteira,transito,cob_base,cap,gdisp,pedido_sugerido,cabe_mais,cob_depois,alvo_faixa,base_em").eq("preposto", P).gt("pedido_sugerido", 0).order("faixa").order("cliente")));
     return montar(null);
   }
 
@@ -89,7 +89,7 @@ window.DadosMeta = (() => {
                falta_gatilho: falta, falta_100: num(r.falta_100), bate: !!r.bate, alcanca: !!r.alcanca, vale_buscar: r.vale_buscar !== false, se_nao_faturar: num(r.se_nao_faturar),
                estado, fecha_na_regua: num(e.fecha_na_regua), fecha_com_alta: num(e.fecha_com_alta), fecha_com_pedido: num(e.fecha_com_pedido), repasse_a_confirmar: num(e.repasse_a_confirmar),
                cms: c ? { gatilho: num(c.gatilho), real: num(c.real), falta: num(c.falta_gatilho) || 0, bate: !!c.bate, alcanca: !!c.alcanca } : null, cms_bate: !!r.cms_bate, cms_alcanca: !!r.cms_alcanca,
-               movimentos: { m1_cobrar: num(r.m1_cobrar), m1_vencida: num(r.m1_vencida), m2_marcado: num(r.m2_marcado), m3_antecipar: num(r.m3_antecipar), m3_cob_alta: num(r.m3_cob_alta), m3_efeito: num(r.m3_efeito_mes_seguinte), m4_repasse: num(r.m4_repasse), m5_clientes: num(r.m5_rfv_clientes), m5_pares: num(r.m5_rfv_pares_2025) },
+               movimentos: { m1_cobrar: num(r.m1_cobrar), m1_vencida: num(r.m1_vencida), m2_marcado: num(r.m2_marcado), m3_antecipar: num(r.m3_antecipar), m3_cob_alta: num(r.m3_cob_alta), m3_efeito: num(r.m3_efeito_mes_seguinte), m4_repasse: num(r.m4_repasse), m5_clientes: num(r.m5_rfv_clientes), m5_pares: num(r.m5_rfv_pares_2025), m3_sem_ag: num(r.m3_sem_ag) },   // m3_sem_ag: mês seguinte em cliente sem AG — "régua não se aplica" (NÚCLEO)
                marcado, faltam: Math.max(0, falta - marcado), fecha: falta > 0 && marcado >= falta, pct_real: r.gatilho ? Math.min(1.5, (num(r.real) || 0) / +r.gatilho) : null, pct_marcado: r.gatilho ? Math.min(1.5, ((num(r.real) || 0) + marcado) / +r.gatilho) : null }; });
     // ordem do GAMER: a mais perto de fechar em cima; batida recolhida no fim; "não vale buscar" apagada
     const RANK = { "fecha na régua": 0, "fecha com pedido novo + antecipação": 1, "fecha com alta/fora da régua": 2, "não fecha": 4 };
@@ -111,7 +111,7 @@ window.DadosMeta = (() => {
     const base = placar[0] || {};
     return { hoje, carregando: carregando || null, preposto: { codigo: P, nome: nomeP, cms: P === "TODOS" }, mes: MES_OK.test(String(base.mes)) ? String(base.mes).slice(0, 7) : null, quinzena2: !!base.quinzena2, dias_uteis: num(base.dias_uteis_restantes),
              placar: placarOrd, faixas_busca: faixasBusca, blocos, previa, pedido_novo: pedidoNovo, filtro: { faixa: faixa || null },
-             bases: { real_lido_em: base.real_lido_em || null, meta_lida_em: base.meta_lida_em || null },
+             bases: { real_lido_em: base.real_lido_em || null, meta_lida_em: base.meta_lida_em || null, placar_em: (estados[0] || {}).base_em || null, pedido_em: (pedido[0] || {}).base_em || null },
              regra: "gatilhos da Vulcabras: tênis 90% no total e 100% na faixa · famílias 95% em R$ · a faixa do vendedor só paga se a CMS também alcança · régua ruptura <4 · ideal 4–5 · alta ≥5 · grade em 12 · nada sai sem o clique" };
   }
   // marcação (o estado vive aqui; a casca só pede)
