@@ -81,6 +81,8 @@
     } catch (e) {
       if (carga !== cargaAtual) return;
       console.error(e); window.desenhar({ cliente: { nome: cliente }, prioridade: { titulo: "Não foi possível carregar os dados", detalhe: Dados.MODO_CLIENTE ? "tente de novo em instantes" : "não consegui ler o banco: " + (e && e.message || e) + " — troque o cliente no seletor ou recarregue a página" }, sem_bloco_topics: true });
+      // Conselho (ponte 0059→0064): a falha vem com botão de repetir, na manchete, sem recarregar a página
+      const m = $("manch"); if (m && !$("ti-repetir")) { m.insertAdjacentHTML("beforeend", `<button id="ti-repetir" type="button" style="margin-top:10px;background:#FFFF1A;color:#000;border:0;border-radius:10px;padding:10px 16px;font:700 13px Inter,Arial;min-height:44px;cursor:pointer">tentar de novo</button>`); $("ti-repetir").onclick = () => abrir(); }
     }
   }
   // o que a casca ainda não desenha sozinha (combinado com o PICASSO para absorver): "sem bloco no TOPICS" e o bloco da ação de trade

@@ -1,90 +1,139 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Prévia isolada · Cliente</title><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data:; font-src 'self'">
-<!-- Gestor · aba Cliente — CASCA (PICASSO, 27/10/2026). Forma aprovada pelo Léo no piloto cliente_v19.
-     ZERO dado embutido: tudo vem do objeto DADOS que o TI entrega e de desenhar(DADOS). Contrato no topo de cliente_tela.js. -->
-
-
-
+<title>Prévia isolada · Cliente</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'none'">
+<!-- Gestor · aba Cliente — CASCA DE PARIDADE com o piloto cliente_v19 (aprovado pelo Léo). PICASSO, 27/10/2026, noite.
+     Todos os blocos do v19, na posição do v19. ZERO dado embutido: tudo vem de desenhar(DADOS). Contrato no topo de cliente_tela.js. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.6.1/dist/css/tabler.min.css" integrity="sha384-tT2UAGE9hxG/p5d0iGIvZ/s8El3nWWG3tfG02i8iOY5Pbf8cZZRVmcrrVs+JG5Vw" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.min.css" integrity="sha384-IcAOG/1tqv9Qnam+j3mZYPAFcNQMnQpMcafc8Nsvd44AUeTCzhUzdQiJkrROmqW6" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<link rel="stylesheet" href="../cliente.css?v=11">
+<link rel="stylesheet" href="../cliente.css?v=44">
 </head>
 <body>
 <div style="position:sticky;top:0;z-index:9999;background:#E3001B;color:#fff;font:800 14px Inter,Arial;padding:8px 14px;text-align:center">DEMONSTRAÇÃO · dados fictícios · sem banco e sem rede</div>
-
-<div style="position:relative;z-index:50;margin:12px 12px 12px 70px;padding:12px;background:#fff3cd;color:#222;border-radius:10px;font:14px Arial">
-<strong>PRÉVIA ISOLADA · dados fictícios · sem banco/rede</strong>
-<button onclick="demoEscolher('CLIENTE A')">A lento (3s)</button>
-<button onclick="demoEscolher('CLIENTE B')">B rápido</button>
-<button onclick="demoFalhar()">Simular falha</button>
-<span>Troque A → B antes de 3s: deve permanecer B. Falha → Tentar novamente recupera.</span>
-</div>
+<div id="demo-faixa" style="position:relative;z-index:50;margin:12px 12px 12px 70px;padding:12px;background:#fff3cd;color:#222;border-radius:10px;font:14px Inter,Arial;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><strong>PRÉVIA ISOLADA · dados fictícios · sem banco/rede</strong> <button type="button" style="min-height:44px;padding:0 14px" onclick="demoEscolher('CLIENTE A')">A lento (3 s)</button> <button type="button" style="min-height:44px;padding:0 14px" onclick="demoEscolher('CLIENTE B')">B rápido</button> <button type="button" style="min-height:44px;padding:0 14px" onclick="demoFalhar()">Simular falha</button> <span>Troque A → B antes de 3 s: deve ficar em B. Falha → “tentar de novo” recupera.</span></div>
 
 <nav class="rail">
  <div class="marca"></div>
- <a href="#" title="Início"><i class="ti ti-home"></i></a>
- <a href="#" class="on" title="Clientes"><i class="ti ti-building-store"></i></a>
- <a href="#" class="bro-m" title="Bro" onclick="abrirBro();return false" style="font-weight:800;font-size:20px">✦</a>
- <a href="#" title="Análise de giro"><i class="ti ti-chart-bar"></i></a>
- <a href="#" title="TOPICS"><i class="ti ti-checklist"></i></a>
+ <a href="#" id="nav_inicio" title="Início"><i class="ti ti-home"></i><span class="rl">Início</span></a>
+ <a href="#" id="nav_cliente" class="on" title="Clientes"><i class="ti ti-building-store"></i><span class="rl">Cliente</span></a>
+ <a href="#" id="nav_bro" class="bro-m" title="Bro" onclick="abrirBro();return false"><i class="st">✦</i><span class="rl">Bro</span></a>
+ <a href="#" id="nav_giro" title="Análise de giro"><i class="ti ti-chart-bar"></i><span class="rl">Giro</span></a>
+ <a href="#" id="nav_topics" title="TOPICS"><i class="ti ti-checklist"></i><span class="rl">TOPICS</span></a>
  <div class="pe">LP</div>
 </nav>
 <button class="bro-fab" onclick="abrirBro()" title="Falar com o Bro"><span class="st">✦</span>Bro</button>
-<div class="main">
- <section class="hero">
-  <img class="marcadagua" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="" onerror="this.remove()">
-  <div class="topo">
-   <div><div class="pre">CLIENTES · KEY ACCOUNT</div><h1 id="c_nome">—</h1>
-    <div style="font-size:13px" id="c_sub">—</div></div>
-   <div id="slot_seletor" class="ms-auto"></div>
-  </div>
-  <div class="bento">
-   <div class="vd manch" id="manch"></div>
-   <div class="vd dec">
-    <div class="d-flex align-items-center"><span class="lb" id="c_dec_tit"><i class="ti ti-bolt"></i> O que decidir hoje</span><span class="ms-auto selo" style="background:#FFFF1A;color:#000" id="c_ntp">—</span></div>
-    <div class="mt-2" id="tpl"></div>
-    <div class="novo"><input id="tpnovo" placeholder="+ novo item no TOPICS deste cliente…" onkeydown="if(event.key==='Enter')tpNovo()"><button onclick="tpNovo()">incluir</button></div>
-   </div>
-   <div class="vd agv"><div class="d-flex align-items-center mb-2"><span class="lb"><i class="ti ti-calendar-event"></i> Agenda do cliente</span><span class="ms-auto" style="font-size:11px;opacity:.85">clique no dia</span></div>
-    <div class="ag"><div class="cal" id="cal"></div><div class="evl" id="evl"></div></div></div>
-   <div class="vd k car">
-    <div class="lb">Carteira</div>
-    <div class="mt-2"><span class="ns" id="c_cart">—</span><small id="c_cart_u">a faturar</small></div>
-    <div class="mes3" id="c_mes3"></div>
-    <div class="hora mt-2" style="color:#fff;opacity:.8" id="c_cart_base"></div>
-   </div>
-   <div class="vd k cob">
-    <div class="lb">Cobertura · <span style="text-transform:none;letter-spacing:0;font-weight:600;opacity:.8" id="c_recorte">—</span></div>
-    <div class="mt-2"><span class="ns" id="c_cob">—</span><span class="teto" id="c_cob_pill">—</span></div>
-    <div class="regua"><span class="z1"></span><span class="z2"></span><span class="z3"></span><i id="c_cob_mk" style="left:-99px"></i></div>
-    <div class="rleg"><span><b class="p">ruptura </b>&lt;4</span><span><b class="p">forçar </b>4–5</span><span><b class="p">teto </b>≥5</span></div>
-    <div class="d-flex gap-4 mt-3 flex-wrap" style="font-size:12.5px"><div>estoque <b id="c_est" style="font:800 18px Barlow">—</b> <span id="c_est_mes" style="opacity:.8"></span></div><div>venda média <b id="c_vm" style="font:800 18px Barlow">—</b><span style="opacity:.8">/mês</span></div></div>
-    <svg class="spark" id="c_spark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
-    <div class="hora" style="color:#fff;opacity:.8" id="c_cob_base">—</div>
-    <div class="segs" id="c_segs"></div>
-   </div>
-  </div>
- </section>
-
- <div class="sec"><h2>Sell-in × sell-out × meta × estoque</h2><span class="hora ms-auto">toque no ano, no começo da linha, para esconder ou mostrar · toque no bloco para ligar a camada</span></div>
- <div class="pn">
-  <div class="seltit"><button id="htit" onclick="abreFiltro()">—</button><div class="menu" id="menu"></div></div>
-  <div class="gwrap"><svg class="graf mt-2" id="gx" style="height:280px"></svg><div class="tip" id="tip"></div><div class="vazio" id="vazio">nada ligado — toque num ano ou num bloco</div></div>
-  <div class="blk" id="blk"></div>
-  <div class="nota" id="nx"></div>
- </div>
- <div class="text-center hora mt-3" id="rodape">Gestor · aba Cliente · forma aprovada em 27/10/2026</div>
-</div>
-
 <aside class="bro" id="bro" aria-label="Bro">
  <div class="hd"><div class="av">✦</div><div><b>Bro</b><small>a IA do Gestor · lê o banco da casa</small></div><button onclick="abrirBro()" title="fechar">×</button></div>
  <div class="ctx">Você está em: <i id="brctx">—</i></div>
  <div class="msgs" id="brmsg"></div>
- <form onsubmit="return false"><input id="brin" placeholder="Escreve para o Bro…" autocomplete="off"><button>enviar</button></form>
+ <div class="sug" id="brsug"></div>
+ <form onsubmit="CLI.brq(document.getElementById('brin').value);document.getElementById('brin').value='';return false"><input id="brin" placeholder="Escreve para o Bro…" autocomplete="off"><button>enviar</button></form>
 </aside>
-<script src="../cliente_tela.js?v=11"></script>
+<div class="main">
+ <section class="hero">
+  <img class="marcadagua" src="../oly_branco.png" alt="" onerror="this.remove()">
+  <div class="topo">
+   <div><div class="pre">CLIENTES · KEY ACCOUNT</div><h1 id="c_nome">—</h1>
+    <div style="font-size:13px"><span id="c_sub">—</span><span id="c_selos"></span></div></div>
+   <div id="slot_seletor"></div>
+   <div class="busca" role="button" tabindex="0" onclick="CLI.acao('busca')" onkeydown="if(event.key==='Enter')CLI.acao('busca')"><i class="ti ti-search"></i>Buscar modelo, pedido ou cliente<kbd>Ctrl K</kbd></div>
+   <div class="bts"><a class="mini-bt" id="b_atas" href="#" title="Abrir as atas do cliente"><b><i class="ti ti-notes"></i>Atas</b><small id="atmini"></small></a><a class="b-cl" id="b_raiox" href="#" title="Gerar a apresentação do Raio-X"><i class="ti ti-presentation"></i>Raio-X</a><a class="b-cl" href="#" onclick="CLI.acao('pdf');return false"><i class="ti ti-file-type-pdf"></i>PDF</a><a class="b-cl" id="b_ag" href="#"><i class="ti ti-file-spreadsheet"></i>Abrir AG</a><a class="b-am" href="#" onclick="CLI.acao('sugerir_pedido');return false"><i class="ti ti-shopping-cart"></i>Sugerir pedido</a></div>
+  </div>
+  <div class="bento">
+   <div class="vd manch" id="manch"></div>
+   <div class="vd rcel" id="rcel"></div>
+   <div class="vd dec">
+    <div class="d-flex align-items-center"><span class="lb" id="c_dec_tit"><i class="ti ti-bolt"></i> O que decidir hoje</span><span class="ms-auto selo" style="background:#FFFF1A;color:#000" id="c_ntp">—</span></div>
+    <div class="mt-2" id="tpl"></div>
+    <div class="novo"><input id="tpnovo" placeholder="+ novo item no TOPICS deste cliente…" onkeydown="if(event.key==='Enter')tpNovo()"><button onclick="tpNovo()">incluir</button></div>
+    <div class="hora mt-auto pt-2" style="color:#fff" id="c_tp_lido"></div>
+   </div>
+   <div class="vd nort">
+    <div class="lb" id="so_lb">Sell-out / mês</div>
+    <div class="mt-2"><span class="ns" id="so_ns">—</span><span class="delta" id="so_delta"></span></div>
+    <svg class="spark" id="sp1" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
+    <div class="hora" style="color:#fff" id="so_base"></div>
+   </div>
+   <div class="vd k cob">
+    <div class="lb">Cobertura</div>
+    <div class="mt-2"><span class="ns" id="c_cob">—</span><span class="teto" id="c_cob_pill">—</span></div>
+    <div class="regua"><span class="z1" role="button" title="ver os produtos em ruptura" onclick="CLI.cobp('rup')"></span><span class="z2" role="button" title="ver os produtos na faixa ideal" onclick="CLI.cobp('for')"></span><span class="z3" role="button" title="ver os produtos com cobertura alta" onclick="CLI.cobp('teto')"></span><i id="c_cob_mk" style="left:-99px"></i></div>
+    <div class="rleg"><span><b class="p">ruptura </b>&lt;4</span><span><b class="p">ideal </b>4–5</span><span><b class="p">alta </b>≥5</span></div>
+    <div class="cobpct" id="c_cobpct"></div>
+    <button class="ponta" id="c_ponta" onclick="CLI.cobp('rx')" hidden></button>
+    <p class="cobleit" id="cobleit"></p>
+    <div class="segs" id="c_segs"></div>
+   </div>
+   <div class="vd k est">
+    <div class="lb" id="es_lb">Estoque</div>
+    <div class="mt-2"><span class="ns" id="es_ns">—</span><small>pares</small></div>
+    <svg class="spark" id="sp2" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
+   </div>
+   <div class="vd k car">
+    <div class="lb" id="car_lb">Carteira aberta</div>
+    <div class="mt-2"><span class="ns" id="c_cart">—</span><small id="c_cart_u">pares</small></div>
+    <div class="mes3" id="c_mes3"></div>
+   </div>
+   <div class="vd cobp" id="cobp" style="display:none"></div>
+   <div class="vd trd" id="trd" hidden><div class="ic"><i class="ti ti-speakerphone"></i></div>
+    <div><span class="lb" style="color:#FFFF1A">Ação de trade em andamento</span><span class="selo" style="background:#FFFF1A;color:#000;margin:0 8px 0 0">trade em andamento</span><b id="trt"></b><small id="trm"></small><div class="pr"><i id="trp"></i></div></div>
+    <div><div class="v" id="trv"></div><small>investimento Olympikus</small></div><div><div class="v" id="trmeta"></div><small>pares de meta</small></div><div><div class="v" id="trf"></div><small>até o fim</small></div></div>
+   <div class="vd agv"><div class="d-flex align-items-center mb-2"><span class="lb"><i class="ti ti-calendar-event"></i> Agenda do cliente</span><span class="ms-auto" style="font-size:11px;opacity:.85">reuniões e atas · análises · trade · marcos — clique no dia</span></div>
+    <div class="ag"><div class="cal" id="cal"></div><div class="evl" id="evl"></div></div></div>
+   <div class="vd leitura"><div class="ic"><i class="ti ti-sparkles"></i></div>
+    <p id="leit"></p></div>
+  </div>
+ </section>
+ <div class="sec"><h2 id="mt_tit">Metas do cliente</h2><div class="abas" id="mtm"></div><span class="hora ms-auto" id="mt_base"></span></div>
+ <div class="mtl">Olympikus</div><div class="mtb" id="mtb"></div><div class="mtl mt-3">Under Armour</div><div class="mtb" id="mtu"></div><div id="mt15"></div>
+ <div class="sec"><h2>Giro do cliente</h2><div class="abas" id="gr_abas"></div>
+  <span class="hora ms-auto" id="gr_base"></span></div>
+ <div class="row g-3">
+  <div class="col-lg-7"><div class="pn">
+   <h3>Principais giros</h3><div class="sub" id="top_sub">modelo + cor · verde ≥30% · vermelho ≤20%</div>
+   <div id="top" class="mt-2"></div>
+  </div></div>
+  <div class="col-lg-5"><div class="pn">
+   <h3>Carteira de tênis pelo giro</h3><div class="sub" id="fx_sub">modelo + cor</div>
+   <div class="fx" id="fx"></div><div class="fxl" id="fxl"></div>
+  </div></div>
+  <div class="col-lg-6"><div class="pn lista">
+   <div class="d-flex align-items-center"><h3><i class="ti ti-trending-up" style="color:#2E3EFC"></i> Produtos para aporte</h3><span class="ms-auto hora">régua: ruptura &lt;4 · ideal 4–5 · alta ≥5</span></div>
+   <div class="sub">modelo + cor com cobertura abaixo de 5 meses · <span class="ap ap-v" style="margin:0">aporte</span> disponível: clique e pede no CMS PASS · <span class="ap ap-r" style="margin:0">aporte S/dispo</span> sem disponível · fora de linha só entra com disponível</div>
+   <div id="pre"></div>
+  </div></div>
+  <div class="col-lg-6"><div class="pn lista pn-alerta">
+   <div class="d-flex align-items-center"><h3><i class="ti ti-alert-triangle" style="color:#E3001B"></i> Giro baixo com carteira</h3><span class="ms-auto hora">giro ≤ 20%</span></div>
+   <div class="sub">modelo + cor que gira pouco e ainda vai faturar: revisar antes de faturar</div>
+   <div class="tot" id="tot"></div>
+   <div id="bx"></div>
+   <div class="hora mt-2" id="novo"></div>
+  </div></div>
+ </div>
+ <details class="todos"><summary><i class="ti ti-table"></i> <span id="tab_tit">Ver tabela completa</span></summary>
+  <div class="card mt-2"><div class="table-responsive rola"><table class="table table-vcenter card-table"><thead><tr><th>Modelo</th><th class="num">Venda/mês</th><th class="num">Estoque</th><th class="num">Giro</th><th class="num">Cobertura</th><th class="num">Carteira</th></tr></thead><tbody id="tab"></tbody></table></div></div>
+ </details>
 
+ <div class="sec"><h2>Carteira</h2><span class="hora ms-auto" id="ct_base">estado pela cor da AG</span></div>
+ <div class="row g-3">
+  <div class="col-lg-5"><div class="pn"><h3>Por mês e estado</h3><div id="cart" class="mt-3"></div>
+   <div class="leg small text-secondary mt-2"><span class="me-2"><i style="background:#92D050"></i>confirmada</span><span class="me-2"><i style="background:#00B050"></i>aporte</span><span class="me-2"><i style="background:#FFFF00"></i>atenção</span><span><i style="background:#FF0000"></i>a cancelar</span></div></div></div>
+  <div class="col-lg-7"><div class="pn"><div class="d-flex"><h3>Por família</h3><span class="ms-auto hora">chinelo separado do tênis</span></div>
+   <div class="table-responsive mt-2"><table class="table table-vcenter card-table"><thead id="fam_h"></thead><tbody id="fam"></tbody></table></div><p class="zr-nota" id="zrnota" role="status" hidden></p><div class="famd" id="famd"></div></div></div>
+ </div>
+ <div class="sec"><h2>Sell-in × sell-out × meta × estoque</h2><span class="hora ms-auto">toque no ano, acima do gráfico, para esconder ou mostrar · segure o ano para ver só ele · toque no bloco para ligar a camada</span></div>
+ <div class="pn"><div class="d-flex align-items-baseline gap-2 flex-wrap"><div class="seltit"><button id="htit" onclick="abreFiltro()">—</button><div class="menu" id="menu"></div></div></div>
+  <p class="leitx" id="leitx"></p><div class="anos" id="anos" role="group" aria-label="anos do gráfico"></div><div class="gwrap"><svg class="graf mt-1" id="gx" style="height:280px"></svg><div class="tip" id="tip"></div><div class="vazio" id="vazio">nada ligado — toque num ano ou num bloco</div></div>
+  <div class="blk" id="blk"></div><details class="todos mt-3"><summary>ver números ▾</summary><div class="table-responsive rola tem-total mt-2"><table class="table table-vcenter card-table mb-0" id="tx"></table></div></details>
+  <div class="nota" id="nx"></div></div>
+
+ <div class="text-center hora mt-3" id="rodape">Gestor · aba Cliente · forma aprovada em 27/10/2026 (piloto v19)</div>
+</div>
+<script src="../cliente_tela.js?v=44"></script>
 <script src="demo_cliente_mock.js"></script>
-<script src="../cliente_dados.js?v=13"></script>
-<script src="../cliente_glue.js?v=13"></script>
+<script src="../dados_paridade.js?v=44"></script>
+<script src="../cliente_dados.js?v=44"></script>
+<script src="../cliente_glue.js?v=44"></script>
 </body></html>

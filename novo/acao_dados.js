@@ -14,7 +14,6 @@ window.DadosAcao = (() => {
   // em ?modo=cliente a explicação é neutra (GAMER 28/10: o critério interno não vai à tela do cliente)
   const EXPLICA_CLIENTE = { "FORA DE LINHA": "modelos que saíram de linha", "PONTA DE ESTOQUE": "últimas unidades", "AÇÃO/REBAIXO": "seleção para a ação" };
   const ORDEM = ["FORA DE LINHA", "PONTA DE ESTOQUE", "AÇÃO/REBAIXO"];
-  const CATALOGO = "https://catalogo.olympikus.com.br/images/produtos/";   // foto pela chave produto.imagem (Engenharia 28/10: a maioria das referências antigas tem foto em ao menos uma cor; cobertura parcial por cor)
   const UNIDADE = f => /MEIAS/.test(f) ? "packs" : /ACESS|VESTU/.test(f) ? "peças" : "pares";
   const NOME_FAM = { "TÊNIS": "Tênis Olympikus", "CHINELO": "Chinelos Olympikus", "MEIAS": "Meias Olympikus", "ACESSÓRIO": "Acessórios Olympikus", "VESTUÁRIO": "Confecção Olympikus",
                      "UA TÊNIS": "Tênis Under Armour", "UA CHINELO": "Chinelos Under Armour", "UA MEIAS": "Meias Under Armour", "UA ACESSÓRIO": "Acessórios Under Armour", "UA VESTUÁRIO": "Confecção Under Armour" };
@@ -40,10 +39,11 @@ window.DadosAcao = (() => {
       const rows = await semErro(() => tudo(sb.from("colecao").select("referencia,cor,foto_url,imagem").in("referencia", refs.slice(i, i + 200)).order("referencia").order("cor")));
       for (const r of rows) { if (!r.foto_url) continue; FOTO.set(r.referencia + "|" + (r.cor || ""), r.foto_url); if (!FOTO.has(r.referencia + "|")) FOTO.set(r.referencia + "|", r.foto_url); }
     }
-    // cadastro: nome da cor e a chave da foto (produto.imagem = referência_COR; o catálogo da Olympikus serve pela mesma chave, com cobertura parcial por cor — Engenharia 28/10)
-    const CAD = []; for (let i = 0; i < refs.length; i += 200) CAD.push(...await semErro(() => tudo(sb.from("produto").select("referencia,cor,cor_descricao,imagem").in("referencia", refs.slice(i, i + 200)).order("referencia").order("cor"))));
+    // cadastro: nome da cor e a foto verificada por cor (produto.foto_url, 0124)
+    const CAD = []; for (let i = 0; i < refs.length; i += 200) CAD.push(...await semErro(() => tudo(sb.from("produto").select("referencia,cor,cor_descricao,imagem,foto_url").in("referencia", refs.slice(i, i + 200)).order("referencia").order("cor"))));
+    // foto VERIFICADA (Engenharia 0124, 28/10): produto.foto_url só existe quando o site do catálogo devolveu 200 com imagem — sem cascata, sem 404; Under Armour quase sem foto → silhueta
     const COR = new Map(CAD.map(p => [p.referencia + "|" + (p.cor || ""), p.cor_descricao])), IMG = new Map();
-    for (const p of CAD) { if (!p.imagem) continue; const u = CATALOGO + encodeURIComponent(p.imagem) + ".jpg"; IMG.set(p.referencia + "|" + (p.cor || ""), u); (IMG.get(p.referencia) || IMG.set(p.referencia, []).get(p.referencia)).push(u); }
+    for (const p of CAD) { if (!p.foto_url) continue; IMG.set(p.referencia + "|" + (p.cor || ""), p.foto_url); (IMG.get(p.referencia) || IMG.set(p.referencia, []).get(p.referencia)).push(p.foto_url); }
     const situ = await semErro(() => tudo(sb.from("produto_situacao").select("referencia,em_linha").eq("em_linha", false).order("referencia")));
     BRUTO = { cliente, nome: (perfil[0] || {}).nome || cliente, linhas, FOTO, COR, IMG, FORA: new Set(situ.map(s => s.referencia)) };
     return montar(periodo || "bf", null, "");
@@ -58,7 +58,7 @@ window.DadosAcao = (() => {
     const termos = String(busca || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);   // vários termos separados por vírgula (aprendizado do CMS Space)
     const casa = it => !termos.length || termos.every(t => [it.modelo, it.ref, it.cor, it.cor_nome, it.familia, it.genero, it.categoria, it.faixa].some(v => String(v || "").toLowerCase().includes(t)));
     const itens = linhas.filter(l => ORDEM.includes(l.tipo) && permitido(l)).map(l => {
-      const k = l.referencia + "|" + (l.cor || ""), lembrada = fotoLembrada(k), fotos = [...new Set([lembrada, FOTO.get(k), FOTO.get(l.referencia + "|"), l.cor ? IMG.get(k) : null].concat(IMG.get(l.referencia) || []).filter(Boolean))], foto = fotos[0] || null;   // cascata: a casca tenta uma a uma (onerror) e cai na silhueta
+      const k = l.referencia + "|" + (l.cor || ""), lembrada = fotoLembrada(k), fotos = [...new Set([l.cor ? IMG.get(k) : null, lembrada].concat(IMG.get(l.referencia) || [], [FOTO.get(k), FOTO.get(l.referencia + "|")]).filter(Boolean))], foto = fotos[0] || null;   // cascata: a casca tenta uma a uma (onerror) e cai na silhueta
       const it = { ref: l.referencia, cor: l.cor || "", cor_nome: COR.get(k) || l.cor || (l.cor ? l.cor : "todas as cores"), modelo: l.descricao || l.referencia, familia: l.familia, genero: l.genero, faixa: l.faixa, categoria: l.categoria,
                    foto, fotos, foto_falta: !foto, venda_mes: l.venda_m3 != null ? Math.round(+l.venda_m3) : null, venda_12m: l.venda_12m != null ? Math.round(+l.venda_12m) : null, estoque: l.estoque != null ? +l.estoque : null,
                    cobertura: l.cobertura != null ? Math.round(+l.cobertura * 10) / 10 : null, excesso: l.excesso != null ? Math.round(+l.excesso) : null, ult_venda: MES_OK.test(String(l.ult_venda)) ? String(l.ult_venda).slice(0, 7) : null,
