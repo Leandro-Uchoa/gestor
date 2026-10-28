@@ -61,13 +61,14 @@
   const refaz = () => { if (!DADOS) return; DADOS = DadosMeta.refiltrar(FAIXA); desenhar(DADOS); };
   // ---------- eventos da casca
   window.onPreposto = codigo => { if (!LISTA.some(p => p.codigo === codigo)) return; PREPOSTO = codigo; lembrar(); hashAtual(); const sel = $("ti-sel"); if (sel) sel.value = codigo; abrir(); };
-  window.onFaixa = faixa => { FAIXA = FAIXA === faixa ? null : (faixa || null); refaz(); };
+  window.onFaixa = (faixa, fixar) => { FAIXA = fixar ? (faixa || null) : (FAIXA === faixa ? null : (faixa || null)); refaz(); };   // fixar=true: só abre (não alterna) — 'ver como fecha fora da régua'
   window.onMarcar = (id, on) => { DadosMeta.marcar(id, on); refaz(); };
   window.onMarcarMinimo = faixa => { const r = DadosMeta.marcarMinimo(faixa) || {}; refaz(); const el = $("a_aviso");
     if (el && (r.faltam > 0 || !r.n)) { el.hidden = false; el.innerHTML = r.n ? `<b>Marquei ${r.n} linhas dentro da régua e ainda faltam ${Math.round(r.faltam).toLocaleString("pt-BR")}</b><small> · a régua (ruptura, ideal e repasse da CMS) não fecha esta faixa sozinha — o resto é decisão sua: linhas fora da régua (alta, sem giro) ou o pedido novo com antecipação</small>` : `<b>Nada a marcar dentro da régua</b><small> · a falta desta faixa não fecha só com ruptura, ideal e repasse da CMS — abra as linhas fora da régua ou o pedido novo</small>`; setTimeout(() => { el.hidden = true; }, 8000); } };
   window.onLimpar = faixa => { DadosMeta.limpar(faixa); refaz(); };
   window.onAcao = (nome, ctx) => {
     if (nome === "exportar_pdf") { window.print(); return true; }
+    if (nome === "recarregar") { abrir(); return true; }
     if (nome === "gerar_pedido") { alert("Baixar o arquivo (ANTECIPAR · TRANSFERIR · DIGITAR): sai pela tarefa das saídas da vitrine com o gera_pedido_ebm.py da Engenharia — contrato em fechamento. Por enquanto a prévia fica na tela."); return true; }
     return false;
   };
