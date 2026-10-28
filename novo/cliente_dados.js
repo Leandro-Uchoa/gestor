@@ -248,8 +248,7 @@ window.Dados = (() => {
         const M = meses[m] = meses[m] || {}; const k = ehFx || ehTT ? TTK : r.chave;
         const x = M[k] = M[k] || [0, 0, null, 0, 0];
         if (ehFx && temTT.has(m)) { x[4] += +(r.faturado || 0); continue; }                   // com a linha TT CALCADOS da Carta: meta e potencial dela; o faturado é a soma das faixas (DETALHADA)
-        const pot = r.unidade === "R$" && r.potencial_detalhada != null ? +r.potencial_detalhada : +(r.potencial || 0);   // R$: a DETALHADA é a mesa do Léo; a Carta vai na nota (BOSS 28/10)
-        x[0] += +r.meta_cliente; x[1] += pot; if (!ehTT) x[4] += +(r.faturado || 0); }
+        x[0] += +r.meta_cliente; x[1] += +(r.potencial || 0); if (!ehTT) x[4] += +(r.faturado || 0); }   // TODAS as famílias pela Carta (Léo ao NÚCLEO: quem paga é a Vulcabras); a DETALHADA é controle, na nota (BOSS 28/10, corrigindo a ordem anterior)
       for (const M of Object.values(meses)) { for (const x of Object.values(M)) { x[2] = x[0] > 0 ? Math.round(x[1] / x[0] * 100) : null; x[3] = Math.round(x[1] - x[0]); } if (!M.CFOLY) M.CFOLY = [0, 0, null, 0]; }
       const ks = Object.keys(meses).sort(), q = Math.floor((+hoje.slice(5, 7) - 1) / 3) + 1, trimestres = {};
       if (ks.length) trimestres[hoje.slice(0, 4) + "-T" + q] = { nome: q + "º TRI", meses: ks.filter(m => m >= corte).slice(0, 3) };
@@ -264,11 +263,12 @@ window.Dados = (() => {
           if (r.unidade === "R$" && FAMK[r.chave]) {   // a diferença é de DATA, não de preço (NÚCLEO): quantidade que o EBM conta no mês e a carteira prevê para depois
             const det = (BRUTO.cartFam || []).filter(v => String(v.mes).slice(0, 7) === hoje && famDe(v.marca) === FAMK[r.chave]).reduce((s, v) => s + (+v.pares_fat || 0) + (+v.pares_cart || 0), 0);
             const dq = r.carta_real_pares != null ? (+r.carta_real_pares - det) : null, prox = (cartLin || []).filter(l => famDe(l.marca) === FAMK[r.chave] && String(l.prev_fat).slice(0, 7) > hoje).map(l => String(l.prev_fat).slice(0, 10)).sort()[0];
-            ctrl.push(`${dq != null && dq > 0 ? fmtN(dq) + " " + UNK[r.chave] : "R$ " + fmtN(d / 1000) + " mil em " + NOMEK[r.chave]}${prox ? " previstos para " + dtBR(prox) : " previstos para depois"} (no EBM ainda em ${mesBR(hoje).slice(0, 3)}: Carta ${Math.round((+r.atingimento || 0) * 100)}%)`); }
+            const pctDet = +r.meta_cliente > 0 ? Math.round((+r.potencial_detalhada || 0) / +r.meta_cliente * 100) : null, mesProx = prox ? ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][+prox.slice(5, 7) - 1] : "depois";
+            ctrl.push(`Carta × carteira: ${dq != null && dq > 0 ? fmtN(dq) + " " + UNK[r.chave] : "R$ " + fmtN(d / 1000) + " mil em " + NOMEK[r.chave]} previstos para ${prox ? dtBR(prox) : "depois"} na DETALHADA${pctDet != null ? ` (${pctDet}% se faturar em ${mesProx})` : ""}`); }
           else ctrl.push(`${fmtN(d)} em ${NOMEK[r.chave] || r.chave} que a Vulcabras já conta no mês e a carteira prevê depois`); } }
       const ctrlTxt = ctrl.length ? ` · ${ctrl.join(" · ")}` : "";
       metas = meta_direta
-        ? { atual: meses[hoje] ? hoje : ks[0], meses, trimestres, base: `${meta_direta} · inclui conta própria da CMS (~1%) · tênis pela Carta (EBM); famílias em R$ pela DETALHADA (PDC = preço da NF), com a Carta na nota${lida ? " · carta lida em " + lida : ""}${ctrlTxt}`, sem_numero: "sem meta na carta para esta família", direta: true, controle: ctrlTxt.replace(/^ · /, "") || null }
+        ? { atual: meses[hoje] ? hoje : ks[0], meses, trimestres, base: `${meta_direta} · inclui conta própria da CMS (~1%) · atingimento pela Carta (EBM) em todas as famílias; a carteira da DETALHADA é controle${lida ? " · carta lida em " + lida : ""}${ctrlTxt}`, sem_numero: "sem meta na carta para esta família", direta: true, controle: ctrlTxt.replace(/^ · /, "") || null }
         : { atual: meses[hoje] ? hoje : ks[0], meses, trimestres, base: `meta do preposto dividida pela participação do cliente · potencial = faturado + carteira do mês · regra do NÚCLEO${lida ? " · carta lida em " + lida : ""}` };
     }
     // participação por família é o MIX do cliente (R$, faturado + carteira do mês): vale para todos, com ou sem meta rateada
