@@ -1,5 +1,5 @@
 // Gestor · BUSCAR A META (novo) — a COLA entre a casca (desenharMeta / onPreposto / onFaixa / onMarcar / onMarcarMinimo / onLimpar / onAcao) e a
-// camada de dados do TI (meta_busca_dados.js). TI, 28/10/2026 (v5 29/10: sem mudança na cola). Login do Supabase (o mesmo do Gestor), seletor de vendedor (preposto) vindo da
+// camada de dados do TI (meta_busca_dados.js). TI, 28/10/2026 (v5 29/10: sem mudança na cola; v6: 'Baixar o arquivo' anota em vitrine_saida, acompanha e baixa pelo cofre). Login do Supabase (o mesmo do Gestor), seletor de vendedor (preposto) vindo da
 // view, vendedor pela URL (#preposto=X) ou o último escolhido neste aparelho; "Carregando…" na troca; ⛔ em ?modo=cliente a página não abre.
 (() => {
   const $ = id => document.getElementById(id);
@@ -69,8 +69,27 @@
   window.onAcao = (nome, ctx) => {
     if (nome === "exportar_pdf") { window.print(); return true; }
     if (nome === "recarregar") { abrir(); return true; }
-    if (nome === "gerar_pedido") { alert("Baixar o arquivo (ANTECIPAR · TRANSFERIR · DIGITAR): sai pela tarefa das saídas da vitrine com o gera_pedido_ebm.py da Engenharia — contrato em fechamento. Por enquanto a prévia fica na tela."); return true; }
+    if (nome === "gerar_pedido") { pedirArquivo(); return true; }
+    if (nome === "baixar_arquivo") { baixarArquivo(); return true; }
+    if (nome === "tirar_saida") { clearTimeout(ACOMP); DadosMeta.limparSaida(); refaz(); return true; }
     return false;
   };
+  // ---------- v6: "Baixar o arquivo" — anota em vitrine_saida, acompanha a cada 20 s (como o Gestor atual) e baixa pelo cofre
+  let ACOMP = null;
+  async function pedirArquivo() {
+    const e = await DadosMeta.pedirArquivo(); refaz();
+    if (e) { const el = $("a_aviso"); if (el) { el.hidden = false; el.innerHTML = `<b>Não consegui anotar o pedido do arquivo</b><small> · ${esc(e)}</small>`; setTimeout(() => { el.hidden = true; }, 8000); } return; }
+    acompanhar();
+  }
+  async function acompanhar() {
+    clearTimeout(ACOMP); const s = await DadosMeta.lerSaida(); refaz();
+    if (s && s.estado === "fila") ACOMP = setTimeout(acompanhar, 20000);
+  }
+  async function baixarArquivo() {
+    const r = await DadosMeta.urlArquivo();
+    if (r.url) { location.href = r.url; return; }
+    const el = $("a_aviso"); if (el) { el.hidden = false; el.innerHTML = `<b>Não consegui baixar</b><small> · ${esc(r.erro || "")}</small>`; setTimeout(() => { el.hidden = true; }, 8000); }
+  }
+  document.addEventListener("keydown", e => { const el = e.target; if (e.key === "Enter" && el && el.getAttribute && el.getAttribute("role") === "button" && el.tagName !== "BUTTON" && el.tagName !== "A") { e.preventDefault(); el.click(); } });   // v6: role=button responde ao Enter
   arranque();
 })();

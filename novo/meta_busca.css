@@ -54,7 +54,18 @@
 .mb-expl .fch{margin-left:auto;display:inline-flex;align-items:center;min-height:44px;min-width:44px;justify-content:center;padding:0 10px;color:#787B86;cursor:pointer;font-size:12px;text-decoration:underline}
 .mb-expl .lk{display:inline-flex;align-items:center;min-height:44px;cursor:pointer;text-decoration:underline;text-decoration-color:#ADAEB3;color:#000}
 .lista.mbl .det{background:#F6F5F0;border-radius:12px;padding:8px 12px;font-size:12px;margin:2px 0 6px}.lista.mbl .det.fl{margin-left:110px}
-.lista.mbl .num.abre{min-height:44px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;border-radius:8px}.lista.mbl .num.abre:hover{background:#F1F1EC}
+.lista.mbl .num.abre{min-height:44px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;border-radius:4px}.lista.mbl .num.abre:hover{background:#F1F1EC}
 .lista.mbl h3.abre,#a_previa h3.abre{cursor:pointer;display:inline-flex;align-items:center;min-height:44px;flex-wrap:wrap;gap:4px;margin:0}
 @media (max-width:991.98px){.mb-expl .ln,.lista.mbl .det .ln{grid-template-columns:104px 1fr}.lista.mbl .det.fl{margin-left:0}.mb-card .fech.abre,.mb-card .mov.abre{margin:0;padding:0}}
 @media (max-width:360px){.lista.mbl .row1.mb{grid-template-areas:"cx ft nm nm nm nm" "pr pr cb cb pv pv" ". . vb vb vb vb"}.lista.mbl .num.abre{min-width:44px}}   /* v5: em 320 px cada número da linha ocupa duas colunas (alvo ≥ 44) */
+/* v6: o pedido do arquivo na prévia (fila · pronto · erro) */
+.mb-saida{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:10px 0 2px;padding:8px 12px;border-radius:12px;background:#F6F5F0;border-left:3px solid #ADAEB3;font-size:13px}.mb-saida small{color:#787B86;font-size:11px}
+.mb-saida.pronto{border-left-color:#00B050}.mb-saida.erro{border-left-color:#E3001B}.mb-saida.fila{border-left-color:#FFFF1A}
+.mb-saida .fx2{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;color:#787B86;cursor:pointer;font-size:16px}
+/* v6: todo número abre detalhe — subtítulo do placar, texto da linha, quantidade da prévia; bloco que não carregou */
+.mb-card .num small.abre{display:flex;align-items:center;min-height:44px;margin-top:0;cursor:pointer;border-radius:4px}.mb-card .num small.abre:hover{background:#F1F1EC}
+.lista.mbl .nm.abre{display:flex;flex-direction:column;justify-content:center;min-height:44px;cursor:pointer;border-radius:4px}.lista.mbl .nm.abre:hover{background:#F1F1EC}
+#a_previa td.num.abre{cursor:pointer;text-decoration:underline dotted #ADAEB3;text-underline-offset:3px;min-width:44px;padding-top:12px;padding-bottom:12px}#a_previa td.num.abre:hover{background:#F1F1EC}
+.mb-falha{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:10px 12px;border-radius:12px;background:#FDE3E5;border-left:3px solid #E3001B;font-size:13px}.mb-falha small{color:#787B86;font-size:11px}
+.mb-nt.falha{background:#FDE3E5;border-left:3px solid #E3001B;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.lista.mbl label.pulso{animation:mbpulso 1s ease-out 1}@keyframes mbpulso{0%{background:#FFF5B8}100%{background:transparent}}
