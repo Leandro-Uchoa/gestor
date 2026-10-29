@@ -124,6 +124,7 @@ async function carregarVitrine(sb){
 async function relerVitrine(){
   if (!SB || !VIT.cliente) return;
   VIT.carregadoPara = null; VIT.vistaPedida = VIT.vista;            // mantém a vista em que ele está (montando / atual)
+  atualizarBarraVitrine();
   await carregarVitrine(SB);
   VIT.erro = "";
   if (ELV && ELV.querySelector(".cat")) desenharVitrine();
@@ -163,7 +164,7 @@ function chips(raiz, id, lista, sel, aoClicar){
 const GTM_GRUPO = "__GTM";
 const chipsClientes = (raiz, id) => {
   const gp = gtmPref(), comuns = VIT.clientes.filter(c => !c.startsWith(gp)), meses = VIT.clientes.filter(c => c.startsWith(gp)), noGtm = !!(VIT.cliente && VIT.cliente.startsWith(gp));
-  const escolher = async v => { VIT.cliente = v; MF.tipo = ""; MF.bloco.clear(); if (v.startsWith(gp)) PREF.gravar("gtm.mes", meses.indexOf(v)); await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); };
+  const escolher = async v => { VIT.cliente = v; VF.parede = ""; MF.tipo = ""; MF.bloco.clear(); atualizarBarraVitrine(); if (v.startsWith(gp)) PREF.gravar("gtm.mes", meses.indexOf(v)); await carregarVitrine(SB); if (EL && EL.querySelector(".cat")) desenhar(); if (ELV && ELV.querySelector(".cat")) desenharVitrine(); };
   chips(raiz, id, [...comuns.map(c => [c, nomeCli(c)]), ...(meses.length ? [[GTM_GRUPO, "GTM CMS Distribuição"]] : [])], new Set(VIT.cliente ? [noGtm ? GTM_GRUPO : VIT.cliente] : []),
     v => escolher(v === GTM_GRUPO ? (noGtm ? VIT.cliente : (meses[PREF.ler("gtm.mes", 0)] || meses[0])) : v));
   let linha = raiz.querySelector("#" + id + "-mes");
@@ -497,10 +498,24 @@ function listaDoPdf(){
 function desenharPdfChips(){
   const o = ELV && ELV.querySelector("#vit-pdf-viz"); if (!o) return;
   const { lista } = listaDoPdf(), n = Object.fromEntries(PDF_PAREDES.map(p => [p, lista.filter(it => pdfParede(it) === p).length])), cheias = PDF_PAREDES.filter(p => n[p]).length;
-  o.innerHTML = PDF_PAREDES.map(p => `<button type="button" class="sec sai pdf-b" data-p="${p}"${n[p] && !PDF_ESTADO.gerando ? "" : " disabled"} title="${n[p] ? "um PDF só da vitrine " + titulo(p).toLowerCase() : "vitrine vazia: não gera arquivo"}">${esc(titulo(p))} <small>${n[p]}</small></button>`).join("")
-    + `<button type="button" class="sec sai pdf-b todas" data-p="TODAS"${cheias && !PDF_ESTADO.gerando ? "" : " disabled"} title="baixa um PDF por vitrine, em sequência">todas <small>${cheias} ${cheias === 1 ? "arquivo" : "arquivos"}</small></button>`;
+  // 29/10 (laudo do GAMER): cada chip é DOIS alvos de 44 px — o rótulo gera o PDF da vitrine, o número abre a lista das cores daquela vitrine
+  o.innerHTML = PDF_PAREDES.map(p => `<span class="pdf-chip"><button type="button" class="sec sai pdf-b" data-p="${p}"${n[p] && !PDF_ESTADO.gerando ? "" : " disabled"} title="${n[p] ? "gera o PDF só da vitrine " + titulo(p).toLowerCase() : "vitrine vazia: não gera arquivo"}">${esc(titulo(p))}</button><button type="button" class="sec sai pdf-n" data-p="${p}"${n[p] ? "" : " disabled"} title="${n[p] ? "mostra as " + n[p] + " cores da vitrine " + titulo(p).toLowerCase() : "vitrine vazia"}" aria-label="ver as ${n[p]} cores da vitrine ${esc(titulo(p).toLowerCase())}">${n[p]}</button></span>`).join("")
+    + `<button type="button" class="sec sai pdf-b todas" data-p="TODAS"${cheias && !PDF_ESTADO.gerando ? "" : " disabled"} title="baixa um PDF por vitrine, em sequência">todas · ${cheias} ${cheias === 1 ? "arquivo" : "arquivos"}</button>`;
   for (const b of o.querySelectorAll(".pdf-b")) b.onclick = () => imprimirVitrine({ grade: PDF_ESTADO.grade, parede: b.dataset.p });
+  for (const b of o.querySelectorAll(".pdf-n")) b.onclick = () => abrirListaVitrine(b.dataset.p);
   for (const b of ELV.querySelectorAll("#vit-pdf-modo button")) { b.classList.toggle("ativa", (b.dataset.g === "1") === PDF_ESTADO.grade); b.disabled = PDF_ESTADO.gerando; }
+}
+// o número (da barra do cliente ou do chip do PDF) abre a lista: no montador passa para o painel da vitrine, filtra por aquela vitrine (parede) e rola até ela
+function abrirListaVitrine(parede){
+  if (!ELV) return;
+  const pg = ELV.querySelector("#vit-pagina"); if (!pg) return;
+  const topo = () => { const c = ELV.querySelector("#vit-cli-fixo"); return c ? c.offsetHeight + 8 : 8; };
+  const mont = pg.querySelector(".montador");
+  if (!mont || (VIT.vista === "atual" && VIT.atual)) { window.scrollTo({ top: window.scrollY + pg.getBoundingClientRect().top - topo() }); return; }   // na coleção atual os cartões já estão todos na página
+  VF.parede = parede || "";
+  PAINEL = "dir"; mont.dataset.painel = "dir"; for (const x of pg.querySelectorAll(".mont-troca button")) x.classList.toggle("ativa", x.dataset.p === "dir");
+  desenharDireita(pg);
+  const alvo = pg.querySelector(".mont-dir"); window.scrollTo({ top: window.scrollY + alvo.getBoundingClientRect().top - topo() });
 }
 // DUAS SAÍDAS (NÚCLEO, 20/10): SEM GRADE = "VITRINE" (a vitrine de escolha: nenhum par em lugar nenhum); COM GRADE = "PROGRAMAÇÃO" (o programa
 // fechado, com os pares por mês). Nas duas, nada interno. opcoes.grade decide; opcoes.parede = uma vitrine ou "TODAS".
@@ -565,7 +580,7 @@ function desenharVitrine(){
   const el = ELV;
   if (!el.querySelector(".cat")) {
     el.innerHTML = `<div class="cat colecao vitrine">
-      <div class="vit-cli-fixo" id="vit-cli-fixo"><b></b><span></span></div>
+      <div class="vit-cli-fixo" id="vit-cli-fixo"><b></b><span><span class="vcf-t"></span> <button type="button" class="vcf-n" title="mostra a lista das cores da vitrine"></button></span></div>
       <div class="vit-desfaz oculto" id="vit-desfaz" role="status"></div>
       <div class="card filtros">
         <label>cliente</label><div class="chips" id="vit-cliente"></div>
@@ -580,6 +595,7 @@ function desenharVitrine(){
       <div class="luz oculto" id="vit-luz"></div>
     </div>`;
     // 19/10: PDF no padrão do PICASSO, gerado aqui mesmo (sem janela nova); 20/10 (NÚCLEO): duas saídas — vitrine sem grade e programação com grade
+    el.querySelector(".vcf-n").onclick = () => abrirListaVitrine("");
     for (const b of el.querySelectorAll("#vit-pdf-modo button")) b.onclick = () => { PDF_ESTADO.grade = b.dataset.g === "1"; desenharPdfChips(); };
     // "todos" = os três arquivos + o PDF (ele, 19/10 15:3x: "bota exportar PDF junto, e todos — tudo pertinho, senão fica dessincronizado")
     for (const b of el.querySelectorAll(".saidas .sai[data-t]")) b.onclick = async () => { await pedirSaida(b.dataset.t.split(",")); if (b.classList.contains("todos")) imprimirVitrine({ grade: false, parede: "TODAS" }); };
@@ -616,16 +632,34 @@ const filtroDaTela = () => { if (ehGtm()) return null; const f = {}; if (VF_MES.
   const partes = []; if (f.tipo) partes.push(f.tipo.map(t => (NOME_TIPO[t] || t).toLowerCase()).join(" e ")); if (f.gen || f.esp) partes.push([...(f.gen || []).map(g => g.toLowerCase()), ...(f.esp ? ["grade especial"] : [])].join(" e ")); if (f.marca) partes.push(f.marca.map(m => m === "OLY" ? "Olympikus" : "Under Armour").join(" e ")); if (f.familia) partes.push(f.familia.map(titulo).join(" e ")); if (f.mes) partes.push("de " + f.mes.join(" e "));
   f.texto = partes.length ? partes.join(" · ") : ""; return Object.keys(f).length > 1 || f.texto ? f : null; };
 const cartoesFiltrados = () => { const f = filtroDaTela(); return escolhidas().filter(it => !f || ((!f.marca || f.marca.includes(it.m)) && (!f.tipo || f.tipo.includes(it.t)) && ((!f.gen && !f.esp) || gruposDe(it).some(g => (f.gen || []).includes(g) || (f.esp && g === "Grade especial"))) && (!f.familia || f.familia.includes(familiaDe(it))) && (!f.mes || entradasDe(chaveCor(it)).some(e => f.mes.some(m => m in (e.pm || {})))))); };
+// 29/10 (laudo do GAMER): o toque duplo no "limpar" caía no "apagar" que nascia no mesmo lugar. Agora (a) o "apagar" só aceita clique 400 ms depois de a
+// confirmação aparecer e (b) a caixa se afasta do botão que a abriu (op.afastar) — o ponto do "limpar" nunca cai no "apagar"; (c) Tab/Shift+Tab ficam dentro da caixa
+function prenderTab(ev, luz){
+  if (ev.key !== "Tab") return;
+  const bs = [...luz.querySelectorAll("button:not(:disabled)")]; ev.preventDefault(); if (!bs.length) return;
+  const i = bs.indexOf(document.activeElement); bs[(i + (ev.shiftKey ? -1 : 1) + bs.length) % bs.length].focus();
+}
+function afastarDe(luz, origem, seletor){
+  if (!origem || !origem.getBoundingClientRect) return;
+  const o = origem.getBoundingClientRect(), folga = 40, alvo = luz.querySelector(seletor); if (!alvo) return;
+  for (const a of ["center", "flex-start", "flex-end"]) {
+    luz.style.alignItems = a; const r = alvo.getBoundingClientRect();
+    if (r.right < o.left - folga || r.left > o.right + folga || r.bottom < o.top - folga || r.top > o.bottom + folga) return;
+  }
+}
 function confirmar(titulo, texto, op){
-  op = op || {};   // 28/10: rótulos próprios; padraoNao = ação que apaga (o foco fica em "voltar" e Enter não confirma); grande = o nome em letra grande
+  op = op || {};   // 28/10: rótulos próprios; padraoNao = ação que apaga (o foco fica em "voltar" e Enter não confirma); grande = o nome em letra grande; espera = ms até o "sim" aceitar clique; afastar = botão de origem
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro${op.grande ? " gq-grande" : ""}"><div class="gq-nome">${esc(titulo)}</div><div class="gq-perg">${esc(texto)}</div><div class="gq-acoes"><button type="button" class="gq-sobe">${esc(op.sim || "sim, só isso")}</button><button type="button" class="sec gq-deixa">${esc(op.nao || "não, deixa")}</button></div></div>`;
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
-    const tecla = ev => { if (ev.key === "Escape") fecha(false); if (ev.key === "Enter" && !op.padraoNao) fecha(true); };
+    const tecla = ev => { if (ev.key === "Escape") fecha(false); if (ev.key === "Enter" && !op.padraoNao) fecha(true); prenderTab(ev, luz); };
     document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(false); };
-    luz.querySelector(".gq-sobe").onclick = () => fecha(true); luz.querySelector(".gq-deixa").onclick = () => fecha(false);
-    document.body.appendChild(luz); luz.querySelector(op.padraoNao ? ".gq-deixa" : ".gq-sobe").focus();
+    const sim = luz.querySelector(".gq-sobe"); sim.onclick = () => { if (!sim.disabled) fecha(true); }; luz.querySelector(".gq-deixa").onclick = () => fecha(false);
+    document.body.appendChild(luz);
+    if (op.afastar) afastarDe(luz, op.afastar, ".gq-sobe");
+    if (op.espera) { sim.disabled = true; sim.classList.add("espera"); setTimeout(() => { sim.disabled = false; sim.classList.remove("espera"); }, op.espera); }
+    luz.querySelector(op.padraoNao ? ".gq-deixa" : ".gq-sobe").focus();
   });
 }
 async function pedirSaida(tipos){
@@ -704,33 +738,49 @@ const LIMPA = { ultima: null, msg: null, ocupado: false };   // ultima = o apaga
 const nomeGrande = () => nomeCli(VIT.cliente || "").toUpperCase();
 const nCores = n => `${n} ${n === 1 ? "cor" : "cores"}`;
 const horaCurta = x => x ? new Date(x).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+// 29/10: a carga do cliente que ele acabou de escolher ainda não terminou (VIT.cliente troca antes) — nada de contar nem apagar nesse intervalo
+const carregandoVitrine = () => !!VIT.cliente && VIT.carregadoPara !== VIT.cliente;
+// o que a função do banco apaga: TODAS as linhas da (cliente, coleção), em qualquer estado — não só as "escolhida"
+const linhasDaVitrine = () => (VIT.cliente && DADOS) ? marcas(DADOS.colecao).size : 0;
 // a barra do cliente (fixa no topo enquanto rola) e o estado dos botões; chamada sempre que a vitrine se redesenha
 function atualizarBarraVitrine(){
   if (!ELV) return;
   const b = ELV.querySelector("#vit-cli-fixo"); if (!b) return;
-  const atual = VIT.vista === "atual" && VIT.atual, n = !VIT.cliente ? 0 : (atual ? VIT.atual.itens.length : escolhidas().length);
+  const carr = carregandoVitrine(), atual = VIT.vista === "atual" && VIT.atual, n = (!VIT.cliente || carr) ? 0 : (atual ? VIT.atual.itens.length : escolhidas().length);
   b.querySelector("b").textContent = nomeGrande();
-  b.querySelector("span").textContent = VIT.cliente ? `vitrine ${atual ? VIT.atual.colecao : (DADOS.colecao || "")} · ${nCores(n)}` : "";
-  const bl = ELV.querySelector("#vf-limpar"); if (bl) bl.disabled = LIMPA.ocupado || !n;
+  b.querySelector(".vcf-t").textContent = !VIT.cliente ? "" : (carr ? "carregando a vitrine…" : `vitrine ${atual ? VIT.atual.colecao : (DADOS.colecao || "")} ·`);
+  const bn = b.querySelector(".vcf-n"); bn.textContent = nCores(n); bn.classList.toggle("oculto", !VIT.cliente || carr); bn.title = "mostra a lista das cores da vitrine";
+  const bl = ELV.querySelector("#vf-limpar"); if (bl) bl.disabled = LIMPA.ocupado || carr || !linhasDaVitrine();
+  const bt = ELV.querySelector("#vf-lotes"); if (bt) bt.disabled = carr;
   desenharPdfChips();
 }
+// a folga de baixo é a ALTURA REAL da faixa (29/10: eram 72 fixos para uma faixa de 100–124 px no celular)
+function folgaFaixa(){
+  const el = ELV && ELV.querySelector("#vit-desfaz"), cat = el && el.closest(".cat"); if (!cat) return;
+  cat.style.paddingBottom = el.classList.contains("oculto") ? "" : (el.offsetHeight + 12) + "px";
+}
+window.addEventListener("resize", () => folgaFaixa());
 function faixaDesfazer(){
   const el = ELV && ELV.querySelector("#vit-desfaz"); if (!el) return;
   const u = LIMPA.ultima, m = LIMPA.msg;
-  const cat = el.closest(".cat"); if (cat) cat.classList.toggle("com-faixa", !!(u || m));   // a faixa fixa não cobre o pé da página
-  if (!u && !m) { el.classList.add("oculto"); el.innerHTML = ""; return; }
+  if (!u && !m) { el.classList.add("oculto"); el.innerHTML = ""; folgaFaixa(); return; }
   el.classList.remove("oculto"); el.classList.toggle("erro", !!(m && m.erro));
-  el.innerHTML = (u ? `<span class="vd-tx">${esc(nCores(u.n))} ${u.n === 1 ? "apagada" : "apagadas"} da vitrine ${esc(u.colecao)} da ${esc(u.nome)}</span> <span class="vd-pt">·</span> <button type="button" class="vd-desf">desfazer</button>` : "")
+  el.innerHTML = (u ? `<span class="vd-tx">${esc(nCores(u.n))} ${u.n === 1 ? "apagada" : "apagadas"} da vitrine ${esc(u.colecao)} da ${esc(u.nome)}</span> <span class="vd-acao"><span class="vd-pt">·</span> <button type="button" class="vd-desf">desfazer</button></span>` : "")
     + (m ? `<span class="vd-msg">${esc(m.texto)}</span>` : "") + `<button type="button" class="vd-x" title="${u ? "dispensar esta faixa (o desfazer continua em 'desfazer um apagamento')" : "fechar"}">${u ? "×" : "ok"}</button>`;
   const d = el.querySelector(".vd-desf"); if (d) d.onclick = () => desfazerApagamento(u.lote, u.nome, u.colecao);
   el.querySelector(".vd-x").onclick = () => { if (u) LIMPA.ultima = null; LIMPA.msg = null; faixaDesfazer(); };
+  folgaFaixa();
 }
 async function limparVitrine(){
-  if (LIMPA.ocupado || !VIT.cliente || !DADOS || !SB || VIT.vista === "atual") return;
-  const col = DADOS.colecao, n = escolhidas().length, nome = nomeGrande(), cliente = VIT.cliente;
+  if (LIMPA.ocupado || !VIT.cliente || !DADOS || !SB || VIT.vista === "atual" || carregandoVitrine()) return;
+  const col = DADOS.colecao, n = linhasDaVitrine(), vis = escolhidas().length, nome = nomeGrande(), cliente = VIT.cliente;
   if (!n) return;
-  const ok = await confirmar(nome, `apagar ${n === 1 ? "a 1 cor" : "as " + n + " cores"} da vitrine ${col} da ${nome}?`, { sim: "apagar", nao: "voltar", grande: true, padraoNao: true });
+  // a conta é a do estado CARREGADO deste cliente e é a mesma coisa que o banco apaga (todas as linhas da coleção); se houver linha fora de "escolhida", a pergunta diz
+  const extra = n - vis;
+  const ok = await confirmar(nome, `apagar ${n === 1 ? "a 1 cor" : "as " + n + " cores"} da vitrine ${col} da ${nome}?${extra > 0 ? ` (${extra} delas não estão como "escolhida", e também serão apagadas)` : ""}`,
+    { sim: "apagar", nao: "voltar", grande: true, padraoNao: true, espera: 400, afastar: ELV && ELV.querySelector("#vf-limpar") });
   if (!ok) return;
+  if (VIT.cliente !== cliente || carregandoVitrine() || linhasDaVitrine() !== n) { LIMPA.msg = { texto: "a vitrine mudou enquanto a confirmação estava aberta: nada foi apagado — abra o limpar de novo", erro: true }; faixaDesfazer(); atualizarBarraVitrine(); return; }
   LIMPA.ocupado = true; atualizarBarraVitrine();
   const r = await SB.rpc("vitrine_limpar", { p_cliente: cliente, p_colecao: col });
   LIMPA.ocupado = false;
@@ -757,21 +807,22 @@ async function desfazerApagamento(lote, nome, col){
 }
 // "desfazer um apagamento": os lotes de mais cedo (mais novo primeiro), com quando, quantas cores, quem e se já voltou
 async function listarApagamentos(){
-  if (!VIT.cliente || !DADOS || !SB) return;
-  const col = DADOS.colecao, nome = nomeGrande(), cliente = VIT.cliente;
+  if (!VIT.cliente || !DADOS || !SB || carregandoVitrine()) return;
+  const col = DADOS.colecao, nome = nomeGrande(), cliente = VIT.cliente, origem = ELV && ELV.querySelector("#vf-lotes");
   const luz = document.createElement("div"); luz.className = "luz grade-luz";
   luz.innerHTML = `<div class="quadro grade-quadro gq-grande gq-lotes"><div class="gq-nome">${esc(nome)}</div><div class="gq-perg">apagamentos da vitrine ${esc(col)} da ${esc(nome)}</div><div class="gq-lista" id="gq-lotes">lendo…</div><div class="gq-acoes"><button type="button" class="sec gq-deixa">fechar</button></div></div>`;
   const fecha = () => { luz.remove(); document.removeEventListener("keydown", tecla); };
-  const tecla = ev => { if (ev.key === "Escape") fecha(); };
+  const tecla = ev => { if (ev.key === "Escape") fecha(); prenderTab(ev, luz); };
   document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(); }; luz.querySelector(".gq-deixa").onclick = fecha;
-  document.body.appendChild(luz);
+  document.body.appendChild(luz); afastarDe(luz, origem, ".gq-lista");
   const pintar = async () => {
     const lista = luz.querySelector("#gq-lotes"), r = await SB.rpc("vitrine_lotes", { p_cliente: cliente, p_colecao: col });
     if (r.error) { lista.textContent = "o banco recusou a leitura: " + r.error.message; return; }
     const ls = Array.isArray(r.data) ? r.data : [];
     if (!ls.length) { lista.textContent = "nenhum apagamento registrado para esta vitrine."; return; }
     lista.innerHTML = ls.map(l => `<div class="gq-lote${l.restaurado ? " feito" : ""}" data-lote="${esc(l.lote)}"><span><b>${esc(horaCurta(l.apagado_em))}</b> · ${esc(nCores(+l.n_cores))} · ${esc(l.apagado_por || "—")}</span>${l.restaurado ? `<em>já restaurado</em>` : `<button type="button" class="gq-sobe">desfazer</button>`}</div>`).join("");
-    for (const b of lista.querySelectorAll(".gq-sobe")) b.onclick = async () => { b.disabled = true; b.textContent = "desfazendo…"; await desfazerApagamento(+b.parentElement.dataset.lote, nome, col); if (luz.isConnected) pintar(); };
+    for (const b of lista.querySelectorAll(".gq-sobe")) { b.disabled = true; b.classList.add("espera"); setTimeout(() => { if (b.isConnected) { b.disabled = false; b.classList.remove("espera"); } }, 400);   // o mesmo toque duplo: 400 ms de espera
+      b.onclick = async () => { b.disabled = true; b.textContent = "desfazendo…"; await desfazerApagamento(+b.parentElement.dataset.lote, nome, col); if (luz.isConnected) pintar(); }; }
   };
   pintar();
 }
@@ -782,7 +833,7 @@ async function listarApagamentos(){
 // e com o PDV. Mais bonito, mais visual, gamificar." Regras da casa que valem aqui: animação é evento (sobe, brilha, PARA);
 // estado é repouso; paleta só a oficial.
 const MF = { busca: "", marca: "OLY", tipo: "", bloco: new Set(), gen: new Set(), esp: false, passo: "" };   // filtros da esquerda (a coleção); esp = só os que chegam ao 48; passo = o roteiro
-const VF = { gen: new Set(), bloco: new Set(), tipo: new Set(), marca: new Set() };
+const VF = { gen: new Set(), bloco: new Set(), tipo: new Set(), marca: new Set(), parede: "" };   // parede = a vitrine do PDF (feminino…chinelos) escolhida pelo número do chip
 // custo para a CMS (ele, 19/10): no GTM o placar mostra custo × pares, não PDV — custo = PDV ÷ markup. 27/10 (BOSS: este arquivo é
 // PÚBLICO no GitHub): o markup e o prazo padrão da CMS NÃO ficam aqui; moram em cliente_condicao, linha 'CMS', lida depois do login (VIT.condCms)
 const condDe = it => ehGtm() ? ((VIT.condCms && (VIT.condCms.get(it.m + "|" + it.t) || VIT.condCms.get(it.m + "|TENIS"))) || null) : (VIT.cond.get(it.m + "|" + it.t) || VIT.cond.get(it.m + "|TENIS") || null);
@@ -840,6 +891,7 @@ function desenharMontador(pg){
       <div class="mont-dir"><div class="mont-zoom" data-lado="dir" title="zoom da vitrine"><button type="button" data-d="-1">−</button><b></b><button type="button" data-d="1">+</button></div>
         <div class="mont-cab">
           <div class="mont-tit" id="vf-tit"></div><div class="vf-confere"><button type="button" class="sec" id="vf-reler" title="relê o que está gravado no banco">↻ conferir no banco</button><button type="button" class="sec" id="vf-limpar" title="apaga todas as cores desta vitrine — pede confirmação e dá para desfazer">limpar a vitrine</button><button type="button" class="sec" id="vf-lotes" title="lista os apagamentos desta vitrine e desfaz um deles">desfazer um apagamento</button><span class="mu" id="vf-lido"></span></div>
+          <div class="vf-parede oculto" id="vf-parede"></div>
           <div class="mont-placar" id="vf-placar"></div>
           <div class="frow"><span class="fl">marca</span><div class="chips" id="vf-marca"></div></div>
           <div class="frow"><span class="fl">tipo</span><div class="chips" id="vf-tipo"></div></div>
@@ -970,6 +1022,7 @@ const fotoMini = it => { const src = srcFoto(it); return src ? `<img loading="la
 
 function desenharDireita(pg){
   const todas = escolhidas();
+  if (VF.parede && !todas.some(it => pdfParede(it) === VF.parede)) VF.parede = "";   // a vitrine esvaziou: o filtro cai
   // filtros em CASCATA (ele, 19/10 17:4x: "tudo só aparece de acordo com o que eu for filtrando; se só tem Olympikus, só Olympikus; se tem
   // tênis e chinelo, os dois e 'todos' — não 'tudo'; filtrei tênis, a família chinelo some"): cada linha conta só o que passou nas de cima
   if (ehGtm()) VF_MES.v.clear();
@@ -997,10 +1050,13 @@ function desenharDireita(pg){
   // do mais caro ao mais barato — o chinelo nunca se mistura ao tênis
   const gtm = ehGtm(), mes = gtmMes();
   // na DISTRIBUIÇÃO: por tipo, dentro do tipo o modelo junto (todas as cores), a cor com mais pares primeiro
-  const lista = todas.filter(it => mesCasa(chaveCor(it)) && (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && casaGrupo(it) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))))
+  const lista = todas.filter(it => mesCasa(chaveCor(it)) && (!VF.marca.size || VF.marca.has(it.m)) && (!VF.tipo.size || VF.tipo.has(it.t)) && casaGrupo(it) && (!VF.bloco.size || VF.bloco.has(familiaDe(it))) && (!VF.parede || pdfParede(it) === VF.parede))
     .sort((a, b) => (secOrd(secaoDe(a)) - secOrd(secaoDe(b))) || (gtm ? (String(a.n).localeCompare(String(b.n)) || ((VIT.pares.get(chaveCor(b)) || 0) - (VIT.pares.get(chaveCor(a)) || 0))) : 0)
       || ((b.p == null ? -1 : +b.p) - (a.p == null ? -1 : +a.p)) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));
   pg.querySelector("#vf-tit").textContent = `Vitrine ${nomeCli(VIT.cliente || "")} · ${DADOS.colecao || ""}`;
+  { const vp = pg.querySelector("#vf-parede"); vp.classList.toggle("oculto", !VF.parede);
+    vp.innerHTML = VF.parede ? `<span>só a vitrine <b>${esc(titulo(VF.parede))}</b> · ${nCores(lista.length)}</span><button type="button" class="sec">ver a vitrine inteira</button>` : "";
+    const vb = vp.querySelector("button"); if (vb) vb.onclick = () => { VF.parede = ""; desenharDireita(pg); }; }
   atualizarBarraVitrine();
   // 19/10 (regra dele, chinelo-separado-do-tenis; PICASSO na conferência da v5.18): UM PLACAR POR TIPO, sem total geral — o chinelo
   // nunca soma com o tênis. O valor em PDV: inteiro no computador, "R$ 3,6 mil" no celular (PICASSO, 15/10: cortava em 390 px)
