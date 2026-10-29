@@ -31,7 +31,7 @@
       <a href="#" id="ti-sair" style="font-size:12px;color:#787B86;text-decoration:underline;min-height:44px;display:inline-flex;align-items:center;padding:0 12px;min-width:44px;justify-content:center">sair</a>`;
     (document.getElementById("slot_seletor") || document.body).appendChild(div);
     $("ti-sair").onclick = ev => { ev.preventDefault(); DadosMeta.sair(); };
-    const sel = $("ti-sel"); sel.innerHTML = LISTA.map(p => `<option value="${esc(p.codigo)}">${esc(p.codigo === "TODOS" ? "CMS · todos" : p.nome)}</option>`).join(""); sel.value = PREPOSTO; sel.onchange = () => { PREPOSTO = sel.value; lembrar(); hashAtual(); abrir(); };
+    const sel = $("ti-sel"); sel.innerHTML = LISTA.map(p => `<option value="${esc(p.codigo)}">${esc(p.codigo === "TODOS" ? "CMS · todos" : p.nome)}</option>`).join(""); sel.value = PREPOSTO; sel.onchange = () => window.onPreposto(sel.value);   /* v8: o select passa pelo onPreposto (zera ACOMP e SAIDA) */
   }
   const hashAtual = () => { location.hash = "preposto=" + encodeURIComponent(PREPOSTO); };
   const lembrar = () => { try { localStorage.setItem("meta_busca:preposto", PREPOSTO); } catch (e) { /* sem armazenamento */ } };
@@ -79,7 +79,7 @@
   let ACOMP = null;
   async function pedirArquivo() {
     const bt = document.querySelector('#a_previa .mb-bt:not(.sec)'); if (bt) { if (bt.disabled) return; bt.disabled = true; bt.textContent = "anotando…"; }   /* v7: trava no clique, antes do await */
-    const e = await DadosMeta.pedirArquivo(); refaz();
+    let e; try { e = await DadosMeta.pedirArquivo(); } catch (x) { e = (x && x.message) || "falhou sem dizer por quê"; } finally { refaz(); }   /* v8: exceção não deixa o botão preso em "anotando…" */
     if (e) { const el = $("a_aviso"); if (el) { el.hidden = false; el.innerHTML = `<b>Não consegui anotar o pedido do arquivo</b><small> · ${esc(e)}</small>`; setTimeout(() => { el.hidden = true; }, 8000); } return; }
     acompanhar();
   }

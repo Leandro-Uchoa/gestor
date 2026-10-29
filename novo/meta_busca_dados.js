@@ -18,7 +18,7 @@ window.DadosMeta = (() => {
                        "UA_AC": "Acessórios UA (R$)", "UA_ME": "Meias UA (R$)", "UA_CH": "Chinelos UA (R$)", "UA_TN": "Tênis UA (R$)", "BASKETBALL": "Basquete UA", "TRAINING": "Treino UA", "RUNNING": "Corrida UA", "RUN INSPIRED": "Run inspired UA" };
   const NA_REGUA = g => /cobertura < 5|repasse CMS/i.test(g || "");                 // o que o "marcar o mínimo" pode marcar (NÚCLEO: dentro da régua)
   const FORA_REGUA = g => /alta|sem giro|a confirmar/i.test(g || "");             // recolhido atrás de "+N" (nunca misturado)
-  let BRUTO = null, MARCADOS = new Set(), NOMES = new Map(), SAIDA = null, ESC = null, PEDINDO = false;   /* SAIDA: o pedido do arquivo (vitrine_saida) em curso; PEDINDO: insert em andamento (v7: dois toques = um pedido) */   /* NOMES: código → nome do vendedor (nota do TODOS) */
+  let BRUTO = null, MARCADOS = new Set(), NOMES = new Map(), SAIDA = null, ESC = null, PEDINDO = false, CARGA = 0;   /* CARGA: nº da carga em curso (v8: carga velha não escreve na nova) */   /* SAIDA: o pedido do arquivo (vitrine_saida) em curso; PEDINDO: insert em andamento (v7: dois toques = um pedido) */   /* NOMES: código → nome do vendedor (nota do TODOS) */
 
   async function tudo(q) { const out = []; for (let i = 0; ; i += 1000) { const { data, error } = await q.range(i, i + 999); if (error) throw error; out.push(...(data || [])); if (!data || data.length < 1000) break; } return out; }
   const semErro = (fn, vazio) => Promise.resolve().then(fn).catch(e => { console.warn("fonte acessória falhou", e && e.message || e); return vazio === undefined ? [] : vazio; });
@@ -36,41 +36,53 @@ window.DadosMeta = (() => {
   // o placar primeiro, e a tela redesenha a cada passo (aoPasso); o que é acessório (estados do placar, pedido novo) vem por último e pode faltar.
   const PASSOS = 8;
   async function carregar(preposto, aoPasso) {
-    const P = preposto || "TODOS", emitir = (passo, rotulo) => { try { if (aoPasso) aoPasso(montar(null, { passo, total: PASSOS, rotulo })); } catch (e) { console.error("passo " + passo, e); } };
+    const minha = ++CARGA, viva = () => minha === CARGA;   /* v8 (GAMER): só a carga mais nova escreve e desenha */
+    const P = preposto || "TODOS", emitir = (passo, rotulo) => { if (!viva()) return; try { if (aoPasso) aoPasso(montar(null, { passo, total: PASSOS, rotulo })); } catch (e) { console.error("passo " + passo, e); } };
     const placar = await tudo(sb.from("v_onde_buscar_meta").select("*")   // "*": colunas novas no FIM (m3_sem_ag, em curso no DBA) entram sem quebrar a consulta
              .eq("preposto", P).order("marca").order("faixa_ordem"));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     const nomeP = (placar[0] || {}).preposto_nome || (P === "TODOS" ? "CMS" : P);
     if (BRUTO && BRUTO.P !== P) SAIDA = null;   /* v7 (GAMER): o pedido do arquivo é do vendedor que o pediu; Atualizar no mesmo vendedor mantém */
     BRUTO = { P, nomeP, placar, estados: [], linhas: [], pedido: [], cms: [], cadastro: [], COR: new Map(), IMG: new Map(), falhas: {} }; MARCADOS = new Set();
-    const acess = async (nome, fn) => { try { return await fn(); } catch (e) { console.warn("fonte acessória falhou", nome, e && e.message || e); BRUTO.falhas[nome] = (e && e.message) || String(e); return []; } };   // GAMER: acessório que falha NÃO some calado
+    const B = BRUTO;   /* v8: as falhas desta carga vão no objeto DESTA carga */
+    const acess = async (nome, fn) => { try { return await fn(); } catch (e) { console.warn("fonte acessória falhou", nome, e && e.message || e); B.falhas[nome] = (e && e.message) || String(e); return []; } };   // GAMER: acessório que falha NÃO some calado
     emitir(1, "placar");
     // estados do placar logo depois do placar (0127: tabela pronta, 0,06 s) — a ordem e os selos valem desde o passo 2
     BRUTO.estados = await acess("estados", () => tudo(sb.from("v_buscar_meta_placar").select("preposto,faixa,falta_gatilho,fecha_na_regua,fecha_com_alta,repasse_a_confirmar,estado,fecha_com_pedido,fecha_com_pedido_sem_teto,base_em").eq("preposto", P)));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     BRUTO.cms = P === "TODOS" ? [] : await acess("cms", () => tudo(sb.from("v_onde_buscar_meta").select("marca,faixa,gatilho,real,falta_gatilho,bate,alcanca").eq("preposto", "TODOS")));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     // v5 (GAMER): no TODOS, o cadastro cliente → vendedor diz de quem são as listas (um só preposto cadastrado → a tela avisa em vez de parecer cópia)
-    BRUTO.cadastro = P === "TODOS" ? await semErro(() => tudo(sb.from("preposto_cliente").select("preposto,cliente").order("preposto").order("cliente")), []) : [];
+    BRUTO.cadastro = P === "TODOS" ? await acess("cadastro", () => tudo(sb.from("preposto_cliente").select("preposto,cliente").order("preposto").order("cliente")), []) : [];
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     emitir(2, "estados do placar");
     // blocos pelas views de cada um (as rápidas), em fila: 1 · origem → cliente seu · 2 · carteira do mês seguinte · 3 · origem antecipa · 5 · continua inchada · 4 · dispo
     const sel = v => sb.from(v).select("*");
     // v6 (GAMER): bloco que estoura o tempo NÃO some calado — a falha fica em falhas.blocoN, a tela avisa e oferece "tentar de novo"
     const b1 = await acess("bloco1", () => tudo((P === "TODOS" ? sel("v_buscar_meta_pio_cliente") : sel("v_buscar_meta_pio_cliente").eq("preposto", P)).order("faixa").order("prioridade")));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     const b2 = await acess("bloco2", () => tudo((P === "TODOS" ? sel("v_buscar_meta_carteira_nov") : sel("v_buscar_meta_carteira_nov").eq("preposto", P)).order("faixa").order("prioridade")));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     // v6 (Engenharia 29/10): a carteira_nov repete as linhas "repasse CMS" e "repasse a confirmar" em CADA preposto (alvo ∪ CMS por vendedor); no TODOS
     // elas entrariam 6 vezes e somariam em dobro — fica UMA por chave (a mesma do id), até o NÚCLEO fixar a regra de quem leva o repasse
     const vistas = new Set(), b2u = P === "TODOS" ? b2.filter(l => { const k = idDe(l); if (vistas.has(k)) return false; vistas.add(k); return true; }) : b2;
     BRUTO.linhas = b1.concat(b2u); emitir(3, "sua carteira");
     // blocos 3 e 5 são do cliente de origem (pontua noutro preposto): entram na visão do vendedor que tem o bloco 1, porque é a mesma jogada
     if (P === "TODOS" || b1.length || BRUTO.falhas.bloco1) { const b3 = await acess("bloco3", () => tudo(sel("v_buscar_meta_pio_antecipa").order("faixa").order("prioridade"))), b5 = await acess("bloco5", () => tudo(sel("v_buscar_meta_pio_inchado").order("faixa").order("prioridade"))); BRUTO.linhas = BRUTO.linhas.concat(b3, b5); }   // v6: bloco 1 falhou ≠ bloco 1 vazio
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     emitir(4, "origem");
     const b4 = await acess("bloco4", () => tudo(sel("v_buscar_meta_dispo").order("faixa").order("prioridade"))); BRUTO.linhas = BRUTO.linhas.concat(b4); emitir(5, "dispo");
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     // fotos verificadas (produto.foto_url, 0124) e nome da cor, em blocos de 200 referências
     const refs = [...new Set(BRUTO.linhas.map(l => l.referencia).filter(Boolean))], CAD = [];
-    for (let i = 0; i < refs.length; i += 200) CAD.push(...await semErro(() => tudo(sb.from("produto").select("referencia,cor,cor_descricao,foto_url").in("referencia", refs.slice(i, i + 200)).order("referencia").order("cor"))));
+    for (let i = 0; i < refs.length; i += 200) CAD.push(...await acess("fotos", () => tudo(sb.from("produto").select("referencia,cor,cor_descricao,foto_url").in("referencia", refs.slice(i, i + 200)).order("referencia").order("cor"))));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     BRUTO.COR = new Map(CAD.map(p => [p.referencia + "|" + (p.cor || ""), p.cor_descricao])); const IMG = BRUTO.IMG = new Map();
     for (const p of CAD) { if (!p.foto_url) continue; IMG.set(p.referencia + "|" + (p.cor || ""), p.foto_url); (IMG.get(p.referencia) || IMG.set(p.referencia, []).get(p.referencia)).push(p.foto_url); }
     emitir(6, "fotos");
     emitir(7, "pedido novo");
     BRUTO.pedido = await acess("pedido", () => tudo(sb.from("v_buscar_meta_pedido_sugerido").select("preposto,faixa,cliente,referencia,cor,descricao,venda_mes,estoque,carteira,transito,cob_base,cap,gdisp,pedido_sugerido,cabe_mais,cob_depois,alvo_faixa,base_em").eq("preposto", P).gt("pedido_sugerido", 0).order("faixa").order("cliente")));
+    if (!viva()) return null;   /* v8: outra carga começou — esta para aqui */
     emitir(8, "pronto");
     return montar(null);
   }
@@ -166,21 +178,24 @@ window.DadosMeta = (() => {
     PEDINDO = true; try { return await pedirArquivo_(); } finally { PEDINDO = false; }
   }
   async function pedirArquivo_() {
-    const M = montar(null), P = M.previa || { n: 0 };
+    const B = BRUTO, M = montar(null), P = M.previa || { n: 0 };   /* v8: o pedido é do vendedor do início */
     if (!P.n) return "nada marcado";
     const esc = await escritorio(); if (!esc) return "não achei o escritório do usuário";
+    if (B !== BRUTO) return "o vendedor mudou enquanto eu anotava — peça de novo";
     const linhas = [].concat(P.antecipar.map(x => Object.assign({ acao: "antecipar" }, x)), P.transferir.map(x => Object.assign({ acao: "transferir" }, x)), P.digitar.map(x => Object.assign({ acao: "digitar" }, x)))
       .map(x => ({ bloco: x.bloco, acao: x.acao, faixa: x.faixa, ref: x.ref, cor: x.cor, cor_nome: x.cor_nome, modelo: x.modelo, cliente_de: x.cliente_de || null, cliente_para: x.cliente_para || null, pares: x.pares, prev_fat: x.prev_fat || null }));
-    const dados = { preposto: BRUTO.P, preposto_nome: BRUTO.nomeP, mes: M.mes, quinzena2: !!M.quinzena2, linhas, totais: { n: P.n, pares: P.pares, por_faixa: (P.por_faixa || []).filter(f => f.pares).map(f => ({ faixa: f.faixa, pares: f.pares })), grade_quebrada: P.grade_quebrada || 0 } };
-    let r; try { r = await sb.from("vitrine_saida").insert({ escritorio_id: esc, cliente: BRUTO.nomeP || BRUTO.P, colecao: M.mes || "", tipo: "meta", dados }).select("id,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho"); }
+    const dados = { preposto: B.P, preposto_nome: B.nomeP, mes: M.mes, quinzena2: !!M.quinzena2, linhas, totais: { n: P.n, pares: P.pares, por_faixa: (P.por_faixa || []).filter(f => f.pares).map(f => ({ faixa: f.faixa, pares: f.pares })), grade_quebrada: P.grade_quebrada || 0 } };
+    let r; try { r = await sb.from("vitrine_saida").insert({ escritorio_id: esc, cliente: B.nomeP || B.P, colecao: M.mes || "", tipo: "meta", dados }).select("id,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho"); }
     catch (e) { return (e && e.message) || "a rede falhou"; }   // falha calada não existe: o erro vai ao aviso da tela
     if (r.error) return r.error.message || "o banco recusou";
     const row = (r.data || [])[0]; if (!row) return "o banco não devolveu o pedido";
+    if (B !== BRUTO) return "o vendedor mudou enquanto eu anotava — o pedido ficou gravado para o vendedor anterior; confira na fila";
     SAIDA = estadoDe(row); return null;
   }
   async function lerSaida() {
-    if (!SAIDA) return null;
+    if (!SAIDA) return null; const S0 = SAIDA;   /* v8: releitura de um pedido que já saiu da tela não volta */
     const r = await sb.from("vitrine_saida").select("id,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho").eq("id", SAIDA.id).limit(1);
+    if (SAIDA !== S0) return SAIDA;
     if (!r.error && r.data && r.data[0]) SAIDA = estadoDe(r.data[0]);
     else if (SAIDA) SAIDA.releitura = (r.error && r.error.message) || "a conferência não voltou";   /* v7: releitura que falha não fica calada */
     return SAIDA;
