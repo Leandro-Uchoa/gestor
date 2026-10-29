@@ -13,12 +13,12 @@ window.DadosMeta = (() => {
                    3: { acao: "antecipar", verbo: "Antecipar", explicacao: "a origem antecipa para ela mesma só o que ela precisa (cobertura < 5)" },
                    4: { acao: "digitar", verbo: "Digitar", explicacao: "o que o EBM tem para faturar na quinzena: quem entra no pedido vem primeiro" },
                    5: { acao: null, verbo: null, explicacao: "continua inchado na origem: rever a entrada do mês seguinte ou outro cliente" } };
-  const NOME_FAIXA = { "TT CALCADOS": "Total de tênis", "TT FTW_UA": "Total de tênis UA", "TT GERAL": "Total geral (R$)", "ACOLY": "Acessórios (R$)", "CHOLY": "Chinelos (R$)", "MEOLY": "Meias (R$)",
+  const NOME_FAIXA = { "TT CALCADOS": "Total de tênis", "TT FTW_UA": "Total de tênis UA", "TT GERAL": "Total geral (R$)", "ACOLY": "Acessórios (R$)", "CHOLY": "Chinelos (R$)", "MEOLY": "Meias (R$)", "CFOLY": "Confecção (R$)", "UA_AC": "Acessórios UA (R$)", "UA_CF": "Confecção UA (R$)", "UA_CH": "Chinelos UA (R$)", "UA_ME": "Meias UA (R$)",
                        "CONF_FEM": "Conforto feminino", "CONF_MASC": "Conforto masculino", "CORRIDA/TREINO": "Corrida / treino", "CLASSICOS": "Clássicos", "INFANTIL": "Infantil", "CORRE": "Família Corre",
                        "UA_AC": "Acessórios UA (R$)", "UA_ME": "Meias UA (R$)", "UA_CH": "Chinelos UA (R$)", "UA_TN": "Tênis UA (R$)", "BASKETBALL": "Basquete UA", "TRAINING": "Treino UA", "RUNNING": "Corrida UA", "RUN INSPIRED": "Run inspired UA" };
   const NA_REGUA = g => /cobertura < 5|repasse CMS/i.test(g || "");                 // o que o "marcar o mínimo" pode marcar (NÚCLEO: dentro da régua)
   const FORA_REGUA = g => /alta|sem giro|a confirmar/i.test(g || "");             // recolhido atrás de "+N" (nunca misturado)
-  let BRUTO = null, MARCADOS = new Set(), NOMES = new Map(), SAIDA = null, ESC = null;   /* SAIDA: o pedido do arquivo (vitrine_saida) em curso */   /* NOMES: código → nome do vendedor (nota do TODOS) */
+  let BRUTO = null, MARCADOS = new Set(), NOMES = new Map(), SAIDA = null, ESC = null, PEDINDO = false;   /* SAIDA: o pedido do arquivo (vitrine_saida) em curso; PEDINDO: insert em andamento (v7: dois toques = um pedido) */   /* NOMES: código → nome do vendedor (nota do TODOS) */
 
   async function tudo(q) { const out = []; for (let i = 0; ; i += 1000) { const { data, error } = await q.range(i, i + 999); if (error) throw error; out.push(...(data || [])); if (!data || data.length < 1000) break; } return out; }
   const semErro = (fn, vazio) => Promise.resolve().then(fn).catch(e => { console.warn("fonte acessória falhou", e && e.message || e); return vazio === undefined ? [] : vazio; });
@@ -40,6 +40,7 @@ window.DadosMeta = (() => {
     const placar = await tudo(sb.from("v_onde_buscar_meta").select("*")   // "*": colunas novas no FIM (m3_sem_ag, em curso no DBA) entram sem quebrar a consulta
              .eq("preposto", P).order("marca").order("faixa_ordem"));
     const nomeP = (placar[0] || {}).preposto_nome || (P === "TODOS" ? "CMS" : P);
+    if (BRUTO && BRUTO.P !== P) SAIDA = null;   /* v7 (GAMER): o pedido do arquivo é do vendedor que o pediu; Atualizar no mesmo vendedor mantém */
     BRUTO = { P, nomeP, placar, estados: [], linhas: [], pedido: [], cms: [], cadastro: [], COR: new Map(), IMG: new Map(), falhas: {} }; MARCADOS = new Set();
     const acess = async (nome, fn) => { try { return await fn(); } catch (e) { console.warn("fonte acessória falhou", nome, e && e.message || e); BRUTO.falhas[nome] = (e && e.message) || String(e); return []; } };   // GAMER: acessório que falha NÃO some calado
     emitir(1, "placar");
@@ -159,7 +160,12 @@ window.DadosMeta = (() => {
   const nomeArq = s => String(s || "").split(/[\\/]/).pop() || "arquivo";
   const estadoDe = r => !r ? null : { id: r.id, estado: r.erro ? "erro" : r.atendido_em ? "pronto" : "fila", pedido_em: r.pedido_em || null, atendido_em: r.atendido_em || null,
                                       erro: r.erro || null, nota: r.nota || null, arquivo: r.arquivo || null, nome: nomeArq(r.arquivo), storage_path: r.storage_path || null, tamanho: num(r.tamanho) };
-  async function pedirArquivo() {
+  async function pedirArquivo() {   /* v7: trava no clique — dois toques rápidos não gravam dois pedidos */
+    if (PEDINDO) return "o pedido anterior ainda está sendo anotado";
+    if (SAIDA && SAIDA.estado === "fila") return "já há um pedido na fila — espere ficar pronto ou tire a linha";
+    PEDINDO = true; try { return await pedirArquivo_(); } finally { PEDINDO = false; }
+  }
+  async function pedirArquivo_() {
     const M = montar(null), P = M.previa || { n: 0 };
     if (!P.n) return "nada marcado";
     const esc = await escritorio(); if (!esc) return "não achei o escritório do usuário";
@@ -176,6 +182,7 @@ window.DadosMeta = (() => {
     if (!SAIDA) return null;
     const r = await sb.from("vitrine_saida").select("id,pedido_em,atendido_em,arquivo,erro,nota,storage_path,tamanho").eq("id", SAIDA.id).limit(1);
     if (!r.error && r.data && r.data[0]) SAIDA = estadoDe(r.data[0]);
+    else if (SAIDA) SAIDA.releitura = (r.error && r.error.message) || "a conferência não voltou";   /* v7: releitura que falha não fica calada */
     return SAIDA;
   }
   async function urlArquivo() {
@@ -184,6 +191,7 @@ window.DadosMeta = (() => {
     return r.error || !r.data ? { erro: (r.error && r.error.message) || "o cofre não respondeu" } : { url: r.data.signedUrl };
   }
   const limparSaida = () => { SAIDA = null; };
+  const pedindo = () => PEDINDO;
   const limpar = faixa => { const total = !!faixa && BRUTO.placar.some(r => r.faixa === faixa && r.total); for (const l of BRUTO.linhas) if (!faixa || total || l.faixa === faixa) MARCADOS.delete(idDe(l)); };
-  return { sb, sessao, entrar, sair, prepostos, carregar, pedirArquivo, lerSaida, urlArquivo, limparSaida, refiltrar: f => montar(f), foraRegua: f => BRUTO ? BRUTO.linhas.filter(l => l.faixa === f && +l.bloco === 2 && FORA_REGUA(l.grupo)).length : 0, marcar, marcarMinimo, limpar, marcados: () => new Set(MARCADOS) };
+  return { sb, sessao, entrar, sair, prepostos, carregar, pedirArquivo, lerSaida, urlArquivo, limparSaida, pedindo, refiltrar: f => montar(f), foraRegua: f => BRUTO ? BRUTO.linhas.filter(l => l.faixa === f && +l.bloco === 2 && FORA_REGUA(l.grupo)).length : 0, marcar, marcarMinimo, limpar, marcados: () => new Set(MARCADOS) };
 })();
