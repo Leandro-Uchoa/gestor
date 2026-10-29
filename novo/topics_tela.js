@@ -1,4 +1,4 @@
-// Topics · casca · ?v=2. Estrutura adaptada das telas de meta e trade; nenhum dado embutido.
+// Topics · casca · ?v=3. Estrutura adaptada das telas de meta e trade; nenhum dado embutido.
 (() => {
   const $=id=>document.getElementById(id), esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const chama=(n,...a)=>window[n]?.(...a);
@@ -65,7 +65,7 @@
     if(D.erro){$('a_grupos').innerHTML='';$('a_chips').innerHTML='';$('a_sem_projeto').innerHTML='';return;}
     if(D.so_linha) {
       const p=(D.passos||[]).find(p=>String(p.id)===String(D.so_linha));
-      const visivel=p&&(D.modo==='projeto'||((D.filtro?.feitos||!p.feito)&&(D.filtro?.algumdia||!p.algumdia)));
+      const visivel=p&&(D.modo==='projeto'||(!p.feito&&!p.algumdia)||(D.filtro?.feitos&&p.feito)||(D.filtro?.algumdia&&p.algumdia));   /* v3 (GAMER): a mesma regra de visibilidade da camada de dados */
       const existentes=[...document.querySelectorAll('[data-linha]')].filter(el=>el.dataset.linha===String(D.so_linha));
       for(const el of existentes) {
         if(visivel) el.outerHTML=linha(p);

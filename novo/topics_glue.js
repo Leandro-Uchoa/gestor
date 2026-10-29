@@ -1,4 +1,4 @@
-// Topics · cola · ?v=2. Login da tela de meta; confirmação e desfazer por 5 s.
+// Topics · cola · ?v=3. Login da tela de meta; confirmação e desfazer por 5 s.
 (() => {
   const $=id=>document.getElementById(id);
   let DADOS=null, FILTRO={modo:'cliente',feitos:false,algumdia:false}, ULTIMO=null, TOAST=null, CARGA=null;
@@ -36,6 +36,6 @@
   window.onNovoPasso=async(v,k)=>{if(NOVOS.has(k))return;NOVOS.add(k);let erro;try{erro=await DadosTopics.acrescentarPasso(v);}catch(e){erro=e.message||String(e);}finally{NOVOS.delete(k);}TOPICS.formRetorno(k,erro);refaz();if(!erro){ULTIMO=null;toast('passo acrescentado',false);}};
   window.onAcao=(nome,ctx)=>{if(nome==='recarregar'){abrir();return true;}if(nome==='exportar_pdf'){window.print();return true;}if(nome==='cliente'&&ctx?.cliente){location.href='cliente.html#cliente='+encodeURIComponent(ctx.cliente);return true;}return false;};
   window.addEventListener('hashchange',()=>{FILTRO=lerHash();if(DADOS)refaz();});
-  async function arranque(){try{FILTRO=lerHash();DadosTopics.refiltrar(FILTRO);const s=await DadosTopics.sessao();if(!s){overlayLogin();return;}main.style.visibility='';$('ti-sair').onclick=()=>DadosTopics.sair();await abrir();}catch(e){main.style.visibility='';desenhar({erro:e.message||String(e),modo:FILTRO.modo,filtro:FILTRO});}}
+  async function arranque(){try{FILTRO=lerHash();DadosTopics.refiltrar(FILTRO);const s=await DadosTopics.sessao();if(!s){overlayLogin();return;}main.style.visibility='';$('ti-sair').onclick=async()=>{const e=await DadosTopics.sair();if(e){const a=$('a_aviso');if(a){a.hidden=false;a.textContent='Não consegui encerrar a sessão: '+e+' — recarrego em 4 s';}setTimeout(()=>location.reload(),4000);}};   /* v3: erro ao sair avisa antes de recarregar */await abrir();}catch(e){main.style.visibility='';desenhar({erro:e.message||String(e),modo:FILTRO.modo,filtro:FILTRO});}}
   arranque();
 })();

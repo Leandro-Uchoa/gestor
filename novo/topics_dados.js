@@ -1,4 +1,4 @@
-// Topics · dados · ?v=2. Consultas em fila, paginação e escrita conferida pela RLS. Concluir projeto fica fora da tela (só topics.py).
+// Topics · dados · ?v=3. Consultas em fila, paginação e escrita conferida pela RLS. Concluir projeto fica fora da tela (só topics.py).
 window.DadosTopics = (() => {
   const sb = window.supabase.createClient(URL_SB, CHAVE);
   let B = { passos: [], projetos: [], blocos: [], falhas: {} }, F = { modo: 'cliente', feitos: false, algumdia: false }, G = null;
@@ -8,16 +8,19 @@ window.DadosTopics = (() => {
   const diasAte = p => p.prazo_data ? Math.round((Date.parse(String(p.prazo_data).slice(0,10)+'T12:00:00Z')-Date.parse(hoje()+'T12:00:00Z'))/86400000) : null;
   /* v2 (GAMER): espelho de topics_precisa_leo() e dos prazos da view — a linha gravada não espera o recarregar */
   const recalc = p => { const dono=String(p.dono||'').toUpperCase(), tipo=String(p.tipo||'').toLowerCase();
-    p.precisa_do_leo = !p.feito && !p.algumdia && ((['LEO','LÉO'].includes(dono) && tipo!=='espera') || /(^|[^a-záéíóú])l[eé]o($|[^a-záéíóú])/i.test(String(p.espera_de||'')) || ['decisao','decisão'].includes(tipo));
+    p.precisa_do_leo = !p.feito && !p.algumdia && ((['LEO','LÉO'].includes(dono) && tipo!=='espera') || /(^|\P{L})l[eé]o($|\P{L})/iu.test(String(p.espera_de||'')) || ['decisao','decisão'].includes(tipo));
     const dd = diasAte(p); p.atrasado = pend(p) && dd !== null && dd < 0; p.vence_em_3_dias = pend(p) && dd !== null && dd >= 0 && dd <= 3;
-    p.situacao = p.feito ? 'feito' : p.algumdia ? 'algum dia' : (p.tipo === 'espera' ? 'esperando' : 'pendente'); return p; };
+    p.situacao = p.feito ? 'feito' : p.algumdia ? 'algum dia' : (tipo === 'espera' ? 'esperando' : 'pendente');
+    p.responsavel = p.precisa_do_leo ? 'Léo' : tipo === 'espera' ? (p.espera_de || p.agente || p.quem) : (p.agente || p.dono || p.quem);   /* v3: como a view */
+    return p; };
   const mesmo = (a,b) => norm(a) === norm(b);   /* a view traz o nome em caixa normal e o bloco em caixa alta: compara sem caixa e sem acento */
   const blocoDe = nome => B.blocos.find(b => mesmo(b.nome, nome));
+  const ordemView = (a,b) => Number(!a.prazo_data)-Number(!b.prazo_data) || String(a.prazo_data||'').localeCompare(String(b.prazo_data||'')) || String(a.criado_em||'').localeCompare(String(b.criado_em||'')) || (+a.seq||0)-(+b.seq||0) || String(a.id).localeCompare(String(b.id));   /* v3 (GAMER): próximo passo como a view (prazo → criação → seq → id) */
   const ordem = (a,b) => Number(!!b.precisa_do_leo)-Number(!!a.precisa_do_leo) || String(a.prazo_data || '9999').localeCompare(String(b.prazo_data || '9999')) || (+a.seq||0)-(+b.seq||0);
   async function tudo(q) { const out=[]; for(let i=0;;i+=1000) { const r=await q.range(i,i+999); if(r.error) throw r.error; out.push(...(r.data||[])); if(!r.data || r.data.length<1000) return out; } }
   async function sessao() { const r=await sb.auth.getSession(); if(r.error) throw r.error; return r.data.session; }
   async function entrar(email,senha) { const r=await sb.auth.signInWithPassword({email,password:senha}); return r.error ? r.error.message : null; }
-  async function sair() { const r=await sb.auth.signOut({scope:'local'}); if(r&&r.error) console.warn('sair', r.error.message); location.reload(); }
+  async function sair() { const r=await sb.auth.signOut({scope:'local'}); if(r&&r.error) return r.error.message; location.reload(); return null; }   /* v3: erro volta para a cola avisar antes de recarregar */
   function montar(carregando=null) {
     const base=B.passos.filter(p => (!F.area || p.projeto_area===F.area) && (!F.cliente || p.cliente===F.cliente) && (!F.tema || p.tema===F.tema) && (!F.projeto || (F.projeto==='__sem__' ? !p.projeto_id : String(p.projeto_id)===F.projeto)) && (!F.precisa || (pend(p)&&p.precisa_do_leo)) && norm([p.txt,p.nota,p.cliente,p.tema,p.projeto_nome,p.responsavel].join(' ')).includes(norm(F.busca)));
     const vis=base.filter(p => pend(p) || (F.feitos && p.feito) || (F.algumdia && p.algumdia)).sort(ordem);   /* v2 (GAMER): o chip mostra o que conta — feito E algum dia entra com qualquer um dos dois ligado */
@@ -29,7 +32,7 @@ window.DadosTopics = (() => {
     const projetos=B.projetos.filter(p=>(!F.area || p.area===F.area) && (!F.projeto || String(p.id)===F.projeto) && ((!F.cliente&&!F.tema&&!F.busca&&!F.precisa) || base.some(s=>String(s.projeto_id)===String(p.id)))).map(p=>{
       const todos=B.passos.filter(s=>String(s.projeto_id)===String(p.id)), lista=base.filter(s=>String(s.projeto_id)===String(p.id));
       const vivos=todos.filter(s=>!s.algumdia), feitos=vivos.filter(s=>s.feito).length, total=vivos.length, pp=lista.filter(pend).sort(ordem);   /* v2 (GAMER): progresso como a view (sem "algum dia"); pendentes e "precisa de você" sobre a lista FILTRADA, que é o que o toque abre */
-      return {...p,total_passos:total,feitos,pendentes:pp.length,progresso_pct:total?Math.round(feitos/total*100):0,proximo_passo:pp[0]?.txt,proximo_passo_com:pp[0]?.responsavel,proximo_passo_prazo:pp[0]?.prazo_data,precisa_do_leo_n:pp.filter(s=>s.precisa_do_leo).length,passos_pendentes:lista.filter(pend).sort(ordem),passos_feitos:lista.filter(s=>s.feito).sort(ordem),passos_algum_dia:lista.filter(s=>!s.feito&&s.algumdia).sort(ordem)};
+      return {...p,total_passos:total,feitos,pendentes:pp.length,progresso_pct:total?Math.round(feitos/total*100):0,proximo_passo:(pp.slice().sort(ordemView)[0]||{}).txt,proximo_passo_com:(pp.slice().sort(ordemView)[0]||{}).responsavel,proximo_passo_prazo:(pp.slice().sort(ordemView)[0]||{}).prazo_data,precisa_do_leo_n:pp.filter(s=>s.precisa_do_leo).length,passos_pendentes:lista.filter(pend).sort(ordem),passos_feitos:lista.filter(s=>s.feito).sort(ordem),passos_algum_dia:lista.filter(s=>!s.feito&&s.algumdia).sort(ordem)};
     });
     let grupos=[];
     if(F.modo==='projeto') {
@@ -76,7 +79,9 @@ window.DadosTopics = (() => {
       const r=await sb.from('topics_item').insert(p).select('id'); if(r.error) throw r.error; if(!r.data?.length) throw Error('o banco não confirmou o passo');
       /* v2: a linha volta da VIEW (cliente do gatilho, prazo_data, responsável); se a releitura falhar, monta local com o espelho da regra */
       let linha=null; try { const q=await sb.from('v_topics_passo').select('*').eq('escritorio_id',esc).eq('id',id).limit(1); linha=q&&!q.error&&q.data&&q.data[0]||null; } catch(e) { linha=null; }
-      const pr=B.projetos.find(x=>String(x.id)===String(p.projeto_id)); B.passos.push(linha?{...linha}:recalc({...p,projeto_nome:pr?.nome,projeto_area:pr?.area,prazo_data:/^\d{4}-\d{2}-\d{2}$/.test(p.prazo||'')?p.prazo:null,responsavel:p.quem,criado_em:new Date().toISOString()})); G={texto:'passo acrescentado',id}; return null;
+      const pr=B.projetos.find(x=>String(x.id)===String(p.projeto_id)); const dataReal=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')&&!isNaN(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s?s:null;
+      const clienteDoBloco=p.cliente||(bloco.cliente?(doBloco.find(x=>x.cliente)||{}).cliente||bloco.nome:null);   /* v3: sem a view, o cliente vem do bloco (como o gatilho) */
+      B.passos.push(linha?{...linha}:recalc({...p,cliente:clienteDoBloco,projeto_nome:pr?.nome,projeto_area:pr?.area,prazo_data:dataReal(p.prazo),criado_em:new Date().toISOString()})); G={texto:'passo acrescentado',id}; return null;
     }catch(e){G={erro:mensagem(e)};return G.erro;}
   }
   return {sessao,entrar,sair,carregar,refiltrar:f=>{F={...F,...f};return montar();},marcarFeito:(id,on)=>gravar(id,{feito:!!on}),algumDia:(id,on)=>gravar(id,{algumdia:!!on}),acrescentarPasso,passo:id=>B.passos.find(p=>String(p.id)===String(id))};

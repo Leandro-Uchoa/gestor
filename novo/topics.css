@@ -1,4 +1,4 @@
-/* Topics · ?v=2. Complemento da casca existente, com os mesmos tokens. */
+/* Topics · ?v=3. Complemento da casca existente, com os mesmos tokens. */
 .tp-pagina{min-width:0}.tp-pagina *{box-sizing:border-box}.tp-pagina .hero{padding:22px}.tp-pagina .topo{align-items:center}.tp-pagina .bts{flex-wrap:wrap}
 .tp-bt,.tp-check{font:600 13px Inter,Arial,sans-serif;min-height:44px;min-width:44px;border:1px solid var(--cl);border-radius:12px;background:#fff;color:#000;padding:8px 12px;cursor:pointer;white-space:normal;overflow-wrap:anywhere;max-width:100%}.tp-bt:hover{background:var(--ow)}.tp-bt.on{background:var(--az);color:#fff;border-color:var(--az)}.tp-bt:focus-visible,.tp-check:focus-visible,summary:focus-visible{outline:3px solid var(--az);outline-offset:2px}
 #a_modos,#a_chips,.tp-acts,.tp-etiquetas{display:flex;flex-wrap:wrap;gap:8px}#a_chips{margin:18px 0}.tp-chip-par{display:inline-flex;flex-wrap:wrap;gap:4px;max-width:100%}.tp-modo{flex:1 1 110px}#tp_busca{display:block;width:100%;min-height:44px;margin-top:14px;border:1px solid var(--cl);border-radius:12px;padding:10px 12px;font-size:14px;min-width:0}
