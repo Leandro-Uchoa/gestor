@@ -1307,7 +1307,7 @@ function perguntarTipos(it){
   // 29/10 (ele: "colocar as quantidades sem precisar detalhar a grade, podendo inserir as grades posteriormente"): em cima, SÓ a quantidade
   // (o total da cor; por mês é opcional) e sobe sem grade — o cartão fica com "grade?" e o selo abre a grade depois, com os pares já lá.
   // Fecha em 12 (em 12 ou em 6 só a partir de R$ 299,99): regra dele de 19/10.
-  const abre6 = abre6De(it), passo = abre6 ? CAIXA6 : CAIXA, redondo = v => Math.max(0, Math.round((+v || 0) / passo) * passo);
+  const abre6 = abre6De(it), passo = abre6 ? CAIXA6 : CAIXA, redondo = v => Math.max(0, Math.floor((+v || 0) / passo) * passo);   // PARA BAIXO (19/10: "371 não é múltiplo de nada; diminui")
   const sugTot = sug ? Object.values(sug.pm || {}).reduce((x, y) => x + y, 0) : 0;
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
@@ -1326,9 +1326,10 @@ function perguntarTipos(it){
     // a quantidade: os meses (se algum preenchido) mandam; senão vale o total digitado
     const qt = luz.querySelector(".gq-qt"), sobeQ = luz.querySelector(".gq-sobe-q"), info = luz.querySelector(".gq-qinfo"), mesIn = [...luz.querySelectorAll(".gq-qm input")];
     const lerQ = () => { const pm = {}; for (const i of mesIn) { const v = redondo(i.value); if (v > 0) pm[i.dataset.m] = v; } const nm = Object.keys(pm).length; return { pm, nm, total: nm ? Object.values(pm).reduce((x, y) => x + y, 0) : redondo(qt.value) }; };
-    const mostraQ = () => { const q = lerQ(); qt.readOnly = q.nm > 0; if (q.nm) qt.value = q.total; sobeQ.disabled = !(q.total > 0);
+    let digitado = "";   // o total que ELE digitou, antes dos meses
+    const mostraQ = () => { let q = lerQ(); if (q.nm) { qt.readOnly = true; qt.value = q.total; } else if (qt.readOnly) { qt.readOnly = false; qt.value = digitado; q = lerQ(); } sobeQ.disabled = !(q.total > 0);
       info.textContent = q.total ? `${q.total.toLocaleString("pt-BR")} pares${q.nm ? " em " + q.nm + " mês(es)" : " no total"} · grade${q.nm ? "" : " e meses"} você define depois` : (sugTot ? `sugestão do núcleo: ${sugTot.toLocaleString("pt-BR")} pares` : ""); };
-    for (const i of [qt, ...mesIn]) { i.oninput = mostraQ; i.onchange = () => { if (!i.readOnly) i.value = redondo(i.value) || ""; mostraQ(); }; }
+    for (const i of [qt, ...mesIn]) { i.oninput = () => { if (i === qt && !qt.readOnly) digitado = qt.value; mostraQ(); }; i.onchange = () => { if (!i.readOnly) i.value = redondo(i.value) || ""; if (i === qt && !qt.readOnly) digitado = qt.value; mostraQ(); }; }
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
     const confirmaQ = () => { const q = lerQ(); if (!(q.total > 0)) return;
       const e = { grade: null, tx: null, pm: q.pm, pm6: {} };
@@ -1348,6 +1349,7 @@ function perguntarMeses(it, atual){
   const k = chaveCor(it), sug = VIT.sug.get(k), opc = GRADES_GTM(it);   // os tipos que a numeração permite
   const abre6 = abre6De(it);
   const redondo = (v, cx) => Math.max(0, Math.round((+v || 0) / cx) * cx);
+  const baixo = (v, cx) => Math.max(0, Math.floor((+v || 0) / cx) * cx);   // o "pares no total" (entrada sem mês) arredonda PARA BAIXO
   const fechaEm = n => n > 0 && (n % CAIXA === 0 || (abre6 && n % CAIXA6 === 0));
   const faixaNum = g => { const f = (faixaDe(it, g) || "").match(/(\d{2})–(\d{2})/); return f ? [+f[1], +f[2]] : [34, 41]; };
   // o que já está: um bloco por tipo (grade antiga "propria"/"aberta" vira o tipo padrão com o texto dela)
@@ -1382,17 +1384,18 @@ function perguntarMeses(it, atual){
       const el = bl.querySelector(".gq-soma"); el.textContent = soma ? `= ${soma} pares${fechaEm(soma) ? "" : (abre6 ? " · precisa fechar em 12 ou em 6" : " · precisa fechar em 12")}` : "digite quantos pares em cada número";
       el.classList.toggle("passou", soma > 0 && !fechaEm(soma)); return { tx: gradeTxDe(ini, dist), ok: fechaEm(soma), soma }; };
     const lerBloco = bl => { const pm = {}, pm6 = {}; for (const l of bl.querySelectorAll(".gq-mes")) { const on = l.querySelector("input[type=checkbox]").checked, { t, t6 } = lerMes(l); l.querySelector(".gm-tot").textContent = on ? (t || "—") : ""; if (on) { pm[l.dataset.m] = t; if (t6) pm6[l.dataset.m] = t6; } }
-      const g = lerGrade(bl), tv = bl.querySelector(".gq-tot"), sem = !Object.keys(pm).length, pares = sem ? redondo(tv.value, abre6 ? CAIXA6 : CAIXA) : 0;
+      const g = lerGrade(bl), tv = bl.querySelector(".gq-tot"), sem = !Object.keys(pm).length, pares = sem ? baixo(tv.value, abre6 ? CAIXA6 : CAIXA) : 0;
       return { grade: bl.dataset.g, tx: g.tx, ok: g.ok, pm, pm6, pares, pares6: (sem && abre6 && pares % CAIXA) ? pares % CAIXA : 0 }; };
     const ler = () => [...blocos.querySelectorAll(".gq-bloco")].map(lerBloco);
     const mostra = () => { const L = ler(); const t = somaMeses(L); const nm = new Set(L.flatMap(e => Object.keys(e.pm))).size;
       pct.textContent = L.length ? `${L.length > 1 ? L.length + " grades · " : ""}${nm ? nm + " mês(es) · " : ""}${t.pares ? t.pares.toLocaleString("pt-BR") + " pares" : "pares a definir depois"}${t.pares6 ? ` · ${t.pares6} em grades de 6` : ""}` : "marque pelo menos uma grade";
       sobe.disabled = !L.length || L.some(e => !e.ok); };
-    const ligarBloco = bl => { const tt = bl.querySelector(".gq-tot"); tt.oninput = mostra; tt.onchange = () => { tt.value = redondo(tt.value, abre6 ? CAIXA6 : CAIXA) || ""; mostra(); };
+    const ligarBloco = bl => { const tt = bl.querySelector(".gq-tot"); tt.oninput = mostra; tt.onchange = () => { tt.value = baixo(tt.value, abre6 ? CAIXA6 : CAIXA) || ""; mostra(); };
       for (const l of bl.querySelectorAll(".gq-mes")) { const cb = l.querySelector("input[type=checkbox]"), nps = [...l.querySelectorAll("input[type=number]")], np = nps[0];
         cb.onchange = () => { const tot = bl.querySelector(".gq-tot"), nMeses = () => bl.querySelectorAll(".gq-mes input[type=checkbox]:checked").length;
-          if (cb.checked && nMeses() === 1 && +tot.value && !(+np.value)) { const tv = redondo(tot.value, abre6 ? CAIXA6 : CAIXA); np.value = (Math.floor(tv / CAIXA) * CAIXA) || ""; if (abre6 && nps[1]) nps[1].value = (tv % CAIXA) || ""; }
-          for (const i of nps) i.disabled = !cb.checked; l.classList.toggle("on", cb.checked); if (cb.checked && !(+np.value) && bl === blocos.firstElementChild) { np.value = redondo((sug && sug.pm[cb.dataset.m]) || 0, CAIXA) || ""; } if (cb.checked) { np.focus(); np.select(); } tot.disabled = nMeses() > 0; if (tot.disabled) tot.value = ""; mostra(); };
+          if (cb.checked && nMeses() === 1 && +tot.value) bl.dataset.totGuardado = tot.value;   // o total que ele tinha: volta se os meses saírem
+          if (cb.checked && nMeses() === 1 && +tot.value && !(+np.value)) { const tv = baixo(tot.value, abre6 ? CAIXA6 : CAIXA); np.value = (Math.floor(tv / CAIXA) * CAIXA) || ""; if (abre6 && nps[1]) nps[1].value = (tv % CAIXA) || ""; }
+          for (const i of nps) i.disabled = !cb.checked; l.classList.toggle("on", cb.checked); if (cb.checked && !(+np.value) && bl === blocos.firstElementChild) { np.value = redondo((sug && sug.pm[cb.dataset.m]) || 0, CAIXA) || ""; } if (cb.checked) { np.focus(); np.select(); } tot.disabled = nMeses() > 0; if (tot.disabled) tot.value = ""; else if (bl.dataset.totGuardado) { tot.value = bl.dataset.totGuardado; delete bl.dataset.totGuardado; } mostra(); };
         for (const i of nps) { i.oninput = mostra; i.onchange = () => { const cx = +i.dataset.cx, v = redondo(i.value, cx); i.value = v || ""; mostra(); }; }
         for (const b of l.querySelectorAll(".cx")) b.onclick = ev => { ev.preventDefault(); if (!cb.checked) { cb.checked = true; cb.onchange(); } const i = b.parentElement.querySelector("input"), cx = +b.dataset.cx; i.value = Math.max(0, redondo(i.value, cx) + (b.classList.contains("cx-mais") ? cx : -cx)) || ""; mostra(); }; }
       for (const r of bl.querySelectorAll("input[type=radio]")) r.onchange = () => { const outra = r.value === "outra" ? r.checked : !r.checked; bl.querySelector(".gq-outra").classList.toggle("oculto", !outra); for (const o of bl.querySelectorAll(".gq-opt")) o.classList.toggle("on", o.querySelector("input").checked); mostra(); if (outra) { const i = bl.querySelector(".gq-tam input"); if (i) { i.focus(); i.select(); } } };
