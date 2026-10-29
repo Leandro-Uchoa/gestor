@@ -18,7 +18,7 @@ let D={},NOTA={},DET={},EXPL=null,TOAST_T=null;
 function topo(){$('c_nome').textContent=D.semestre?'Trade · '+D.semestre:'Trade';document.title='Gestor · Trade'+(D.semestre?' · '+D.semestre:'');
  const c=D.controle||{},cg=D.carga||{};$('c_sub').innerHTML=[c.arquivo?'planilha '+esc(c.arquivo):(cg.arquivo?'planilha '+esc(cg.arquivo):'sem carga da planilha de verbas'),c.lida_em?'verba lida '+esc(hhmm(c.lida_em)):null,cg.carregado_em?'carga de '+esc(hhmm(cg.carregado_em)):null,D.n_total!=null?bt('status','tudo','abre',fmt(D.n_total)+' ações no semestre','ver todas, inclusive as arquivadas'):(D.verba&&D.verba.parcial?'— ações no semestre':null)].filter(Boolean).join(' · ');
  const av=D.aviso,ld=D.carregando,fl=D.falhas,el=$('a_aviso');el.hidden=!(av||ld||fl);
- if(av)el.innerHTML=`<b>${esc(av.titulo)}</b><small> · ${esc(av.detalhe||'')}</small>`;else if(ld)el.innerHTML=`<b>Carregando ${esc(ld.rotulo||'')}…</b><small> · passo ${ld.passo} de ${ld.total}${ld.passo>=1?' · verba e saldo já valem; as ações chegam em seguida':''}</small>`;else if(fl)el.innerHTML=`<b>Parte do dado não veio</b><small> · ${esc(Object.keys(fl).map(k=>({acoes:'lista de ações'})[k]||k).join(', '))} sem resposta do banco — ${bt('acao','recarregar','lk','tentar de novo')}</small>`;
+ if(av)el.innerHTML=`<b>${esc(av.titulo)}</b><small> · ${esc(av.detalhe||'')}</small>`;else if(ld)el.innerHTML=`<b>Carregando ${esc(ld.rotulo||'')}…</b><small> · passo ${ld.passo} de ${ld.total}${ld.passo>=2?' · verba, saldo e ações já valem; falta só o escritório (para gravar)':ld.passo>=1?' · verba e saldo já valem; as ações chegam em seguida':''}</small>`;else if(fl)el.innerHTML=`<b>Parte do dado não veio</b><small> · ${esc(Object.keys(fl).map(k=>({acoes:'lista de ações'})[k]||k).join(', '))} sem resposta do banco — ${bt('acao','recarregar','lk','tentar de novo')}</small>`;
  $('a_regra').textContent=D.regra||'';}
 function placar(){const v=D.verba||{},c=D.controle||{},semV=!!v.sem_verba||v.total==null,par=!!v.parcial;const st=(D.filtros||{}).status_sel||[];
  const card=(cls,tit,val,sub,on,act,vv,title)=>`<div class="tr-card ${cls}${on?' on':''}${EXPL===vv&&act==='expl'?' on':''}"><div class="t">${tit}</div><div class="num">${bt(act,vv,'abre',val,title)}</div><small>${sub}</small></div>`;
@@ -77,7 +77,7 @@ function toast(g){let el=$('a_toast');if(!el){el=document.createElement('div');e
  clearTimeout(TOAST_T);if(!g){el.hidden=true;return}
  el.hidden=false;el.className='tr-toast'+(g.erro?' erro':'');el.innerHTML=`<span>${g.erro?'<b>Não gravou</b> · '+esc(g.erro):'<b>Gravado</b> · '+esc(g.texto||'')}</span>${g.desfazer?bt('desfazer',null,'mb-bt sec','Desfazer'):''}${bt('toast',null,'fx','fechar','fechar')}`;
  TOAST_T=setTimeout(()=>{el.hidden=true},g.erro?8000:5000);
- if(g.erro&&g.id!=null){const m=document.querySelector(`.row1.tr[data-id="${g.id}"] .msg`);if(m){m.hidden=false;m.textContent='não gravou: '+g.erro}}
+ if(g.erro&&g.id!=null){const row=document.querySelector(`.row1.tr[data-id="${g.id}"]`),m=row&&row.querySelector('.msg');if(m){m.hidden=false;m.textContent='não gravou: '+g.erro}const a=(D.acoes||[]).find(x=>+x.id===+g.id),s=row&&row.querySelector('select');if(s&&a)s.value=a.status_tela}
  else if(g.id!=null){const m=document.querySelector(`.row1.tr[data-id="${g.id}"] .msg`);if(m){m.hidden=true;m.textContent=''}}}
 // cliques por data-atributo (um apóstrofo no nome do cliente ou do vendedor não quebra nada)
 function agir(el){const act=el.dataset.act,v=el.dataset.v;

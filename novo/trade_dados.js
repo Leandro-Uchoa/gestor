@@ -24,19 +24,19 @@ window.DadosTrade = (() => {
   const PASSOS = 3;
   async function carregar(semestre, aoPasso) {
     const emitir = (passo, rotulo) => { try { if (aoPasso) aoPasso(montar({ passo, total: PASSOS, rotulo })); } catch (e) { console.error("passo " + passo, e); } };
-    BRUTO = { semestre: semestre || null, resumo: null, consulta: null, esc: null, falhas: {} };
+    BRUTO = { semestre: semestre || null, resumo: null, consulta: null, esc: null, falhas: {}, aviso: null };
     // 1 · o placar: verba, consumido, saldo e o controle da planilha (uma RPC leve)
     const r = await sb.rpc("trade_resumo", { p_semestre: semestre || null });
     if (r.error) throw r.error;
     BRUTO.resumo = r.data || null;
     if (!BRUTO.semestre && BRUTO.resumo && BRUTO.resumo.semestre) BRUTO.semestre = BRUTO.resumo.semestre;
-    emitir(1, "verba e saldo");
+    emitir(1, "ações");   /* v3 (GAMER): o rótulo diz o que está carregando AGORA (a verba já está na tela) */
     // 2 · todas as ações (para os chips de vendedor e status e para as arquivadas)
     const c = await sb.rpc("trade_consulta");
     if (c.error) { BRUTO.falhas.acoes = c.error.message || "sem resposta"; BRUTO.consulta = { acoes: [], semestres: [], carga: null }; }
     else BRUTO.consulta = c.data || { acoes: [], semestres: [], carga: null };
     if (!BRUTO.semestre) { const sems = (BRUTO.consulta.semestres || []).slice().sort(semOrd); BRUTO.semestre = sems[0] || null; }
-    emitir(2, "ações");
+    emitir(2, "escritório");
     // 3 · o escritório (só para o match da gravação; acessório)
     const e = await semErro(() => tudo(sb.from("escritorio").select("id").order("id").limit(1)), []);
     BRUTO.esc = (e[0] || {}).id || null;
@@ -57,10 +57,10 @@ window.DadosTrade = (() => {
     const semVerba = !resumo || resumo.verba == null;
     const consumidoLocal = doSem.filter(a => APROVADA(a.status)).reduce((s, a) => s + valor(a), 0);
     const verba = {
-      total: semVerba ? null : num(resumo.verba), consumido: semVerba ? consumidoLocal : num(resumo.consumido),
-      saldo: semVerba ? null : num(resumo.saldo), feita: semVerba ? doSem.filter(a => a.status === "feita").reduce((s, a) => s + valor(a), 0) : num(resumo.feita),
-      em_andamento: semVerba ? doSem.filter(a => a.status === "em andamento").reduce((s, a) => s + valor(a), 0) : num(resumo.em_andamento),
-      n_aprovadas: semVerba ? doSem.filter(a => APROVADA(a.status)).length : num(resumo.n_acoes),
+      total: semVerba ? null : num(resumo.verba), consumido: semVerba ? (parcial ? null : consumidoLocal) : num(resumo.consumido),   /* v3: sem verba e sem consulta ainda → "—", não R$ 0 */
+      saldo: semVerba ? null : num(resumo.saldo), feita: semVerba ? (parcial ? null : doSem.filter(a => a.status === "feita").reduce((s, a) => s + valor(a), 0)) : num(resumo.feita),
+      em_andamento: semVerba ? (parcial ? null : doSem.filter(a => a.status === "em andamento").reduce((s, a) => s + valor(a), 0)) : num(resumo.em_andamento),
+      n_aprovadas: semVerba ? (parcial ? null : doSem.filter(a => APROVADA(a.status)).length) : num(resumo.n_acoes),
       provisionada: parcial ? null : doSem.filter(a => a.status === "planejada").reduce((s, a) => s + valor(a), 0), n_planejada: doSem.filter(a => a.status === "planejada").length,
       arquivadas: parcial ? null : { n: doSem.filter(a => ARQ(a.status)).length, valor: doSem.filter(a => ARQ(a.status)).reduce((s, a) => s + valor(a), 0) },
       nao_usada: parcial ? null : { n: doSem.filter(a => a.status === "não usada").length, valor: doSem.filter(a => a.status === "não usada").reduce((s, a) => s + valor(a), 0) },
@@ -88,8 +88,8 @@ window.DadosTrade = (() => {
       meta: a.meta || null, mecanica: a.mecanica || null, produtos: a.produtos || null, objetivo: a.objetivo || null, aprovacao: a.aprovacao || null, proximo: a.proximo || null, loja: a.loja || null,
       status_planilha: a.status_planilha || null, fonte: a.fonte || null, criado_por: a.criado_por || null, criado_em: a.criado_em || null, atualizado_em: a.atualizado_em || null,   /* a ficha da ação (GAMER: todo número abre o detalhe) */
       semestre: a.semestre || null, pct: Math.round(100 * valor(a) / max) }));
-    const tot = k => acoes.reduce((s, a) => s + (num(a[k]) || 0), 0);
-    return { hoje, semestre, semestres, carregando: carregando || null, falhas: Object.keys(falhas).length ? falhas : null, aviso: null, gravado: null,
+    const tot = k => acoes.some(a => num(a[k]) != null) ? acoes.reduce((s, a) => s + (num(a[k]) || 0), 0) : null;   /* v3: nenhuma linha com o valor → rodapé "—" */
+    return { hoje, semestre, semestres, carregando: carregando || null, falhas: Object.keys(falhas).length ? falhas : null, aviso: BRUTO.aviso || null, gravado: null,
       verba, controle, carga, filtros, acoes, n: acoes.length, n_total: parcial ? null : doSem.length, totais: { provisionado: tot("provisionado"), utilizada: tot("utilizada"), restante: tot("restante") },
       regra: "consumido = feita + em andamento · planejada é provisionada · arquivada some da frente e volta pelo chip · nenhum valor arredondado" };
   }
@@ -103,7 +103,7 @@ window.DadosTrade = (() => {
     if (!r.data || !r.data.length) return "nenhuma linha gravada — este usuário não tem permissão de escrita neste escritório";
     const a = ((BRUTO.consulta || {}).acoes || []).find(x => Number(x.id) === Number(id)); if (a) Object.assign(a, patch);
     // o resumo (verba · consumido · saldo) vem da RPC: depois de mudar status, relê só ela (leve)
-    if (patch.status !== undefined) { const r2 = await semErro(() => sb.rpc("trade_resumo", { p_semestre: BRUTO.semestre }).then(x => { if (x.error) throw x.error; return x.data; }), null); if (r2) BRUTO.resumo = r2; }
+    if (patch.status !== undefined) { const r2 = await semErro(() => sb.rpc("trade_resumo", { p_semestre: BRUTO.semestre }).then(x => { if (x.error) throw x.error; return x.data; }), null); if (r2) { BRUTO.resumo = r2; BRUTO.aviso = null; } else BRUTO.aviso = { titulo: "O placar pode estar velho", detalhe: "o status foi gravado, mas a releitura de verba e saldo falhou — use Atualizar" }; }   /* v3: falha calada não existe */
     return null;
   }
 
