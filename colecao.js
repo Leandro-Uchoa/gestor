@@ -542,9 +542,13 @@ async function imprimirVitrine(opcoes){
     if (!grade) return ctx;
     const pm = mesesDe(it), p = pm ? Object.values(pm).reduce((x, y) => x + y, 0) : null, gr = VIT.grades.get(k);
     if (gtm) ctx.linha = pm ? `<b>${p.toLocaleString("pt-BR")}</b> pares ${esc(mes)}${gr ? ` · ${esc(ROTULO_GRADE[gr] || gr)}` : ""}` : "pares a definir";
-    else if (!atual) ctx.linha = pm ? `${p ? `<b>${p.toLocaleString("pt-BR")}</b> pares · ` : ""}${MESES_V.filter(m => m in pm).map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!p ? " · pares a definir" : ""}` : "meses a definir";
+    else if (!atual) { const ms = pm ? MESES_V.filter(m => m in pm) : [], tot = paresDe(it), resto = ms.length ? tot - p : 0, L = entradasDe(k), semGrade = L.length ? L.some(e => !e.grade) : !gr;
+      // 29/10: cor subida só com a quantidade mostra os pares e "meses a definir"; sem grade escolhida, "grade a definir" (nunca some nem soma errado)
+      ctx.linha = (ms.length ? `${tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · ` : ""}${ms.map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${resto > 0 ? ` · ${resto.toLocaleString("pt-BR")} sem mês` : ""}${!tot ? " · pares a definir" : ""}`
+        : (tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · meses a definir` : (pm ? "pares a definir" : "meses a definir"))) + (semGrade ? " · grade a definir" : ""); }
     return ctx; };
-  const paresDe = it => { const pm = mesesDe(it); return pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; };
+  // pares da cor nesta saída: os dos meses; a cor subida só com a quantidade (sem meses) entra com o total dela, salvo se o filtro de mês da tela corta
+  const paresDe = it => { const pm = mesesDe(it), p = pm ? Object.values(pm).reduce((x, y) => x + y, 0) : 0; return (gtm || atual || (f && f.mes)) ? p : Math.max(p, VIT.pares.get(chaveCor(it)) || 0); };
   // um arquivo: a capa própria da vitrine + os cartões dela (PDV crescente puro, sem separar por família) + a parede dela
   const gerar = async (p, sub, pref) => {
     sub.sort((a, b) => pdfCmpPdv(a, b) || String(a.n).localeCompare(String(b.n)) || String(a.c).localeCompare(String(b.c)));   // 28/10: faixa de preço pura, do mais barato ao mais caro
@@ -1092,7 +1096,7 @@ function desenharDireita(pg){
   for (const { it, e, i, n } of cartoes) {
     const sec = secaoDe(it, e ? e.grade : undefined);
     if (sec !== secAtual) { secAtual = sec; const its = cartoes.filter(x => secaoDe(x.it, x.e ? x.e.grade : undefined) === sec); html += `<div class="vsec${/grade\?/.test(sec) ? " falta" : ""}">${esc(sec)} <small>${new Set(its.map(x => x.it.m + "|" + x.it.r)).size} modelo(s) · ${its.length} cor(es)</small></div>`; }
-    const pmE = e ? e.pm : VIT.meses.get(chaveCor(it)), p6E = e ? Object.values(e.pm6 || {}).reduce((x, y) => x + y, 0) : (VIT.pares6.get(chaveCor(it)) || 0), totE = pmE ? Object.values(pmE).reduce((x, y) => x + y, 0) : VIT.pares.get(chaveCor(it));
+    const pmE = e ? e.pm : VIT.meses.get(chaveCor(it)), p6E = e ? pares6DaEntrada(e) : (VIT.pares6.get(chaveCor(it)) || 0), totE = e ? paresDaEntrada(e) : (pmE ? Object.values(pmE).reduce((x, y) => x + y, 0) : VIT.pares.get(chaveCor(it)));
     const gE = e ? e.grade : VIT.grades.get(chaveCor(it)), txE = e ? e.tx : VIT.gradeTx.get(chaveCor(it));
     html += `<div class="vcard${chaveCor(it) === NOVA ? " nova" : ""}${n > 1 ? " dupla" : ""}" data-kc="${esc(chaveCor(it))}" data-gi="${i}">
       <button type="button" class="mais tira" data-kc="${esc(chaveCor(it))}" data-gi="${i}" title="${n > 1 ? "tirar esta grade da vitrine" : "tirar da vitrine"}">×</button>${n > 1 ? `<i class="vdup" title="esta cor está em ${n} grades">${i + 1}/${n}</i>` : ""}
@@ -1105,7 +1109,7 @@ function desenharDireita(pg){
           const p6 = VIT.pares6.get(chaveCor(it)) || 0;
           return `<button type="button" class="selo pares${p == null ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="mudar os pares desta cor">${p == null ? "pares?" : `<b>${p.toLocaleString("pt-BR")}</b> pares${p6 ? ` (${Math.floor((p - p6) / CAIXA)}×12 + ${Math.floor(p6 / CAIXA6)}×6)` : ""}${pct != null ? ` · ${pct}% de ${teto.toLocaleString("pt-BR")}` : ""}`}</button>`; })() : ""}
         ${!gtm ? (() => { const pm = pmE, tot = totE; const ms = pm ? MESES_V.filter(m => m in pm) : [];
-          return `<button type="button" class="selo pares${!pm ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="meses e pares desta cor">${pm && ms.length ? `${tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · ` : ""}${ms.map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!tot ? " · pares a definir" : ""}${p6E ? ` · ${p6E} em gr. 6` : ""}` : "meses? toque para definir"}</button>`; })() : ""}
+          return `<button type="button" class="selo pares${!pm ? " falta" : ""}" data-kc="${esc(chaveCor(it))}" title="meses e pares desta cor">${pm && ms.length ? `${tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · ` : ""}${ms.map(m => pm[m] ? `${m} ${pm[m]}` : m).join(" · ")}${!tot ? " · pares a definir" : ""}${p6E ? ` · ${p6E} em gr. 6` : ""}` : (pm && tot ? `<b>${tot.toLocaleString("pt-BR")}</b> pares · meses a definir${p6E ? ` · ${p6E} em gr. 6` : ""}` : "meses? toque para definir")}</button>`; })() : ""}
         ${gE ? `<button type="button" class="selo grade" data-kc="${esc(chaveCor(it))}" title="trocar a grade">${esc(txE && gE !== "aberta" ? ((ROTULO_GRADE[gE] || "grade") + " · " + txE) : (ROTULO_GRADE[gE] || "grade " + gE))}</button>` : `<button type="button" class="selo grade falta" data-kc="${esc(chaveCor(it))}" title="definir a grade">grade?</button>`}
         <div class="mu">${familiaDe(it) ? esc(titulo(familiaDe(it))) : ""}${it.ge ? " · " + esc(it.ge) : ""}</div></div>
     </div>`;
@@ -1163,8 +1167,13 @@ async function alternar(kc, modo){
 }
 // a lista de grades de uma cor (ele, 19/10 16:2x: "posso escolher mais de uma grade — parte feminina, parte masculina; aí ele aparece duas vezes").
 // As colunas antigas ficam como o TOTAL e a primeira grade; `grades` guarda cada uma com os seus meses.
-const entradasDe = kc => { const L = VIT.gradesL.get(kc); if (L && L.length) return L; const g = VIT.grades.get(kc), pm = VIT.meses.get(kc); return (g || pm) ? [{ grade: g || null, tx: VIT.gradeTx.get(kc) || null, pm: pm || {}, pm6: VIT.meses6.get(kc) || {} }] : []; };
-const somaMeses = L => { const pm = {}, pm6 = {}; for (const e of L) { for (const k of MESES_V) { if (k in (e.pm || {})) pm[k] = (pm[k] || 0) + (e.pm[k] || 0); if ((e.pm6 || {})[k]) pm6[k] = (pm6[k] || 0) + e.pm6[k]; } } return { pm, pm6, pares: Object.values(pm).reduce((x, y) => x + y, 0), pares6: Object.values(pm6).reduce((x, y) => x + y, 0) }; };
+// 29/10 (ele: "colocar as quantidades sem detalhar a grade, podendo inserir as grades posteriormente"): a entrada pode vir SEM grade e SEM meses,
+// só com o total de pares (`pares`, e `pares6` se parte fecha em grade de 6); quando há meses, os pares são a soma deles.
+const temMes = e => MESES_V.some(k => k in (e.pm || {}));
+const entradasDe = kc => { const L = VIT.gradesL.get(kc); if (L && L.length) return L; const g = VIT.grades.get(kc), pm = VIT.meses.get(kc), p = VIT.pares.get(kc); return (g || pm || p) ? [{ grade: g || null, tx: VIT.gradeTx.get(kc) || null, pm: pm || {}, pm6: VIT.meses6.get(kc) || {}, pares: p || 0, pares6: VIT.pares6.get(kc) || 0 }] : []; };
+const paresDaEntrada = e => temMes(e) ? Object.values(e.pm).reduce((x, y) => x + y, 0) : (+e.pares || 0);
+const pares6DaEntrada = e => temMes(e) ? Object.values(e.pm6 || {}).reduce((x, y) => x + y, 0) : (+e.pares6 || 0);
+const somaMeses = L => { const pm = {}, pm6 = {}; let sem = 0, sem6 = 0; for (const e of L) { for (const k of MESES_V) { if (k in (e.pm || {})) pm[k] = (pm[k] || 0) + (e.pm[k] || 0); if ((e.pm6 || {})[k]) pm6[k] = (pm6[k] || 0) + e.pm6[k]; } if (!temMes(e)) { sem += +e.pares || 0; sem6 += +e.pares6 || 0; } } return { pm, pm6, pares: Object.values(pm).reduce((x, y) => x + y, 0) + sem, pares6: Object.values(pm6).reduce((x, y) => x + y, 0) + sem6 }; };
 const guardarEntradas = (kc, L) => { const t = somaMeses(L); VIT.gradesL.set(kc, L); if (L[0] && L[0].grade) VIT.grades.set(kc, L[0].grade); else VIT.grades.delete(kc); if (L[0] && L[0].tx) VIT.gradeTx.set(kc, L[0].tx); else VIT.gradeTx.delete(kc); VIT.pares.set(kc, t.pares); VIT.pares6.set(kc, t.pares6); VIT.meses.set(kc, t.pm); if (Object.keys(t.pm6).length) VIT.meses6.set(kc, t.pm6); else VIT.meses6.delete(kc); };
 const limparEntradas = kc => { for (const m of [VIT.gradesL, VIT.grades, VIT.gradeTx, VIT.pares, VIT.pares6, VIT.meses, VIT.meses6]) m.delete(kc); };
 const linhaDeEntradas = L => { const t = somaMeses(L); return { grade: (L[0] && L[0].grade) || null, grade_texto: (L[0] && L[0].tx) || null, pares: t.pares, pares6: t.pares6 || null, pares_mes: t.pm, pares6_mes: Object.keys(t.pm6).length ? t.pm6 : null, grades: L }; };
@@ -1295,21 +1304,42 @@ const NOME_GRADE = { feminina: "feminina", masculina: "masculina", estendida: "u
 // as grades e os meses vêm num segundo momento, no cartão"): marca os tipos e sobe. A sugestão de meses do NÚCLEO entra na primeira.
 function perguntarTipos(it){
   const opc = GRADES_GTM(it), padrao = gradePadraoDe(it), sug = VIT.sug.get(chaveCor(it));
+  // 29/10 (ele: "colocar as quantidades sem precisar detalhar a grade, podendo inserir as grades posteriormente"): em cima, SÓ a quantidade
+  // (o total da cor; por mês é opcional) e sobe sem grade — o cartão fica com "grade?" e o selo abre a grade depois, com os pares já lá.
+  // Fecha em 12 (em 12 ou em 6 só a partir de R$ 299,99): regra dele de 19/10.
+  const abre6 = abre6De(it), passo = abre6 ? CAIXA6 : CAIXA, redondo = v => Math.max(0, Math.round((+v || 0) / passo) * passo);
+  const sugTot = sug ? Object.values(sug.pm || {}).reduce((x, y) => x + y, 0) : 0;
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
     luz.innerHTML = `<div class="quadro grade-quadro tipos"><div class="gq-nome">${esc(it.n)} <span class="mu">${esc(it.r)} · ${esc(it.c)}${it.nu ? " · " + esc(it.nu) : ""}${it.ge ? " · " + esc(it.ge) : ""}</span></div>
+      <div class="gq-soqtd"><div class="gq-perg">Só a quantidade <span class="mu">a grade você define depois, no cartão · ${abre6 ? "fecha em 12 ou em 6" : "fecha em 12"}</span></div>
+        <div class="gq-qrow"><input type="number" class="gq-qt" min="0" step="${passo}" inputmode="numeric" placeholder="pares" aria-label="pares no total"><button type="button" class="gq-sobe-q">sobe com a quantidade</button></div>
+        <details class="gq-qmeses"><summary>dividir por mês (opcional)</summary><div class="gq-qm">${MESES_V.map(m => `<label><small>${m}</small><input type="number" min="0" step="${passo}" inputmode="numeric" data-m="${m}" placeholder="0"></label>`).join("")}</div></details>
+        <div class="gq-qinfo mu"></div></div>
+      <div class="gq-ou">ou já escolha a grade</div>
       <div class="gq-perg">Em que grade(s)? <span class="mu">marque uma ou mais; os meses e a numeração você acerta depois, no cartão</span></div>
       <div class="gq-tipos">${opc.map(g => `<label class="gq-tipo${g === padrao ? " on" : ""}"><input type="checkbox" data-g="${g}" ${g === padrao ? "checked" : ""}><b>${esc(NOME_GRADE[g] || g)}</b><small>${esc(MUSICAL[g] || ("eu digito · " + faixaDe(it, g)))}</small></label>`).join("")}</div>
       <div class="gq-acoes"><button type="button" class="gq-sobe">sobe para a vitrine</button><button type="button" class="sec gq-deixa">deixa</button></div></div>`;
     const sobe = luz.querySelector(".gq-sobe"), marcados = () => [...luz.querySelectorAll(".gq-tipos input:checked")].map(i => i.dataset.g);
     const mostra = () => { for (const l of luz.querySelectorAll(".gq-tipo")) l.classList.toggle("on", l.querySelector("input").checked); sobe.disabled = !marcados().length; };
     for (const i of luz.querySelectorAll(".gq-tipos input")) i.onchange = mostra;
+    // a quantidade: os meses (se algum preenchido) mandam; senão vale o total digitado
+    const qt = luz.querySelector(".gq-qt"), sobeQ = luz.querySelector(".gq-sobe-q"), info = luz.querySelector(".gq-qinfo"), mesIn = [...luz.querySelectorAll(".gq-qm input")];
+    const lerQ = () => { const pm = {}; for (const i of mesIn) { const v = redondo(i.value); if (v > 0) pm[i.dataset.m] = v; } const nm = Object.keys(pm).length; return { pm, nm, total: nm ? Object.values(pm).reduce((x, y) => x + y, 0) : redondo(qt.value) }; };
+    const mostraQ = () => { const q = lerQ(); qt.readOnly = q.nm > 0; if (q.nm) qt.value = q.total; sobeQ.disabled = !(q.total > 0);
+      info.textContent = q.total ? `${q.total.toLocaleString("pt-BR")} pares${q.nm ? " em " + q.nm + " mês(es)" : " no total"} · grade${q.nm ? "" : " e meses"} você define depois` : (sugTot ? `sugestão do núcleo: ${sugTot.toLocaleString("pt-BR")} pares` : ""); };
+    for (const i of [qt, ...mesIn]) { i.oninput = mostraQ; i.onchange = () => { if (!i.readOnly) i.value = redondo(i.value) || ""; mostraQ(); }; }
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
+    const confirmaQ = () => { const q = lerQ(); if (!(q.total > 0)) return;
+      const e = { grade: null, tx: null, pm: q.pm, pm6: {} };
+      if (abre6) { if (q.nm) { for (const m in q.pm) if (q.pm[m] % CAIXA) e.pm6[m] = q.pm[m] % CAIXA; } else if (q.total % CAIXA) e.pares6 = q.total % CAIXA; }
+      if (!q.nm) e.pares = q.total;
+      fecha({ grades: [e] }); };
     const confirma = () => { if (sobe.disabled) return; const L = marcados().map((g, i) => ({ grade: g, tx: MUSICAL[g] || null, pm: (i === 0 && sug) ? Object.assign({}, sug.pm) : {}, pm6: {} })); fecha({ grades: L }); };
-    const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter") confirma(); };
+    const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter") { if (ev.target.closest && ev.target.closest(".gq-soqtd")) { if (ev.target.tagName === "BUTTON") return; ev.preventDefault(); confirmaQ(); } else confirma(); } };
     document.addEventListener("keydown", tecla); luz.onclick = ev => { if (ev.target === luz) fecha(null); };
-    luz.querySelector(".gq-deixa").onclick = () => fecha(null); sobe.onclick = confirma; mostra();
-    document.body.appendChild(luz); sobe.focus();
+    luz.querySelector(".gq-deixa").onclick = () => fecha(null); sobe.onclick = confirma; sobeQ.onclick = confirmaQ; mostra(); mostraQ();
+    document.body.appendChild(luz); if (window.matchMedia && matchMedia("(pointer:fine)").matches) qt.focus(); else sobeQ.focus({ preventScroll: true });
   });
 }
 const gradePadraoDe = it => { const o = GRADES_GTM(it); if (ehInf(it)) return "infantil"; if (o.length === 1) return o[0]; if (ehFem(it) && o.includes("feminina")) return "feminina"; if (ehMasc(it) && o.includes("masculina")) return "masculina"; const auto = ({ fem: "feminina", masc: "masculina", inf: "infantil" })[(MF.passo || "").replace("ua-", "")]; return auto && o.includes(auto) ? auto : null; };
@@ -1322,7 +1352,7 @@ function perguntarMeses(it, atual){
   const faixaNum = g => { const f = (faixaDe(it, g) || "").match(/(\d{2})–(\d{2})/); return f ? [+f[1], +f[2]] : [34, 41]; };
   // o que já está: um bloco por tipo (grade antiga "propria"/"aberta" vira o tipo padrão com o texto dela)
   const tipoDe = e => (e.grade && FAIXA[e.grade]) ? e.grade : (gradePadraoDe(it) || opc[0]);
-  let entradas = (atual.grades && atual.grades.length) ? atual.grades.map(e => ({ grade: tipoDe(e), tx: e.tx || "", pm: Object.assign({}, e.pm || {}), pm6: Object.assign({}, e.pm6 || {}) })) : [];
+  let entradas = (atual.grades && atual.grades.length) ? atual.grades.map(e => ({ grade: tipoDe(e), tx: e.tx || "", pm: Object.assign({}, e.pm || {}), pm6: Object.assign({}, e.pm6 || {}), pares: temMes(e) ? 0 : (+e.pares || 0) })) : [];
   if (!entradas.length) { const g = gradePadraoDe(it) || opc[0]; entradas = [{ grade: g, tx: MUSICAL[g] || "", pm: sug ? Object.assign({}, sug.pm) : {}, pm6: {} }]; }
   return new Promise(resolve => {
     const luz = document.createElement("div"); luz.className = "luz grade-luz";
@@ -1332,6 +1362,7 @@ function perguntarMeses(it, atual){
       return `<div class="gq-bloco" data-g="${esc(e.grade)}"><div class="gq-btit">${esc(ROTULO_GRADE[e.grade] || e.grade)}</div>
       <div class="gq-escolha">${mus ? `<label class="gq-opt${usaMus ? " on" : ""}"><input type="radio" name="gr-${esc(e.grade)}" value="musical" ${usaMus ? "checked" : ""}> musical <b>${esc(mus)}</b></label>` : ""}<label class="gq-opt${outra ? " on" : ""}"><input type="radio" name="gr-${esc(e.grade)}" value="outra" ${outra ? "checked" : ""}> outra grade: eu digito <span class="mu">${esc(faixaDe(it, e.grade))}</span></label></div>
       <div class="gq-outra${outra ? "" : " oculto"}">${linhaTam(e.grade, outra ? e.tx : "")}</div>
+      <label class="gq-total"><span>pares no total <small>sem dividir por mês</small></span><input type="number" class="gq-tot" min="0" step="${abre6 ? CAIXA6 : CAIXA}" inputmode="numeric" value="${!Object.keys(e.pm).length && e.pares ? e.pares : ""}" placeholder="0" ${Object.keys(e.pm).length ? "disabled" : ""}></label>
       <div class="gq-meses${abre6 ? " seis" : ""}"><div class="gq-cab"><span></span><span>grades de 12</span>${abre6 ? `<span>grades de 6</span>` : ""}<span>total</span></div>${MESES_V.map(m => { const on = m in e.pm, p6 = e.pm6[m] || 0, p12 = Math.max(0, (e.pm[m] || 0) - p6);
         const campo = (cx, v) => `<span class="gq-campo"><button type="button" class="cx cx-menos" data-cx="${cx}" title="−${cx} pares">−</button><input type="number" min="0" step="${cx}" inputmode="numeric" data-cx="${cx}" value="${on && v > 0 ? v : ""}" ${on ? "" : "disabled"} placeholder="0"><button type="button" class="cx cx-mais" data-cx="${cx}" title="+${cx} pares">+</button></span>`;
         return `<div class="gq-mes${on ? " on" : ""}" data-m="${m}"><label class="gm-rot"><input type="checkbox" data-m="${m}" ${on ? "checked" : ""}>${m}</label>${campo(CAIXA, p12)}${abre6 ? campo(CAIXA6, p6) : ""}<b class="gm-tot">${on ? ((p12 + p6) || "—") : ""}</b></div>`; }).join("")}</div></div>`; };
@@ -1351,13 +1382,17 @@ function perguntarMeses(it, atual){
       const el = bl.querySelector(".gq-soma"); el.textContent = soma ? `= ${soma} pares${fechaEm(soma) ? "" : (abre6 ? " · precisa fechar em 12 ou em 6" : " · precisa fechar em 12")}` : "digite quantos pares em cada número";
       el.classList.toggle("passou", soma > 0 && !fechaEm(soma)); return { tx: gradeTxDe(ini, dist), ok: fechaEm(soma), soma }; };
     const lerBloco = bl => { const pm = {}, pm6 = {}; for (const l of bl.querySelectorAll(".gq-mes")) { const on = l.querySelector("input[type=checkbox]").checked, { t, t6 } = lerMes(l); l.querySelector(".gm-tot").textContent = on ? (t || "—") : ""; if (on) { pm[l.dataset.m] = t; if (t6) pm6[l.dataset.m] = t6; } }
-      const g = lerGrade(bl); return { grade: bl.dataset.g, tx: g.tx, ok: g.ok, pm, pm6 }; };
+      const g = lerGrade(bl), tv = bl.querySelector(".gq-tot"), sem = !Object.keys(pm).length, pares = sem ? redondo(tv.value, abre6 ? CAIXA6 : CAIXA) : 0;
+      return { grade: bl.dataset.g, tx: g.tx, ok: g.ok, pm, pm6, pares, pares6: (sem && abre6 && pares % CAIXA) ? pares % CAIXA : 0 }; };
     const ler = () => [...blocos.querySelectorAll(".gq-bloco")].map(lerBloco);
     const mostra = () => { const L = ler(); const t = somaMeses(L); const nm = new Set(L.flatMap(e => Object.keys(e.pm))).size;
       pct.textContent = L.length ? `${L.length > 1 ? L.length + " grades · " : ""}${nm ? nm + " mês(es) · " : ""}${t.pares ? t.pares.toLocaleString("pt-BR") + " pares" : "pares a definir depois"}${t.pares6 ? ` · ${t.pares6} em grades de 6` : ""}` : "marque pelo menos uma grade";
       sobe.disabled = !L.length || L.some(e => !e.ok); };
-    const ligarBloco = bl => { for (const l of bl.querySelectorAll(".gq-mes")) { const cb = l.querySelector("input[type=checkbox]"), nps = [...l.querySelectorAll("input[type=number]")], np = nps[0];
-        cb.onchange = () => { for (const i of nps) i.disabled = !cb.checked; l.classList.toggle("on", cb.checked); if (cb.checked && !(+np.value) && bl === blocos.firstElementChild) { np.value = redondo((sug && sug.pm[cb.dataset.m]) || 0, CAIXA) || ""; } if (cb.checked) { np.focus(); np.select(); } mostra(); };
+    const ligarBloco = bl => { const tt = bl.querySelector(".gq-tot"); tt.oninput = mostra; tt.onchange = () => { tt.value = redondo(tt.value, abre6 ? CAIXA6 : CAIXA) || ""; mostra(); };
+      for (const l of bl.querySelectorAll(".gq-mes")) { const cb = l.querySelector("input[type=checkbox]"), nps = [...l.querySelectorAll("input[type=number]")], np = nps[0];
+        cb.onchange = () => { const tot = bl.querySelector(".gq-tot"), nMeses = () => bl.querySelectorAll(".gq-mes input[type=checkbox]:checked").length;
+          if (cb.checked && nMeses() === 1 && +tot.value && !(+np.value)) { const tv = redondo(tot.value, abre6 ? CAIXA6 : CAIXA); np.value = (Math.floor(tv / CAIXA) * CAIXA) || ""; if (abre6 && nps[1]) nps[1].value = (tv % CAIXA) || ""; }
+          for (const i of nps) i.disabled = !cb.checked; l.classList.toggle("on", cb.checked); if (cb.checked && !(+np.value) && bl === blocos.firstElementChild) { np.value = redondo((sug && sug.pm[cb.dataset.m]) || 0, CAIXA) || ""; } if (cb.checked) { np.focus(); np.select(); } tot.disabled = nMeses() > 0; if (tot.disabled) tot.value = ""; mostra(); };
         for (const i of nps) { i.oninput = mostra; i.onchange = () => { const cx = +i.dataset.cx, v = redondo(i.value, cx); i.value = v || ""; mostra(); }; }
         for (const b of l.querySelectorAll(".cx")) b.onclick = ev => { ev.preventDefault(); if (!cb.checked) { cb.checked = true; cb.onchange(); } const i = b.parentElement.querySelector("input"), cx = +b.dataset.cx; i.value = Math.max(0, redondo(i.value, cx) + (b.classList.contains("cx-mais") ? cx : -cx)) || ""; mostra(); }; }
       for (const r of bl.querySelectorAll("input[type=radio]")) r.onchange = () => { const outra = r.value === "outra" ? r.checked : !r.checked; bl.querySelector(".gq-outra").classList.toggle("oculto", !outra); for (const o of bl.querySelectorAll(".gq-opt")) o.classList.toggle("on", o.querySelector("input").checked); mostra(); if (outra) { const i = bl.querySelector(".gq-tam input"); if (i) { i.focus(); i.select(); } } };
@@ -1369,7 +1404,7 @@ function perguntarMeses(it, atual){
       if (!cb.checked && ja) ja.remove();
       mostra(); };
     const fecha = v => { luz.remove(); document.removeEventListener("keydown", tecla); resolve(v); };
-    const confirma = () => { if (sobe.disabled) return; const L = ler().map(e => ({ grade: e.grade, tx: e.tx || null, pm: e.pm, pm6: Object.keys(e.pm6).length ? e.pm6 : {} })); fecha({ grades: L }); };
+    const confirma = () => { if (sobe.disabled) return; const L = ler().map(e => Object.assign({ grade: e.grade, tx: e.tx || null, pm: e.pm, pm6: Object.keys(e.pm6).length ? e.pm6 : {} }, e.pares ? { pares: e.pares } : {}, e.pares6 ? { pares6: e.pares6 } : {})); fecha({ grades: L }); };
     const tecla = ev => { if (ev.key === "Escape") fecha(null); if (ev.key === "Enter" && ev.target.tagName !== "BUTTON" && !(ev.target.closest && ev.target.closest(".gq-tam"))) { if (ev.target.tagName === "INPUT" && ev.target.type === "number") ev.target.onchange && ev.target.onchange(); confirma(); } };
     document.addEventListener("keydown", tecla);
     luz.onclick = ev => { if (ev.target === luz) fecha(null); };
