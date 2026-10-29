@@ -394,8 +394,8 @@ const PDF_CSS = `
 // ctx.linha = os pares por mês (só na PROGRAMAÇÃO); ctx.retirada = marcada "retirar" na atual. NADA interno (NÚCLEO, 20/10): sem o C de
 // continuidade, sem classe, motivo, venda média, estoque ou carteira — só o que o cliente pode ver.
 function pdfCartao(it, ctx){
-  const sg = VIT.sug.get(chaveCor(it)), inicio = it.if || (sg && sg.inicio) || "";
-  const selos = (ehLanc(it) ? `<span class="tag">LANÇAMENTO</span>` : "") + (inicio ? `<span class="tag ini">${esc(inicio)}</span>` : "") + (it.sl ? `<span class="tag ini">CONVENÇÃO</span>` : "") + (ctx.retirada ? `<span class="tag ret">RETIRAR</span>` : "");
+  // 29/10 (ele, via NÚCLEO): a data de INÍCIO DE FATURAMENTO nunca vai ao cliente ("muito volante, essa data altera") — o PDF leva só LANÇAMENTO e CONVENÇÃO; a data fica na tela interna
+  const selos = (ehLanc(it) ? `<span class="tag">LANÇAMENTO</span>` : "") + (it.sl ? `<span class="tag ini">CONVENÇÃO</span>` : "") + (ctx.retirada ? `<span class="tag ret">RETIRAR</span>` : "");
   const cor = `<b>${esc(it.c)}</b>` + (it.cd && it.cd !== it.c ? ` · ${esc(it.cd)}` : "");
   const det = [it.ge, it.nu, pdfFamilia(it)].filter(Boolean).map(x => esc(x)).join(" · ");
   const g = ctx.grade ? `<div class="g${ctx.linha ? "" : " vazia"}">${ctx.linha || "&nbsp;"}</div>` : "";   // na programação a linha existe sempre (vazia = invisível) para a fileira alinhar
@@ -557,7 +557,7 @@ async function imprimirVitrine(opcoes){
       return `${esc(titulo(r))}: ${its.length} cores · ${pdfModelos(its)} modelos${pr ? ` · ${pr.toLocaleString("pt-BR")} pares${gtm ? " " + esc(mes) : ""}` : (grade ? " · pares a definir" : "")}`; }).filter(Boolean);   // PICASSO 19/10 21:0x: na programação o tipo sem pares diz "a definir", nunca some nem soma ao tênis
     const rod = { esq: `referência em azul · Gestor, ${esc(new Date().toLocaleDateString("pt-BR"))}`, dir: `${esc(cli)} · ${esc(col)} · ${esc(titulo(p))}` };
     const paginas = [`<div class="pg capa"><h1>${tituloDoc} ${esc(p)}<br>${esc(cli.toUpperCase())}<br>COLEÇÃO <em>${esc(col)}</em></h1>
-<p>${linhas.join("<br>")}<br>Cartões do mais barato ao mais caro (faixa de preço) · lançamento: não fatura antes do início indicado no selo cinza${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
+<p>${linhas.join("<br>")}<br>Cartões do mais barato ao mais caro (faixa de preço)${atual ? "<br>como está hoje: carteira + faturado · RETIRAR = decisão registrada na vitrine" : ""}</p></div>`,
       ...pdfBlocos(sub, ctxDe, rod, `${tituloDoc} ${p}`), ...pdfParedes(sub, rod)];
     return GestorLib.pdfDePaginas(paginas, PDF_CSS, GestorLib.nomeArquivoCasa(cli, tituloDoc + " " + col + " " + p),
       { formato: PDF_FORMATO, fundo: "#fff", classe: "vit-pdf", largura: "338.7mm", escala: 1.5, qualidade: 0.85, esperar: 25e3, antes: palco => { pdfRepaginarParedes(palco); pdfAjustarParedes(palco); }, avisa: t => avisa(pref + "gerando o PDF… " + t) });
