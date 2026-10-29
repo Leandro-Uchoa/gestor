@@ -1,4 +1,4 @@
-// Gestor · BUSCAR A META (novo) — a CAMADA DE DADOS (TI, 28/10/2026). Contrato em TI\CONTRATO_META_BUSCA_DADOS.md; a casca é do PICASSO
+// Gestor · BUSCAR A META (novo) — a CAMADA DE DADOS (TI, 28/10/2026; v5 29/10: cadastro do TODOS, total soma as faixas, dispo sem cliente não se marca). Contrato em TI\CONTRATO_META_BUSCA_DADOS.md; a casca é do PICASSO
 // (window.desenharMeta(DADOS)). Fontes: v_onde_buscar_meta (0099–0101: placar por preposto × faixa, movimentos m1–m5), v_buscar_meta_placar
 // (0109–0117: 4 estados), v_buscar_meta (0104–0117: blocos 1–5, um SKU por linha), v_buscar_meta_pedido_sugerido (0117: pedido novo com teto),
 // produto.foto_url (0124, verificada). Regras: a API corta em 1.000 linhas (.range em laço); nada embutido (preposto vem da view e da URL,
@@ -17,7 +17,7 @@ window.DadosMeta = (() => {
                        "UA_AC": "Acessórios UA (R$)", "UA_ME": "Meias UA (R$)", "UA_CH": "Chinelos UA (R$)", "UA_TN": "Tênis UA (R$)", "BASKETBALL": "Basquete UA", "TRAINING": "Treino UA", "RUNNING": "Corrida UA", "RUN INSPIRED": "Run inspired UA" };
   const NA_REGUA = g => /cobertura < 5|repasse CMS/i.test(g || "");                 // o que o "marcar o mínimo" pode marcar (NÚCLEO: dentro da régua)
   const FORA_REGUA = g => /alta|sem giro|a confirmar/i.test(g || "");             // recolhido atrás de "+N" (nunca misturado)
-  let BRUTO = null, MARCADOS = new Set();
+  let BRUTO = null, MARCADOS = new Set(), NOMES = new Map();   /* NOMES: código → nome do vendedor (nota do TODOS) */
 
   async function tudo(q) { const out = []; for (let i = 0; ; i += 1000) { const { data, error } = await q.range(i, i + 999); if (error) throw error; out.push(...(data || [])); if (!data || data.length < 1000) break; } return out; }
   const semErro = (fn, vazio) => Promise.resolve().then(fn).catch(e => { console.warn("fonte acessória falhou", e && e.message || e); return vazio === undefined ? [] : vazio; });
@@ -27,7 +27,7 @@ window.DadosMeta = (() => {
   // prepostos (vendedores) que a view conhece — TODOS = a CMS inteira; a ordem vem da view (preposto_ordem)
   async function prepostos() {
     const rows = await tudo(sb.from("v_onde_buscar_meta").select("preposto,preposto_nome,preposto_ordem").order("preposto_ordem").order("preposto"));
-    const vistos = new Map(); for (const r of rows) if (r.preposto && !vistos.has(r.preposto)) vistos.set(r.preposto, { codigo: r.preposto, nome: r.preposto_nome || r.preposto, ordem: r.preposto_ordem });
+    const vistos = new Map(); for (const r of rows) if (r.preposto && !vistos.has(r.preposto)) { vistos.set(r.preposto, { codigo: r.preposto, nome: r.preposto_nome || r.preposto, ordem: r.preposto_ordem }); NOMES.set(r.preposto, r.preposto_nome || r.preposto); }
     return [...vistos.values()].sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
   }
 
@@ -39,12 +39,14 @@ window.DadosMeta = (() => {
     const placar = await tudo(sb.from("v_onde_buscar_meta").select("*")   // "*": colunas novas no FIM (m3_sem_ag, em curso no DBA) entram sem quebrar a consulta
              .eq("preposto", P).order("marca").order("faixa_ordem"));
     const nomeP = (placar[0] || {}).preposto_nome || (P === "TODOS" ? "CMS" : P);
-    BRUTO = { P, nomeP, placar, estados: [], linhas: [], pedido: [], cms: [], COR: new Map(), IMG: new Map(), falhas: {} }; MARCADOS = new Set();
+    BRUTO = { P, nomeP, placar, estados: [], linhas: [], pedido: [], cms: [], cadastro: [], COR: new Map(), IMG: new Map(), falhas: {} }; MARCADOS = new Set();
     const acess = async (nome, fn) => { try { return await fn(); } catch (e) { console.warn("fonte acessória falhou", nome, e && e.message || e); BRUTO.falhas[nome] = (e && e.message) || String(e); return []; } };   // GAMER: acessório que falha NÃO some calado
     emitir(1, "placar");
     // estados do placar logo depois do placar (0127: tabela pronta, 0,06 s) — a ordem e os selos valem desde o passo 2
     BRUTO.estados = await acess("estados", () => tudo(sb.from("v_buscar_meta_placar").select("preposto,faixa,falta_gatilho,fecha_na_regua,fecha_com_alta,repasse_a_confirmar,estado,fecha_com_pedido,fecha_com_pedido_sem_teto,base_em").eq("preposto", P)));
     BRUTO.cms = P === "TODOS" ? [] : await acess("cms", () => tudo(sb.from("v_onde_buscar_meta").select("marca,faixa,gatilho,real,falta_gatilho,bate,alcanca").eq("preposto", "TODOS")));
+    // v5 (GAMER): no TODOS, o cadastro cliente → vendedor diz de quem são as listas (um só preposto cadastrado → a tela avisa em vez de parecer cópia)
+    BRUTO.cadastro = P === "TODOS" ? await semErro(() => tudo(sb.from("preposto_cliente").select("preposto,cliente").order("preposto").order("cliente")), []) : [];
     emitir(2, "estados do placar");
     // blocos pelas views de cada um (as rápidas), em fila: 1 · origem → cliente seu · 2 · carteira do mês seguinte · 3 · origem antecipa · 5 · continua inchada · 4 · dispo
     const sel = v => sb.from(v).select("*");
@@ -81,16 +83,18 @@ window.DadosMeta = (() => {
                cobertura_de: num(l.cobertura_de), cobertura_para: num(l.cobertura_para), regua_de: l.regua_de, regua_para: l.regua_para, venda_mes: num(l.venda_mes), estoque: num(l.estoque),
                grupo: l.grupo || "", prioridade: num(l.prioridade), acumulado: num(l.acumulado_faixa), acao: l.acao || (BLOCOS[+l.bloco] || {}).acao, acao_xl: l.acao_xl || null,
                na_regua: +l.bloco === 1 || +l.bloco === 3 ? true : +l.bloco === 4 ? /entra no pedido/i.test(l.grupo || "") : NA_REGUA(l.grupo), fora_regua: +l.bloco === 2 ? FORA_REGUA(l.grupo) : +l.bloco === 4 ? !/entra no pedido/i.test(l.grupo || "") : +l.bloco === 5,
-               marcavel: +l.bloco !== 5 && (num(l.pares) || 0) > 0, marcado: MARCADOS.has(idDe(l)) }; it.grade_ok = (it.pares % 12) === 0; return it; });
+               marcavel: +l.bloco !== 5 && (num(l.pares) || 0) > 0 && (+l.bloco !== 4 || /entra no pedido/i.test(l.grupo || "")), marcado: MARCADOS.has(idDe(l)) }; it.grade_ok = !it.marcavel || (it.pares % 12) === 0; return it; });   /* v5: dispo sem cliente pedindo não se marca (não teria cliente no arquivo) nem pinta grade quebrada */
     // o que conta para a faixa do VENDEDOR: origem → cliente seu (1), sua carteira (2) e dispo digitada (4). O bloco 3 (a origem antecipa para ela) pontua no preposto da origem: só conta na visão CMS
     const contaFaixa = i => P === "TODOS" ? [1, 2, 3].includes(i.bloco) : [1, 2].includes(i.bloco);   // dispo (4) não conta no placar; 5 não se marca
-    const porFaixa = f => itens.filter(i => i.faixa === f && i.marcado && contaFaixa(i)).reduce((s, i) => s + i.pares, 0);
+    const FX_BUSCA = placar.filter(r => r.unidade === "pares" && !r.total && r.marca !== "UA").map(r => r.faixa), TOTAL_DE = f => placar.some(r => r.faixa === f && r.total);   /* v5: o total de tênis soma as faixas de busca */
+    const naFaixa = (i, f) => TOTAL_DE(f) ? FX_BUSCA.includes(i.faixa) : i.faixa === f;
+    const porFaixa = f => itens.filter(i => naFaixa(i, f) && i.marcado && contaFaixa(i)).reduce((s, i) => s + i.pares, 0);
     // placar: uma linha por faixa (marca OLY e UA), com o estado do NÚCLEO e a conta ao vivo do que está marcado
     const linhasPlacar = placar.map(r => { const e = EST.get(r.faixa) || {}, c = CMS.get(r.marca + "|" + r.faixa) || null, falta = num(r.falta_gatilho) || 0, marcado = r.unidade === "pares" ? porFaixa(r.faixa) : 0;
       const estado = r.bate ? "batida" : (e.estado || null);   // só os 4 estados do NÚCLEO; faixa sem linha no placar fica sem selo
       return { faixa: r.faixa, nome: (NOME_FAIXA[r.faixa] || r.faixa) + (r.marca === "UA" && !/UA/.test(NOME_FAIXA[r.faixa] || "") ? " · UA" : ""), marca: r.marca, unidade: r.unidade, total: !!r.total, ordem: num(r.faixa_ordem), gatilho_pct: num(r.gatilho_pct), meta: num(r.meta), gatilho: num(r.gatilho), real: num(r.real), faturado: num(r.faturado),
                falta_gatilho: falta, falta_100: num(r.falta_100), bate: !!r.bate, alcanca: !!r.alcanca, vale_buscar: r.vale_buscar !== false, se_nao_faturar: num(r.se_nao_faturar),
-               estado, fecha_na_regua: num(e.fecha_na_regua), fecha_com_alta: num(e.fecha_com_alta), fecha_com_pedido: num(e.fecha_com_pedido), repasse_a_confirmar: num(e.repasse_a_confirmar),
+               estado, fecha_na_regua: num(e.fecha_na_regua), fecha_com_alta: num(e.fecha_com_alta), fecha_com_pedido: num(e.fecha_com_pedido), fecha_com_pedido_sem_teto: num(e.fecha_com_pedido_sem_teto), repasse_a_confirmar: num(e.repasse_a_confirmar), marcavel: r.unidade === "pares" && r.marca !== "UA" && (!!r.total || FX_BUSCA.includes(r.faixa)),
                cms: c ? { gatilho: num(c.gatilho), real: num(c.real), falta: num(c.falta_gatilho) || 0, bate: !!c.bate, alcanca: !!c.alcanca } : null, cms_bate: !!r.cms_bate, cms_alcanca: !!r.cms_alcanca,
                movimentos: { m1_cobrar: num(r.m1_cobrar), m1_vencida: num(r.m1_vencida), m2_marcado: num(r.m2_marcado), m3_antecipar: num(r.m3_antecipar), m3_cob_alta: num(r.m3_cob_alta), m3_efeito: num(r.m3_efeito_mes_seguinte), m4_repasse: num(r.m4_repasse), m5_clientes: num(r.m5_rfv_clientes), m5_pares: num(r.m5_rfv_pares_2025), m3_sem_ag: num(r.m3_sem_ag), m3_sem_venda: num(r.m3_sem_venda) },   // m3_sem_venda (0130, a caminho): SKU sem venda em cliente com AG — lançamento/novo, decisão do Léo   // m3_sem_ag: mês seguinte em cliente sem AG — "régua não se aplica" (NÚCLEO)
                marcado, faltam: Math.max(0, falta - marcado), fecha: falta > 0 && marcado >= falta, pct_real: r.gatilho ? Math.min(1.5, (num(r.real) || 0) / +r.gatilho) : null, pct_marcado: r.gatilho ? Math.min(1.5, ((num(r.real) || 0) + marcado) / +r.gatilho) : null }; });
@@ -98,9 +102,9 @@ window.DadosMeta = (() => {
     const RANK = { "fecha na régua": 0, "fecha com pedido novo + antecipação": 1, "fecha com alta/fora da régua": 2, "não fecha": 4 };
     const peso = p => p.bate ? 6 : !p.vale_buscar ? 5 : p.fecha ? 0 : (p.estado in RANK ? RANK[p.estado] : 3);
     const placarOrd = linhasPlacar.slice().sort((a, b) => peso(a) - peso(b) || (a.total ? 1 : 0) - (b.total ? 1 : 0) || (a.faltam || 0) - (b.faltam || 0) || (a.ordem || 0) - (b.ordem || 0));
-    const faixasBusca = linhasPlacar.filter(p => p.unidade === "pares" && !p.total && p.marca !== "UA").map(p => p.faixa);
+    const faixasBusca = FX_BUSCA;
     // blocos
-    const blocos = [1, 2, 3, 4, 5].map(b => { const L = itens.filter(i => i.bloco === b && (!faixa || i.faixa === faixa)); if (!L.length) return null;
+    const blocos = [1, 2, 3, 4, 5].map(b => { const L = itens.filter(i => i.bloco === b && (!faixa || naFaixa(i, faixa))); if (!L.length) return null;
       const nome = (linhas.find(l => +l.bloco === b) || {}).bloco_nome || ("Bloco " + b), ordem = (x, y) => (x.fora_regua ? 1 : 0) - (y.fora_regua ? 1 : 0) || (x.na_regua ? 0 : 1) - (y.na_regua ? 0 : 1) || (x.prioridade || 9e9) - (y.prioridade || 9e9) || (x.cobertura_para ?? 99) - (y.cobertura_para ?? 99);
       L.sort(ordem);
       return Object.assign({ bloco: b, nome, n: L.length, pares: L.reduce((s, i) => s + i.pares, 0), marcados: L.filter(i => i.marcado).length, pares_marcados: L.filter(i => i.marcado).reduce((s, i) => s + i.pares, 0),
@@ -112,7 +116,10 @@ window.DadosMeta = (() => {
                      por_faixa: faixasBusca.map(f => ({ faixa: f, nome: NOME_FAIXA[f] || f, pares: porFaixa(f) })) };
     const pedidoNovo = pedido.map(p => ({ faixa: p.faixa, cliente: p.cliente, ref: p.referencia, cor: p.cor, cor_nome: COR.get(p.referencia + "|" + (p.cor || "")) || p.cor, modelo: p.descricao, venda_mes: num(p.venda_mes), estoque: num(p.estoque), carteira: num(p.carteira), transito: num(p.transito), cob_base: num(p.cob_base), cap: num(p.cap), gdisp: num(p.gdisp), pedido: num(p.pedido_sugerido), cabe_mais: num(p.cabe_mais), cob_depois: num(p.cob_depois), alvo_faixa: num(p.alvo_faixa) }));
     const base = placar[0] || {};
-    return { hoje, carregando: carregando || null, falhas: Object.assign({}, BRUTO.falhas || {}), preposto: { codigo: P, nome: nomeP, cms: P === "TODOS" }, mes: MES_OK.test(String(base.mes)) ? String(base.mes).slice(0, 7) : null, quinzena2: !!base.quinzena2, dias_uteis: num(base.dias_uteis_restantes),
+    const porP = new Map(); for (const c of BRUTO.cadastro || []) porP.set(c.preposto, (porP.get(c.preposto) || 0) + 1);
+    const cadastro = { prepostos: [...porP.entries()].map(([codigo, n]) => ({ codigo, nome: NOMES.get(codigo) || codigo, n })), n_clientes: (BRUTO.cadastro || []).length };
+    const nota = P === "TODOS" && cadastro.prepostos.length === 1 ? `as listas são de ${cadastro.prepostos[0].nome} (${cadastro.prepostos[0].codigo}): o cadastro cliente → vendedor tem ${cadastro.n_clientes} clientes, todos dele — os outros vendedores entram quando o cadastro for preenchido` : null;
+    return { hoje, carregando: carregando || null, falhas: Object.assign({}, BRUTO.falhas || {}), preposto: { codigo: P, nome: nomeP, cms: P === "TODOS" }, cadastro, nota, mes: MES_OK.test(String(base.mes)) ? String(base.mes).slice(0, 7) : null, quinzena2: !!base.quinzena2, dias_uteis: num(base.dias_uteis_restantes),
              placar: placarOrd, faixas_busca: faixasBusca, blocos, previa, pedido_novo: pedidoNovo, filtro: { faixa: faixa || null },
              bases: { real_lido_em: base.real_lido_em || null, meta_lida_em: base.meta_lida_em || null, placar_em: (estados[0] || {}).base_em || null, pedido_em: (pedido[0] || {}).base_em || null },
              regra: "gatilhos da Vulcabras: tênis 90% no total e 100% na faixa · famílias 95% em R$ · a faixa do vendedor só paga se a CMS também alcança · régua ruptura <4 · ideal 4–5 · alta ≥5 · grade em 12 · nada sai sem o clique" };
@@ -120,10 +127,11 @@ window.DadosMeta = (() => {
   // marcação (o estado vive aqui; a casca só pede)
   const marcar = (id, on) => { if (on === false || (on == null && MARCADOS.has(id))) MARCADOS.delete(id); else MARCADOS.add(id); };
   function marcarMinimo(faixa) {   // GAMER: pré-marca na ordem do brief, SÓ dentro da régua, até cobrir a falta; só sugere
-    const p = montar(null).placar.find(x => x.faixa === faixa); if (!p || p.unidade !== "pares") return { n: 0, faltam: 0 };
+    const M = montar(null), p = M.placar.find(x => x.faixa === faixa); if (!p || p.unidade !== "pares") return { n: 0, faltam: 0 };
+    const fxs = p.total ? M.faixas_busca : [faixa];   /* v5: o total de tênis marca em todas as faixas de busca */
     let falta = p.falta_gatilho - p.marcado, n = 0; if (falta <= 0) return { n: 0, faltam: 0 };
     const blocosOk = BRUTO.P === "TODOS" ? [1, 2, 3] : [1, 2];   // bloco 3 só conta na visão CMS
-    const cand = BRUTO.linhas.filter(l => l.faixa === faixa && blocosOk.includes(+l.bloco) && (+l.bloco !== 2 || NA_REGUA(l.grupo)) && (num(l.pares) || 0) > 0 && !MARCADOS.has(idDe(l)))
+    const cand = BRUTO.linhas.filter(l => fxs.includes(l.faixa) && blocosOk.includes(+l.bloco) && (+l.bloco !== 2 || NA_REGUA(l.grupo)) && (num(l.pares) || 0) > 0 && !MARCADOS.has(idDe(l)))
       .sort((a, b) => (+a.bloco === 2 ? 0 : 1) - (+b.bloco === 2 ? 0 : 1) || (num(a.prioridade) || 9e9) - (num(b.prioridade) || 9e9));
     // GAMER: a MENOR sobra, não a gulosa (falta 100 com 90/60/50 → 110, não 140). Subset-sum em unidades de 12 até falta + maior linha; empate → menor soma de posições (ordem do brief)
     const U = cand.map(l => Math.max(1, Math.ceil(+l.pares / 12))), T = Math.ceil(falta / 12), LIM = T + Math.max(0, ...U), tot = U.reduce((a, b) => a + b, 0);
@@ -135,6 +143,6 @@ window.DadosMeta = (() => {
     for (let b = best[alvo]; b && b.i >= 0; b = b.prev) { MARCADOS.add(idDe(cand[b.i])); falta -= +cand[b.i].pares; n++; }
     return { n, faltam: Math.max(0, falta) };
   }
-  const limpar = faixa => { for (const l of BRUTO.linhas) if (!faixa || l.faixa === faixa) MARCADOS.delete(idDe(l)); };
+  const limpar = faixa => { const total = !!faixa && BRUTO.placar.some(r => r.faixa === faixa && r.total); for (const l of BRUTO.linhas) if (!faixa || total || l.faixa === faixa) MARCADOS.delete(idDe(l)); };
   return { sb, sessao, entrar, sair, prepostos, carregar, refiltrar: f => montar(f), foraRegua: f => BRUTO ? BRUTO.linhas.filter(l => l.faixa === f && +l.bloco === 2 && FORA_REGUA(l.grupo)).length : 0, marcar, marcarMinimo, limpar, marcados: () => new Set(MARCADOS) };
 })();

@@ -8,15 +8,15 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <link rel="stylesheet" href="cliente.css?v=46">
 <link rel="stylesheet" href="acao.css?v=9">
-<link rel="stylesheet" href="meta_busca.css?v=4">
+<link rel="stylesheet" href="meta_busca.css?v=5">
 </head>
 <body>
 <nav class="rail">
  <div class="marca"></div>
  <a href="cliente.html" id="nav_cliente" title="Clientes"><i class="ti ti-building-store"></i><span class="rl">Cliente</span></a>
  <a href="acao.html" id="nav_acao" title="Ação de preço"><i class="ti ti-tag"></i><span class="rl">Ação</span></a>
- <a href="#" id="nav_meta" class="on" title="Buscar a meta"><i class="ti ti-target-arrow"></i><span class="rl">Meta</span></a>
- <a href="#" id="nav_topics" title="TOPICS"><i class="ti ti-checklist"></i><span class="rl">TOPICS</span></a>
+ <a href="#" id="nav_meta" class="on" title="Buscar a meta" onclick="scrollTo({top:0});return false"><i class="ti ti-target-arrow"></i><span class="rl">Meta</span></a>
+ <a href="trade.html" id="nav_trade" title="Trade"><i class="ti ti-speakerphone"></i><span class="rl">Trade</span></a>
  <div class="pe">LP</div>
 </nav>
 <div class="main">
@@ -31,6 +31,7 @@
   </div>
   <div class="a-aviso" id="a_aviso" hidden></div>
   <div class="mb-placar" id="a_placar"></div>
+  <div class="mb-expl" id="a_expl" hidden></div>
   <div id="a_batidas"></div>
   <div id="a_reais"></div>
   <div id="a_ua"></div>
@@ -40,9 +41,9 @@
  <div id="a_blocos"></div>
  <div class="text-center hora mt-3" id="rodape">Gestor · buscar a meta · sobre a forma aprovada da aba Cliente (27/10/2026)</div>
 </div>
-<script src="meta_busca_tela.js?v=4"></script>
+<script src="meta_busca_tela.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script>const URL_SB = "https://bdkazfzgecbhmiewfmjb.supabase.co", CHAVE = "sb_publishable_uR4m8_xLpYp-E3APKhzeHg_6gNOHuaB";</script>
-<script src="meta_busca_dados.js?v=4"></script>
-<script src="meta_busca_glue.js?v=4"></script>
+<script src="meta_busca_dados.js?v=5"></script>
+<script src="meta_busca_glue.js?v=5"></script>
 </body></html>

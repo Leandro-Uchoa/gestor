@@ -1,5 +1,5 @@
 // Gestor · BUSCAR A META (novo) — a COLA entre a casca (desenharMeta / onPreposto / onFaixa / onMarcar / onMarcarMinimo / onLimpar / onAcao) e a
-// camada de dados do TI (meta_busca_dados.js). TI, 28/10/2026. Login do Supabase (o mesmo do Gestor), seletor de vendedor (preposto) vindo da
+// camada de dados do TI (meta_busca_dados.js). TI, 28/10/2026 (v5 29/10: sem mudança na cola). Login do Supabase (o mesmo do Gestor), seletor de vendedor (preposto) vindo da
 // view, vendedor pela URL (#preposto=X) ou o último escolhido neste aparelho; "Carregando…" na troca; ⛔ em ?modo=cliente a página não abre.
 (() => {
   const $ = id => document.getElementById(id);
