@@ -1,4 +1,4 @@
-// Topics · cola · ?v=1. Login da tela de meta; confirmação e desfazer por 5 s.
+// Topics · cola · ?v=2. Login da tela de meta; confirmação e desfazer por 5 s.
 (() => {
   const $=id=>document.getElementById(id);
   let DADOS=null, FILTRO={modo:'cliente',feitos:false,algumdia:false}, ULTIMO=null, TOAST=null, CARGA=null;

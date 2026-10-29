@@ -1,4 +1,4 @@
-/* Topics · ?v=1. Complemento da casca existente, com os mesmos tokens. */
+/* Topics · ?v=2. Complemento da casca existente, com os mesmos tokens. */
 .tp-pagina{min-width:0}.tp-pagina *{box-sizing:border-box}.tp-pagina .hero{padding:22px}.tp-pagina .topo{align-items:center}.tp-pagina .bts{flex-wrap:wrap}
 .tp-bt,.tp-check{font:600 13px Inter,Arial,sans-serif;min-height:44px;min-width:44px;border:1px solid var(--cl);border-radius:12px;background:#fff;color:#000;padding:8px 12px;cursor:pointer;white-space:normal;overflow-wrap:anywhere;max-width:100%}.tp-bt:hover{background:var(--ow)}.tp-bt.on{background:var(--az);color:#fff;border-color:var(--az)}.tp-bt:focus-visible,.tp-check:focus-visible,summary:focus-visible{outline:3px solid var(--az);outline-offset:2px}
 #a_modos,#a_chips,.tp-acts,.tp-etiquetas{display:flex;flex-wrap:wrap;gap:8px}#a_chips{margin:18px 0}.tp-chip-par{display:inline-flex;flex-wrap:wrap;gap:4px;max-width:100%}.tp-modo{flex:1 1 110px}#tp_busca{display:block;width:100%;min-height:44px;margin-top:14px;border:1px solid var(--cl);border-radius:12px;padding:10px 12px;font-size:14px;min-width:0}
@@ -11,3 +11,5 @@
 @media print{.rail,.tp-novo,#a_toast,.tp-pagina .bts{display:none!important}.tp-pagina.main{margin:0;padding:0}.tp-projeto,.tp-linha{break-inside:avoid}.tp-cartoes{display:block}.tp-projeto{margin-bottom:12px}}
 /* cor do bloco (token b1…b6 do banco) no chip do cliente — só a paleta Olympikus */
 .tp-cor-b1{border-left:5px solid #2E3EFC}.tp-cor-b2{border-left:5px solid #FFFF1A}.tp-cor-b3{border-left:5px solid #000}.tp-cor-b4{border-left:5px solid #787B86}.tp-cor-b5{border-left:5px solid #ADAEB3}.tp-cor-b6{border-left:5px solid #E6E7E8}
+/* v2: a lista 'Sem projeto' abre abaixo do próprio botão, no Por projeto */
+#a_sem_projeto .tp-grupo{margin-top:12px}#a_sem_projeto .tp-grupo h3{margin-bottom:8px}

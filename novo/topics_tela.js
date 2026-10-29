@@ -1,4 +1,4 @@
-// Topics · casca · ?v=1. Estrutura adaptada das telas de meta e trade; nenhum dado embutido.
+// Topics · casca · ?v=2. Estrutura adaptada das telas de meta e trade; nenhum dado embutido.
 (() => {
   const $=id=>document.getElementById(id), esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const chama=(n,...a)=>window[n]?.(...a);
@@ -25,6 +25,12 @@
     const barra=`<span class="tp-progresso"><i style="width:${Math.max(0,Math.min(100,p.progresso_pct))}%"></i></span>`;
     return `<article class="card tp-projeto" data-projeto="${esc(p.id)}"><div class="tp-card-topo">${bt('abrir',k,`<strong>${esc(p.nome)}</strong><span class="selo">${esc(p.status)}</span>`,'tp-projeto-titulo')}<div class="hora">${esc([p.dono,...(p.equipe||[])].filter(Boolean).join(' · '))}</div>${bt('abrir',k,`${barra}<span>${p.feitos}/${p.total_passos} passos · ${p.progresso_pct}%</span>`,'tp-barra')}${p.precisa_do_leo_n?bt('precisaProjeto',p.id,`precisa de você (${p.precisa_do_leo_n})`,'tp-precisa'):''}<p class="tp-proximo">${esc(p.proximo_passo||'Sem próximo passo')}${p.proximo_passo_com?' · '+esc(p.proximo_passo_com):''}${p.proximo_passo_prazo?' · '+esc(data(p.proximo_passo_prazo)):''}</p></div>${ABERTOS.has(k)?`<div class="tp-card-corpo"><p class="hora">${esc(p.objetivo||'')}</p><div data-bucket="pendentes">${linhas(p.passos_pendentes)}</div>${secao(chave(k,'feitos'),`Feitos (${p.passos_feitos.length})`,`<div data-bucket="feitos">${linhas(p.passos_feitos)}</div>`)}${secao(chave(k,'algumdia'),`Algum dia (${p.passos_algum_dia.length})`,`<div data-bucket="algumdia">${linhas(p.passos_algum_dia)}</div>`)}${p.status==='concluído'?'':formulario(ctx,k)}</div>`:''}</article>`;
   }
+  /* v2 (GAMER): só os ABERTOS contam, o rótulo diz isso, e o toque lista os passos aqui mesmo, sem trocar o modo */
+  function semProjeto() {
+    if(D.modo!=='projeto'){$('a_sem_projeto').innerHTML='';return;}
+    const n=D.passos_sem_projeto||0, on=D.filtro?.projeto==='__sem__';
+    $('a_sem_projeto').innerHTML=bt('semprojeto','',`${n} ${n===1?'passo aberto':'passos abertos'} sem projeto`,on?'on':'')+(on?`<section class="pn tp-grupo"><h3>Sem projeto <span class="hora">(${(D.sem_projeto_lista||[]).length})</span></h3><div class="lista tp-lista">${linhas(D.sem_projeto_lista||[])}</div></section>`:'');
+  }
   function grupos() {
     $('a_grupos').innerHTML=(D.grupos||[]).map(g=>{
       const k=chave(D.modo,g.chave), titulo=`${esc(g.chave)} <span class="hora">(${g.n})</span>`;
@@ -35,7 +41,7 @@
       }).join('');
       return `<section class="pn tp-grupo" data-grupo="${esc(k)}"><div class="tp-grupo-cab">${bt('abrir',k,`<h3>${titulo}</h3>`,'tp-grupo-bt')}${precisa}</div>${ABERTOS.has(k)?conteudo:''}</section>`;
     }).join('')||'<div class="pn">Nenhum passo com esses filtros.</div>';
-    $('a_sem_projeto').innerHTML=D.modo==='projeto'?bt('semprojeto','',`${D.passos_sem_projeto||0} passos ainda sem projeto`):'';
+    semProjeto();
     for(const el of document.querySelectorAll('.tp-novo textarea')) crescer(el);
   }
   function topo() {
@@ -51,7 +57,7 @@
     const chips=(lista,campo)=>lista.map(c=>`<span class="tp-chip-par">${bt('filtro',{[campo]:F[campo]===c.nome?null:c.nome},`${esc(c.nome)} (${c.n})`,F[campo]===c.nome?'on':'')}${c.precisa?bt('precisaGrupo',{[campo]:c.nome},`precisa (${c.precisa})`,'tp-precisa'):''}</span>`).join('');
     $('a_chips').innerHTML=bt('limpar','','Limpar filtros')+chips(D.clientes||[],'cliente')+chips(D.temas||[],'tema')+bt('filtro',{feitos:!F.feitos},`feitos (${r.feitos||0})`,F.feitos?'on':'')+bt('filtro',{algumdia:!F.algumdia},`algum dia (${r.algum_dia||0})`,F.algumdia?'on':'');
     // Cor do chip = cor do bloco (token b1…b6 do topics_bloco → classe do topics.css); o texto nunca vira CSS.
-    for(const el of $('a_chips').querySelectorAll('[data-act="filtro"]')){let v;try{v=JSON.parse(el.dataset.v);}catch(e){continue;}const c=(D.clientes||[]).find(c=>c.nome===v.cliente);if(c&&/^b[1-6]$/.test(c.cor||''))el.classList.add('tp-cor-'+c.cor);}
+    for(const el of $('a_chips').querySelectorAll('[data-act="filtro"]')){let v;try{v=JSON.parse(el.dataset.v);}catch(e){console.warn('chip sem filtro legível',el.dataset.v,e);continue;}const c=(D.clientes||[]).find(c=>c.nome===v.cliente);if(c&&/^b[1-6]$/.test(c.cor||''))el.classList.add('tp-cor-'+c.cor);}
   }
   function desenharTopics(d) {
     D=d||{};
@@ -66,7 +72,7 @@
         else {const marcador=document.createComment('posição do passo');el.replaceWith(marcador);LUGARES.set(String(D.so_linha),marcador);}
       }
       const lugar=LUGARES.get(String(D.so_linha));
-      if(!existentes.length&&visivel&&lugar?.isConnected){const tmp=document.createElement('div');tmp.innerHTML=linha(p);lugar.replaceWith(tmp.firstElementChild);LUGARES.delete(String(D.so_linha));}
+      if(!existentes.length&&visivel&&lugar?.isConnected){const tmp=document.createElement('div');tmp.innerHTML=linha(p);const nova=tmp.firstElementChild;lugar.replaceWith(nova);LUGARES.delete(String(D.so_linha));const vz=nova.parentElement&&nova.parentElement.querySelector(':scope>p.hora');if(vz)vz.remove();}
       if(p&&D.modo==='projeto')for(const card of document.querySelectorAll('[data-projeto]'))if(card.dataset.projeto===String(p.projeto_id)) {
         const destino=card.querySelector(`[data-bucket="${p.feito?'feitos':p.algumdia?'algumdia':'pendentes'}"]`);
         const el=[...card.querySelectorAll('[data-linha]')].find(el=>el.dataset.linha===String(p.id));
@@ -78,11 +84,14 @@
         if(titulo)titulo.innerHTML=`${esc(g?.chave||JSON.parse(el.dataset.grupo)[1])} <span class="hora">(${g?.n||0})</span>`;
         const precisa=cab.querySelector('[data-act="precisaGrupo"]');if(precisa)precisa.textContent=`precisa de você (${g?.precisa||0})`;
         for(const s of g?.sub||[]) {const k=chave(el.dataset.grupo,s.chave);for(const det of el.querySelectorAll('[data-aberto]'))if(det.dataset.aberto===k)det.querySelector('summary h3').innerHTML=`${esc(s.chave)} <span class="hora">(${s.n})</span>`;}
+        /* v2 (GAMER): subgrupo que ficou sem passo visível mostra (0) em vez do número velho */
+        const vivos=new Set((g?.sub||[]).map(s=>chave(el.dataset.grupo,s.chave)));
+        for(const det of el.querySelectorAll('[data-aberto]')){let arr;try{arr=JSON.parse(det.dataset.aberto);}catch(e){continue;}if(arr.length===2&&arr[0]===el.dataset.grupo&&!vivos.has(det.dataset.aberto)){const h=det.querySelector('summary h3');if(h)h.innerHTML=`${esc(arr[1])} <span class="hora">(0)</span>`;const lista=det.querySelector('.tp-lista');if(lista&&!lista.querySelector('[data-linha]')&&!lista.querySelector(':scope>p.hora'))lista.insertAdjacentHTML('beforeend','<p class="hora">Nenhum passo aqui.</p>');   /* mantém o marcador de posição: a linha volta no mesmo lugar ao reabrir */}}
         for(const pr of g?.projetos||[]){const k=chave('projeto',pr.id);for(const b of el.querySelectorAll('.tp-projeto-titulo'))if(b.dataset.v===k){const card=b.closest('.tp-projeto'),tmp=document.createElement('div');tmp.innerHTML=projeto(pr);card.querySelector('.tp-card-topo').replaceWith(tmp.querySelector('.tp-card-topo'));
           for(const [tipo,lista] of [['feitos',pr.passos_feitos],['algumdia',pr.passos_algum_dia]]){const det=[...card.querySelectorAll('[data-aberto]')].find(e=>e.dataset.aberto===chave(k,tipo));if(det)det.querySelector('summary h3').textContent=(tipo==='feitos'?'Feitos':'Algum dia')+' ('+lista.length+')';}
         }}
       }
-      $('a_sem_projeto').innerHTML=D.modo==='projeto'?bt('semprojeto','',`${D.passos_sem_projeto||0} passos ainda sem projeto`):'';
+      semProjeto();
     }else grupos();
     delete D.so_linha;
   }
@@ -98,7 +107,7 @@
     else if(a==='precisaGrupo')TOPICS.filtro({...JSON.parse(v),precisa:true,feitos:false,algumdia:false});
     else if(a==='precisaProjeto')TOPICS.filtro({modo:'projeto',projeto:v,precisa:true});
     else if(a==='projeto')TOPICS.filtro({modo:'projeto',projeto:v});
-    else if(a==='semprojeto')TOPICS.filtro({modo:'cliente',projeto:'__sem__',feitos:true,algumdia:true});
+    else if(a==='semprojeto')TOPICS.filtro({projeto:D.filtro?.projeto==='__sem__'?null:'__sem__'});
     else if(a==='inicio'){const p=(D.passos||[]).find(p=>String(p.id)===v);if(!p)return;FICHAS.add(v);ABERTOS.add(chave('cliente',p.cliente||'Sem cliente'));ABERTOS.add(chave(chave('cliente',p.cliente||'Sem cliente'),p.tema||'Sem tema'));TOPICS.filtro({modo:'cliente',cliente:p.cliente||null,tema:p.tema,projeto:null});requestAnimationFrame(()=>[...document.querySelectorAll('[data-linha]')].find(e=>e.dataset.linha===v)?.scrollIntoView({block:'center'}));}
   });
   document.addEventListener('input',ev=>{if(ev.target.id==='tp_busca')TOPICS.filtro({busca:ev.target.value});else if(ev.target.matches('[data-campo]')){guardar(ev.target);if(ev.target.tagName==='TEXTAREA')crescer(ev.target);}});
