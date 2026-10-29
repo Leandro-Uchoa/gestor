@@ -1348,7 +1348,7 @@ function perguntarMeses(it, atual){
   atual = atual || {};
   const k = chaveCor(it), sug = VIT.sug.get(k), opc = GRADES_GTM(it);   // os tipos que a numeração permite
   const abre6 = abre6De(it);
-  const redondo = (v, cx) => Math.max(0, Math.round((+v || 0) / cx) * cx);
+  const redondo = (v, cx) => Math.max(0, Math.floor((+v || 0) / cx) * cx);   // PARA BAIXO em todo campo que ele digita (19/10: "diminui para ficar múltiplo")
   const baixo = (v, cx) => Math.max(0, Math.floor((+v || 0) / cx) * cx);   // o "pares no total" (entrada sem mês) arredonda PARA BAIXO
   const fechaEm = n => n > 0 && (n % CAIXA === 0 || (abre6 && n % CAIXA6 === 0));
   const faixaNum = g => { const f = (faixaDe(it, g) || "").match(/(\d{2})–(\d{2})/); return f ? [+f[1], +f[2]] : [34, 41]; };
