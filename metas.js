@@ -98,14 +98,18 @@
     }
     const hoje = mesAtual();
     // os meses do seletor: do primeiro mês com meta (ou o corrente) até dezembro do mesmo ano — administração de carteira, à frente
-    const { data: mm } = await sb.from("meta_mensal").select("mes").eq("marca", marca).eq("preposto", preposto).order("mes").limit(1);
+    // 30/10: a Carta HISTÓRICA (2024/2025, carga de 27/10) entrou em meta_mensal para o 25745 e para TODOS; o seletor passou a abrir
+    // em 2024 e o padrão caía no botão "4º TRI 24" → "2024-T4-01" → "o banco recusou". O seletor é DESTE ANO: primeiro mês com meta
+    // dentro do ano corrente (ou o corrente); e o padrão nunca é um botão de trimestre.
+    const { data: mm } = await sb.from("meta_mensal").select("mes").eq("marca", marca).eq("preposto", preposto).gte("mes", hoje.slice(0, 4) + "-01-01").order("mes").limit(1);
     const primeiro = (mm && mm[0] ? mm[0].mes.slice(0, 7) : hoje) < hoje ? (mm[0].mes.slice(0, 7)) : hoje;
     const ano = primeiro.slice(0, 4); const meses = [];
     for (let m = +primeiro.slice(5, 7); m <= 12; m++) {
       meses.push(ano + "-" + String(m).padStart(2, "0"));
       if (m % 3 === 0) meses.push(ano + "-T" + (m / 3));                    // depois de mar/jun/set/dez entra o botão do trimestre
     }
-    mes = mes && meses.includes(mes) ? mes : (meses.includes(hoje) ? hoje : meses[meses.length - 1]);
+    const soMeses = meses.filter(m => !/-T\d$/.test(m));
+    mes = mes && meses.includes(mes) ? mes : (meses.includes(hoje) ? hoje : soMeses[soMeses.length - 1]);
     const mes01 = mes + "-01", futuro = mes > hoje;
     // o trimestre do mês do seletor (regra 11): out → out, nov, dez
     const q0 = Math.floor((+mes.slice(5, 7) - 1) / 3) * 3 + 1, triMeses = [0, 1, 2].map(i => mes.slice(0, 4) + "-" + String(q0 + i).padStart(2, "0")), tri01 = triMeses.map(m => m + "-01");
